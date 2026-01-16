@@ -1,0 +1,408 @@
+<?php defined('BASEPATH') OR exit('No direct script access allowed'); ?>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nutritional Assessment Reports</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
+    <style>
+      #wrapper { display: flex; width: 100%; }
+      #sidebar-wrapper { min-width: 220px; max-width: 260px; background: #f8f9fa; border-right: 1px solid #e3e6ea; }
+      #page-content-wrapper { flex: 1 1 auto; padding: 20px; }
+      @media (max-width: 767px) { #sidebar-wrapper { display: none; } }
+
+      .card { border: none; border-radius: 0.5rem; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); }
+      .bg-gradient-primary { background: linear-gradient(45deg, #4e73df, #224abe); }
+      .bg-gradient-info { background: linear-gradient(45deg, #17a2b8, #6f42c1); }
+      .bg-gradient-success { background: linear-gradient(45deg, #1cc88a, #13855c); }
+      .bg-gradient-warning { background: linear-gradient(45deg, #f6c23e, #dda20a); }
+      .bg-gradient-danger { background: linear-gradient(45deg, #e74a3b, #be2617); }
+      
+      .text-gray-800 { color: #5a5c69 !important; }
+      .text-gray-300 { color: #dddfeb !important; }
+      
+      /* Table styling from SBFP Dashboard */
+      .table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
+      .table-bordered th, .table-bordered td { border: 1px solid #e3e6f0; }
+      
+      .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+      
+      /* Badge styling for assessment types */
+      .badge-baseline { background: linear-gradient(45deg, #4e73df, #224abe); }
+      .badge-endline { background: linear-gradient(45deg, #1cc88a, #13855c); }
+    </style>
+  </head>
+  <body class="bg-light">
+    <div id="wrapper">
+      <?php $this->load->view('templates/sidebar'); ?>
+      <div id="page-content-wrapper">
+        <div class="container-fluid py-4">
+
+          <!-- Reports Header - Enhanced from SBFP Dashboard -->
+          <div class="card bg-gradient-primary text-white mb-4">
+            <div class="card-body">
+              <h1 class="h2 font-weight-bold mb-2">Nutritional Assessment Reports</h1>
+              <?php if (!empty($current_filters['school_name'])): ?>
+                <p class="mb-0 opacity-8">Showing reports for <strong><?php echo htmlspecialchars($current_filters['school_name']); ?></strong></p>
+              <?php else: ?>
+                <p class="mb-0 opacity-8">View and analyze all submitted nutritional assessment data</p>
+              <?php endif; ?>
+            </div>
+          </div>
+
+          <!-- Statistics Cards -->
+            <?php
+            // If a specific school filter is active, compute filtered statistics
+            $use_filtered_stats = !empty($current_filters['school_name']);
+            if ($use_filtered_stats) {
+              $filtered_total_assessments = 0;
+              $filtered_baseline_count = 0;
+              $filtered_endline_count = 0;
+              $unique_schools = [];
+
+              if (!empty($reports) && is_array($reports)) {
+                foreach ($reports as $r) {
+                  $filtered_total_assessments++;
+                  $type = strtolower(trim($r->assessment_type ?? ''));
+                  if ($type === 'baseline') $filtered_baseline_count++;
+                  if ($type === 'endline') $filtered_endline_count++;
+                  if (!empty($r->school_name)) $unique_schools[$r->school_name] = true;
+                }
+              }
+
+              $filtered_total_schools = count($unique_schools);
+            }
+            ?>
+
+            <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                  <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                      <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                        Total Assessments
+                      </div>
+                      <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        <?php echo number_format($use_filtered_stats ? ($filtered_total_assessments ?? 0) : ($total_assessments ?? 0)); ?>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <i class="fas fa-clipboard-list fa-2x text-black"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                  <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                      <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                        Baseline Assessments
+                      </div>
+                      <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        <?php echo number_format($use_filtered_stats ? ($filtered_baseline_count ?? 0) : ($baseline_count ?? 0)); ?>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <span class="badge badge-baseline rounded-pill px-3 py-2">
+                        <i class="fas fa-flag"></i>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                  <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                      <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                        Endline Assessments
+                      </div>
+                      <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        <?php echo number_format($use_filtered_stats ? ($filtered_endline_count ?? 0) : ($endline_count ?? 0)); ?>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <span class="badge badge-endline rounded-pill px-3 py-2">
+                        <i class="fas fa-flag-checkered"></i>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                  <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                      <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                        Total Schools
+                      </div>
+                      <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        <?php echo number_format($use_filtered_stats ? ($filtered_total_schools ?? 0) : ($total_schools ?? 0)); ?>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <i class="fas fa-school fa-2x text-black"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filters Card -->
+          <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+              <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-filter me-1"></i> Filter Reports
+              </h6>
+              <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-redo me-1"></i> Reset Filters
+              </a>
+            </div>
+            <div class="card-body">
+              <div class="card border mb-4">
+                <div class="card-header bg-light">
+                  <h6 class="mb-0">
+                    <i class="fas fa-search me-1"></i> Search & Filter Criteria
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <form method="get" action="<?php echo site_url('admin/reports'); ?>" class="row g-3">
+                    <div class="col-md-3">
+                      <label class="form-label fw-bold text-dark">
+                        <i class="fas fa-flag me-1"></i> Assessment Type
+                      </label>
+                      <select name="assessment_type" class="form-select">
+                        <?php foreach ($assessment_types as $value => $label): ?>
+                          <option value="<?php echo htmlspecialchars($value); ?>" 
+                            <?php echo ($current_filters['assessment_type'] == $value) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($label); ?>
+                          </option>
+                        <?php endforeach; ?>
+                      </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                      <label class="form-label fw-bold text-dark">
+                        <i class="fas fa-graduation-cap me-1"></i> Grade Level
+                      </label>
+                      <select name="grade_level" class="form-select">
+                        <option value="">All Grades</option>
+                        <?php foreach ($grade_levels as $grade): ?>
+                          <option value="<?php echo htmlspecialchars($grade->grade_level ?? ''); ?>" 
+                            <?php echo ($current_filters['grade_level'] == $grade->grade_level) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($grade->grade_level ?? 'N/A'); ?>
+                          </option>
+                        <?php endforeach; ?>
+                      </select>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label fw-bold text-dark">
+                        <i class="fas fa-calendar-day me-1"></i> Date From
+                      </label>
+                      <input type="date" name="date_from" class="form-control" 
+                             value="<?php echo htmlspecialchars($current_filters['date_from'] ?? ''); ?>">
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label fw-bold text-dark">
+                        <i class="fas fa-calendar-check me-1"></i> Date To
+                      </label>
+                      <input type="date" name="date_to" class="form-control" 
+                             value="<?php echo htmlspecialchars($current_filters['date_to'] ?? ''); ?>">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                      <button type="submit" class="btn btn-primary w-100 py-2">
+                        <i class="fas fa-filter me-1"></i> Apply Filters
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
+<!-- Reports Table - Enhanced with SBFP Dashboard styling -->
+<div class="card shadow">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-chart-bar me-1"></i> Nutritional Assessment Reports
+        </h6>
+        <div class="d-flex align-items-center">
+            <span class="badge bg-primary rounded-pill me-3">
+                <?php echo number_format(count($reports)); ?> Reports
+            </span>
+            <div>
+                <a href="<?php echo site_url('admin/reports/export?' . http_build_query($current_filters)); ?>" 
+                   class="btn btn-success btn-sm me-2">
+                    <i class="fas fa-file-export me-1"></i> Export to CSV
+                </a>
+                <a href="<?php echo site_url('admin/reports/statistics?' . http_build_query($current_filters)); ?>" 
+                   class="btn btn-info btn-sm">
+                    <i class="fas fa-chart-pie me-1"></i> View Statistics
+                </a>
+                <a href="<?php echo site_url('admin/reports/comparison_report'); ?>" 
+                   class="btn btn-warning btn-sm ms-2">
+                    <i class="fas fa-exchange-alt me-1"></i> Comparison Report
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <?php if (empty($reports)): ?>
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-4x text-gray-300 mb-3"></i>
+                <h5 class="text-gray-500 mb-2">No reports found</h5>
+                <p class="text-gray-500 mb-4">Try adjusting your filters or check back later for new submissions.</p>
+                <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-primary">
+                    <i class="fas fa-redo me-1"></i> Clear Filters
+                </a>
+            </div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="reportsTable" width="100%" cellspacing="0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>School Name</th>
+                            <th>School ID</th>
+                            <th>Legislative District</th>
+                            <th>School District</th>
+                            <th>Grade Level</th>
+                            <th>Section</th>
+                            <th>Assessment Type</th>
+                            <th class="text-center">Students</th>
+                            <th>Date Submitted</th>
+                            <th class="text-center">Export</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($reports as $report): ?>
+                        <?php 
+                            $assessment_type_class = ($report->assessment_type == 'baseline') ? 'badge-baseline' : 'badge-endline';
+                            $assessment_icon = ($report->assessment_type == 'baseline') ? 'flag' : 'flag-checkered';
+                        ?>
+                        <tr>
+                            <td class="fw-bold text-primary">
+                                <i class="fas fa-school me-1"></i> <?php echo htmlspecialchars($report->school_name ?? 'N/A'); ?>
+                            </td>
+                            <td>
+                                <span class="badge bg-dark">
+                                    <i class="fas fa-id-card me-1"></i> <?php echo htmlspecialchars($report->school_id ?? 'N/A'); ?>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-landmark me-1"></i> <?php echo htmlspecialchars($report->legislative_district ?? 'N/A'); ?>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">
+                                    <i class="fas fa-map-marker-alt me-1"></i> <?php echo htmlspecialchars($report->school_district ?? 'N/A'); ?>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info"><?php echo htmlspecialchars($report->grade_level ?? 'N/A'); ?></span>
+                            </td>
+                            <td><?php echo htmlspecialchars($report->section ?? 'N/A'); ?></td>
+                            <td>
+                                <span class="badge <?php echo $assessment_type_class; ?> text-white">
+                                    <i class="fas fa-<?php echo $assessment_icon; ?> me-1"></i> 
+                                    <?php echo ucfirst($report->assessment_type ?? 'baseline'); ?>
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary rounded-pill py-2 px-3">
+                                    <i class="fas fa-users me-1"></i> <?php echo $report->student_count ?? 0; ?>
+                                </span>
+                            </td>
+                            <td>
+                                <?php if (!empty($report->first_submission)): ?>
+                                    <span class="badge bg-light text-dark">
+                                        <i class="fas fa-calendar-day me-1"></i> <?php echo date('M j, Y', strtotime($report->first_submission)); ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-muted">N/A</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-center">
+                                <a href="<?php echo site_url('admin/reports/export_detail?' . http_build_query([
+                                    'legislative_district' => $report->legislative_district ?? '',
+                                    'school_district' => $report->school_district ?? '',
+                                    'school_name' => $report->school_name ?? '',
+                                    'school_id' => $report->school_id ?? '',
+                                    'grade_level' => $report->grade_level ?? '',
+                                    'section' => $report->section ?? '',
+                                    'assessment_type' => $report->assessment_type ?? 'baseline'
+                                ])); ?>" 
+                                   class="btn btn-success btn-sm" title="Export to Excel/CSV" data-bs-toggle="tooltip">
+                                    <i class="fas fa-file-export me-1"></i> Export
+                                </a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+      $(document).ready(function() {
+        // Initialize DataTables
+        $('#reportsTable').DataTable({
+          "pageLength": 25,
+          "ordering": true,
+          "order": [[0, 'asc'], [3, 'asc'], [4, 'asc'], [5, 'asc']],
+          "columnDefs": [
+            { "orderable": false, "targets": [8] }
+          ],
+          "language": {
+            "emptyTable": "No reports available",
+            "info": "Showing _START_ to _END_ of _TOTAL_ reports",
+            "infoEmpty": "Showing 0 to 0 of 0 reports",
+            "infoFiltered": "(filtered from _MAX_ total reports)",
+            "lengthMenu": "Show _MENU_ reports",
+            "search": "Search:",
+            "zeroRecords": "No matching reports found"
+          },
+          "responsive": true
+        });
+
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+          return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Add loading state to filter button
+        $('form').on('submit', function() {
+          var btn = $(this).find('button[type="submit"]');
+          btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Applying...');
+        });
+      });
+    </script>
+  </body>
+</html>
