@@ -143,7 +143,7 @@
               <h6 class="m-0 font-weight-bold text-primary">
                 <i class="fas fa-filter me-1"></i> Filter Reports
               </h6>
-              <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-outline-secondary btn-sm">
+              <a href="<?php echo site_url('district/reports'); ?>" class="btn btn-outline-secondary btn-sm">
                 <i class="fas fa-redo me-1"></i> Reset Filters
               </a>
             </div>
@@ -155,7 +155,7 @@
                   </h6>
                 </div>
                 <div class="card-body">
-                  <form method="get" action="<?php echo site_url('admin/reports'); ?>" class="row g-3">
+                  <form method="get" action="<?php echo site_url('district/reports'); ?>" class="row g-3">
                     <div class="col-md-3">
                       <label class="form-label fw-bold text-dark">
                         <i class="fas fa-landmark me-1"></i> Legislative District
@@ -262,15 +262,15 @@
                 <?php echo number_format(count($reports)); ?> Reports
             </span>
             <div>
-                <a href="<?php echo site_url('admin/reports/export?' . http_build_query($current_filters)); ?>" 
+                 <a href="<?php echo site_url('district/reports/export?' . http_build_query($current_filters)); ?>" 
                    class="btn btn-success btn-sm me-2">
                     <i class="fas fa-file-export me-1"></i> Export to CSV
                 </a>
-                <a href="<?php echo site_url('admin/reports/statistics?' . http_build_query($current_filters)); ?>" 
+                 <a href="<?php echo site_url('district/reports/statistics?' . http_build_query($current_filters)); ?>" 
                    class="btn btn-info btn-sm">
                     <i class="fas fa-chart-pie me-1"></i> View Statistics
                 </a>
-                <a href="<?php echo site_url('admin/reports/comparison_report'); ?>" 
+                 <a href="<?php echo site_url('district/reports/comparison_report'); ?>" 
                    class="btn btn-warning btn-sm ms-2">
                     <i class="fas fa-exchange-alt me-1"></i> Comparison Report
                 </a>
@@ -283,7 +283,7 @@
                 <i class="fas fa-inbox fa-4x text-gray-300 mb-3"></i>
                 <h5 class="text-gray-500 mb-2">No reports found</h5>
                 <p class="text-gray-500 mb-4">Try adjusting your filters or check back later for new submissions.</p>
-                <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-primary">
+                <a href="<?php echo site_url('district/reports'); ?>" class="btn btn-primary">
                     <i class="fas fa-redo me-1"></i> Clear Filters
                 </a>
             </div>
@@ -354,7 +354,7 @@
                                 <?php endif; ?>
                             </td>
                             <td class="text-center">
-                                <a href="<?php echo site_url('admin/reports/export_detail?' . http_build_query([
+                                <a href="<?php echo site_url('district/reports/export_detail?' . http_build_query([
                                     'legislative_district' => $report->legislative_district ?? '',
                                     'school_district' => $report->school_district ?? '',
                                     'school_name' => $report->school_name ?? '',

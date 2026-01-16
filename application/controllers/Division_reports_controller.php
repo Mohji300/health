@@ -78,7 +78,7 @@ class Division_reports_controller extends CI_Controller {
         ];
 
         // Load the new view file
-        $this->load->view('nutritional_reports', $data);
+        $this->load->view('division_reports', $data);
     }
 
     /**

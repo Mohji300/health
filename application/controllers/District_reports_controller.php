@@ -106,7 +106,7 @@ class District_reports_controller extends CI_Controller {
         ];
 
         // Load the new view file
-        $this->load->view('nutritional_reports', $data);
+        $this->load->view('district_reports', $data);
     }
 
     /**
