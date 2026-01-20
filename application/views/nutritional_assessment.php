@@ -154,24 +154,6 @@
             </form>
           </div>
 
-          <!-- Upload Results Section -->
-          <div id="uploadResultsSection" class="d-none no-print">
-            <div class="card mb-4">
-              <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Extraction Results</h5>
-              </div>
-              <div class="card-body">
-                <div id="uploadResultsMessage" class="alert alert-success"></div>
-                <div id="uploadStudentsTableContainer"></div>
-                <div class="text-end mt-3">
-                  <button type="button" id="addExtractedStudentsBtn" class="btn btn-primary">
-                    <i class="fas fa-plus-circle me-2"></i>Add All to Student List
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- Instructions -->
           <div class="alert alert-primary mb-4 no-print">
             <h5 class="alert-heading"><i class="fas fa-lightbulb"></i> Instructions</h5>
@@ -380,514 +362,466 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-      // Keep all your existing JavaScript code exactly as it is
-      const STORAGE_PREFIX = 'nutritional_assessment_';
-      let students = [];
-      let alertModal = null;
-      let loadingModal = null;
-      let extractedStudents = [];
+<script>
+  // Keep all your existing JavaScript code exactly as it is
+  const STORAGE_PREFIX = 'nutritional_assessment_';
+  let students = [];
+  let alertModal = null;
+  let loadingModal = null;
 
-      // Initialize
-      document.addEventListener('DOMContentLoaded', () => {
-        alertModal = new bootstrap.Modal(document.getElementById('alertModal'));
-        loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'), { keyboard: false, backdrop: 'static' });
-        
-        // Set today's date
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('date').value = today;
+  // Initialize
+  document.addEventListener('DOMContentLoaded', () => {
+    alertModal = new bootstrap.Modal(document.getElementById('alertModal'));
+    loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'), { keyboard: false, backdrop: 'static' });
+    
+    // Set today's date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').value = today;
 
-        // Load from localStorage
-        loadStudents();
-        updateUI();
+    // Load from localStorage
+    loadStudents();
+    updateUI();
 
-        // Event listeners
-        document.getElementById('assessmentForm').addEventListener('submit', (e) => {
-          e.preventDefault();
-          addStudent();
-        });
+    // Event listeners
+    document.getElementById('assessmentForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      addStudent();
+    });
 
-        document.getElementById('clearFormBtn').addEventListener('click', clearForm);
-        document.getElementById('clearAllBtn').addEventListener('click', clearAllStudents);
-        document.getElementById('submitBtn').addEventListener('click', submitReport);
-        
-        // Excel upload event listeners
-        document.getElementById('chooseFileBtn').addEventListener('click', function() {
-          document.getElementById('excelFile').click();
-        });
+    document.getElementById('clearFormBtn').addEventListener('click', clearForm);
+    document.getElementById('clearAllBtn').addEventListener('click', clearAllStudents);
+    document.getElementById('submitBtn').addEventListener('click', submitReport);
+    
+    // Excel upload event listeners
+    document.getElementById('chooseFileBtn').addEventListener('click', function() {
+      document.getElementById('excelFile').click();
+    });
 
-        document.getElementById('excelFile').addEventListener('change', function(event) {
-          if (event.target.files.length > 0) {
-            extractFromExcel();
-          }
-        });
-
-        document.getElementById('addExtractedStudentsBtn').addEventListener('click', addExtractedStudents);
-        
-        // Assessment switcher
-        document.getElementById('switchToBaseline').addEventListener('click', function() {
-          switchAssessmentType('baseline');
-        });
-        
-        document.getElementById('switchToEndline').addEventListener('click', function() {
-          switchAssessmentType('endline');
-        });
-      });
-
-      function switchAssessmentType(type) {
-        // Get current URL
-        const currentUrl = window.location.href;
-        const url = new URL(currentUrl);
-        
-        // Update assessment_type parameter
-        url.searchParams.set('assessment_type', type);
-        
-        // Reload page with new assessment type
-        window.location.href = url.toString();
+    document.getElementById('excelFile').addEventListener('change', function(event) {
+      if (event.target.files.length > 0) {
+        extractFromExcel();
       }
+    });
+    
+    // Assessment switcher
+    document.getElementById('switchToBaseline').addEventListener('click', function() {
+      switchAssessmentType('baseline');
+    });
+    
+    document.getElementById('switchToEndline').addEventListener('click', function() {
+      switchAssessmentType('endline');
+    });
+  });
 
-      // Excel Upload Functions
-      function extractFromExcel() {
-        const file = document.getElementById('excelFile').files[0];
-        if (!file) return;
+  function switchAssessmentType(type) {
+    // Get current URL
+    const currentUrl = window.location.href;
+    const url = new URL(currentUrl);
+    
+    // Update assessment_type parameter
+    url.searchParams.set('assessment_type', type);
+    
+    // Reload page with new assessment type
+    window.location.href = url.toString();
+  }
 
-        const fileExtension = file.name.split('.').pop().toLowerCase();
-        if (!['xlsx', 'xls', 'csv'].includes(fileExtension)) {
-          showAlert('Invalid File', 'Please select an Excel file (.xlsx, .xls) or CSV file');
-          return;
-        }
+  // Excel Upload Functions
+  function extractFromExcel() {
+    const file = document.getElementById('excelFile').files[0];
+    if (!file) return;
 
-        if (file.size > 5 * 1024 * 1024) { // 5MB
-          showAlert('File Too Large', 'Please select a file smaller than 5MB');
-          return;
-        }
+    const fileExtension = file.name.split('.').pop().toLowerCase();
+    if (!['xlsx', 'xls', 'csv'].includes(fileExtension)) {
+      showAlert('Invalid File', 'Please select an Excel file (.xlsx, .xls) or CSV file');
+      return;
+    }
 
-        document.getElementById('uploadLoadingSpinner').classList.remove('d-none');
-        document.getElementById('chooseFileBtn').disabled = true;
+    if (file.size > 5 * 1024 * 1024) { // 5MB
+      showAlert('File Too Large', 'Please select a file smaller than 5MB');
+      return;
+    }
 
-        const formData = new FormData();
-        formData.append('excel_file', file);
+    document.getElementById('uploadLoadingSpinner').classList.remove('d-none');
+    document.getElementById('chooseFileBtn').disabled = true;
 
-        fetch('<?php echo site_url("nutritional_upload/process_excel"); ?>', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById('uploadLoadingSpinner').classList.add('d-none');
-          document.getElementById('chooseFileBtn').disabled = false;
-          document.getElementById('excelFile').value = '';
+    const formData = new FormData();
+    formData.append('excel_file', file);
 
-          if (data.success) {
-            extractedStudents = data.students || [];
-            showUploadResults(data.message, extractedStudents);
-          } else {
-            showAlert('Processing Error', data.message);
-          }
-        })
-        .catch(error => {
-          document.getElementById('uploadLoadingSpinner').classList.add('d-none');
-          document.getElementById('chooseFileBtn').disabled = false;
-          document.getElementById('excelFile').value = '';
-          showAlert('Error', 'An error occurred while processing the file: ' + error.message);
-        });
+    fetch('<?php echo site_url("nutritional_upload/process_excel"); ?>', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById('uploadLoadingSpinner').classList.add('d-none');
+      document.getElementById('chooseFileBtn').disabled = false;
+      document.getElementById('excelFile').value = '';
+
+      if (data.success) {
+        const extractedStudents = data.students || [];
+        addExtractedStudentsDirectly(extractedStudents, data.message);
+      } else {
+        showAlert('Processing Error', data.message);
       }
+    })
+    .catch(error => {
+      document.getElementById('uploadLoadingSpinner').classList.add('d-none');
+      document.getElementById('chooseFileBtn').disabled = false;
+      document.getElementById('excelFile').value = '';
+      showAlert('Error', 'An error occurred while processing the file: ' + error.message);
+    });
+  }
 
-      function showUploadResults(message, students) {
-        const resultsMessage = document.getElementById('uploadResultsMessage');
-        const resultsSection = document.getElementById('uploadResultsSection');
-        const tableContainer = document.getElementById('uploadStudentsTableContainer');
+  function addExtractedStudentsDirectly(extractedStudents, message) {
+    if (extractedStudents.length === 0) {
+      showAlert('No Students', 'No valid student data found in the file.');
+      return;
+    }
 
-        resultsMessage.textContent = message;
-        resultsSection.classList.remove('d-none');
-
-        if (students && students.length > 0) {
-          let tableHtml = `
-            <div class="table-responsive mt-3">
-              <table class="table table-sm table-striped">
-                <thead class="table-dark">
-                  <tr>
-                    <th>Name</th>
-                    <th>Birthday</th>
-                    <th>Weight</th>
-                    <th>Height</th>
-                    <th>Sex</th>
-                    <th>BMI</th>
-                    <th>Nutritional Status</th>
-                    <th>Height-for-Age</th>
-                  </tr>
-                </thead>
-                <tbody>
-          `;
-
-          students.forEach(student => {
-            tableHtml += `
-              <tr>
-                <td>${escapeHtml(student.name)}</td>
-                <td>${escapeHtml(student.birthday)}</td>
-                <td>${student.weight || ''}</td>
-                <td>${student.height || ''}</td>
-                <td>${escapeHtml(student.sex)}</td>
-                <td>${student.bmi || ''}</td>
-                <td>${escapeHtml(student.nutritional_status)}</td>
-                <td>${escapeHtml(student.height_for_age)}</td>
-              </tr>
-            `;
-          });
-
-          tableHtml += `
-                </tbody>
-              </table>
-            </div>
-          `;
-
-          tableContainer.innerHTML = tableHtml;
-        }
-      }
-
-      function addExtractedStudents() {
-        if (extractedStudents.length === 0) {
-          showAlert('No Students', 'No extracted students to add.');
-          return;
-        }
-
-        let addedCount = 0;
-        
-        extractedStudents.forEach((extractedStudent, index) => {
-          console.log("Extracted student data:", extractedStudent);
-          
-          // Calculate age from birthday
-          const birthday = extractedStudent.birthday;
-          let ageYears = 0, ageMonths = 0;
-          let ageDisplay = '0|0';
-          
-          if (birthday) {
-            const bdate = new Date(birthday);
-            const today = new Date();
-            ageYears = today.getFullYear() - bdate.getFullYear();
-            ageMonths = today.getMonth() - bdate.getMonth();
-            if (ageMonths < 0) {
-              ageYears--;
-              ageMonths += 12;
-            }
-            ageDisplay = ageYears + '|' + ageMonths;
-          }
-          
-          // Map snake_case to camelCase for the UI
-          const student = {
-            name: extractedStudent.name,
-            birthday: extractedStudent.birthday,
-            weight: extractedStudent.weight,
-            height: extractedStudent.height,
-            sex: extractedStudent.sex,
-            grade: document.getElementById('grade').value,
-            section: document.getElementById('section').value,
-            school_year: document.getElementById('school_year').value,
-            date: document.getElementById('date').value,
-            legislative_district: document.getElementById('legislative_district').value,
-            school_district: document.getElementById('school_district').value,
-            school_id: document.getElementById('school_id').value,
-            school_name: document.getElementById('school_name').value,
-            heightSquared: extractedStudent.height_squared || (extractedStudent.height ? (extractedStudent.height * extractedStudent.height).toFixed(4) : null),
-            age: ageDisplay,
-            ageYears: ageYears,
-            ageMonths: ageMonths,
-            ageDisplay: ageDisplay,
-            bmi: extractedStudent.bmi,
-            nutritionalStatus: extractedStudent.nutritional_status || 'Not Specified',
-            heightForAge: extractedStudent.height_for_age || 'Not Specified',
-            sbfpBeneficiary: extractedStudent.sbfp_beneficiary || ((extractedStudent.nutritional_status === 'Severely Wasted' || extractedStudent.nutritional_status === 'Wasted') ? 'Yes' : 'No')
-          };
-          
-          console.log("Mapped student data with age:", student);
-          
-          students.push(student);
-          addedCount++;
-        });
-
-        saveStudents();
-        updateUI();
-        document.getElementById('uploadResultsSection').classList.add('d-none');
-        showAlert('Success', `Added ${addedCount} student(s) to the list.`);
-        extractedStudents = [];
-      }
-
-      // Existing Functions (keep all your existing functions the same)
-function getStorageKey() {
-    const ld = document.getElementById('legislative_district').value || 'na';
-    const sd = document.getElementById('school_district').value || 'na';
-    const gr = document.getElementById('grade').value || 'na';
-    const sc = document.getElementById('section').value || 'na';
-    const sy = document.getElementById('school_year').value || 'na';
-    const si = document.getElementById('school_id').value || 'na';
-    const sn = document.getElementById('school_name').value || 'na';
-    return STORAGE_PREFIX + [ld, sd, gr, sc, sy, sn].join('_');
-}
-
-      function loadStudents() {
-        const key = getStorageKey();
-        const stored = localStorage.getItem(key);
-        if (stored) {
-          try {
-            students = JSON.parse(stored);
-            // Update the current session count in the stats card (guarded)
-            const curEl = document.getElementById('currentSessionCount');
-            if (curEl) {
-              curEl.textContent = students.length;
-            } else {
-              console.warn('Element #currentSessionCount not found when loading students');
-            }
-          } catch (e) {
-            console.error('Error loading students:', e);
-            students = [];
-          }
-        }
-      }
-
-      function saveStudents() {
-        const key = getStorageKey();
-        localStorage.setItem(key, JSON.stringify(students));
-        // Update the current session count
-        const curEl = document.getElementById('currentSessionCount');
-        if (curEl) curEl.textContent = students.length;
-      }
-
-      function clearStoredStudents() {
-        const key = getStorageKey();
-        localStorage.removeItem(key);
-        const curEl = document.getElementById('currentSessionCount');
-        if (curEl) curEl.textContent = '0';
-      }
-
-function calculateStudentData(name, birthday, weight, height, sex) {
-    let ageYears = 0, ageMonths = 0;
-    if (birthday) {
+    let addedCount = 0;
+    let skippedCount = 0;
+    
+    extractedStudents.forEach((extractedStudent, index) => {
+      // Calculate age from birthday
+      const birthday = extractedStudent.birthday;
+      let ageYears = 0, ageMonths = 0;
+      let ageDisplay = '0|0';
+      
+      if (birthday) {
         const bdate = new Date(birthday);
         const today = new Date();
         ageYears = today.getFullYear() - bdate.getFullYear();
         ageMonths = today.getMonth() - bdate.getMonth();
         if (ageMonths < 0) {
-            ageYears--;
-            ageMonths += 12;
+          ageYears--;
+          ageMonths += 12;
         }
-    }
-
-    const heightSq = (height * height).toFixed(4);
-    const bmi = (weight / (height * height)).toFixed(2);
-
-    let nutritionalStatus = 'Normal';
-    if (bmi < 16) nutritionalStatus = 'Severely Wasted';
-    else if (bmi < 18.5) nutritionalStatus = 'Wasted';
-    else if (bmi < 25) nutritionalStatus = 'Normal';
-    else if (bmi < 30) nutritionalStatus = 'Overweight';
-    else nutritionalStatus = 'Obese';
-
-    const sbfpBeneficiary = (nutritionalStatus === 'Severely Wasted' || nutritionalStatus === 'Wasted') ? 'Yes' : 'No';
-
-    return {
-        name: name.trim(),
-        birthday: birthday,
-        weight: parseFloat(weight),
-        height: parseFloat(height),
-        sex: sex,
+        ageDisplay = ageYears + '|' + ageMonths;
+      }
+      
+      // Validate required fields
+      if (!extractedStudent.name || !extractedStudent.birthday || !extractedStudent.weight || !extractedStudent.height || !extractedStudent.sex) {
+        skippedCount++;
+        return;
+      }
+      
+      // Map snake_case to camelCase for the UI
+      const student = {
+        name: extractedStudent.name,
+        birthday: extractedStudent.birthday,
+        weight: extractedStudent.weight,
+        height: extractedStudent.height,
+        sex: extractedStudent.sex,
         grade: document.getElementById('grade').value,
         section: document.getElementById('section').value,
-        school_year: document.getElementById('school_year').value, // Add this line
+        school_year: document.getElementById('school_year').value,
         date: document.getElementById('date').value,
         legislative_district: document.getElementById('legislative_district').value,
         school_district: document.getElementById('school_district').value,
         school_id: document.getElementById('school_id').value,
         school_name: document.getElementById('school_name').value,
-        heightSquared: parseFloat(heightSq),
-        age: ageYears + '|' + ageMonths,
+        heightSquared: extractedStudent.height_squared || (extractedStudent.height ? (extractedStudent.height * extractedStudent.height).toFixed(4) : null),
+        age: ageDisplay,
         ageYears: ageYears,
         ageMonths: ageMonths,
-        ageDisplay: ageYears + '|' + ageMonths,
-        bmi: parseFloat(bmi),
-        nutritionalStatus: nutritionalStatus,
-        heightForAge: 'Normal',
-        sbfpBeneficiary: sbfpBeneficiary
-    };
-}
+        ageDisplay: ageDisplay,
+        bmi: extractedStudent.bmi,
+        nutritionalStatus: extractedStudent.nutritional_status || 'Not Specified',
+        heightForAge: extractedStudent.height_for_age || 'Not Specified',
+        sbfpBeneficiary: extractedStudent.sbfp_beneficiary || ((extractedStudent.nutritional_status === 'Severely Wasted' || extractedStudent.nutritional_status === 'Wasted') ? 'Yes' : 'No')
+      };
+      
+      students.push(student);
+      addedCount++;
+    });
 
-      function addStudent() {
-        const form = document.getElementById('assessmentForm');
-        if (!form.checkValidity()) {
-          form.classList.add('was-validated');
-          return;
+    saveStudents();
+    updateUI();
+    
+    // Show success message
+    let successMessage = `Successfully added ${addedCount} student(s) to the list.`;
+    if (skippedCount > 0) {
+      successMessage += ` ${skippedCount} record(s) were skipped due to missing data.`;
+    }
+    showAlert('Excel Import Complete', successMessage);
+  }
+
+  // Existing Functions (keep all your existing functions the same)
+  function getStorageKey() {
+      const ld = document.getElementById('legislative_district').value || 'na';
+      const sd = document.getElementById('school_district').value || 'na';
+      const gr = document.getElementById('grade').value || 'na';
+      const sc = document.getElementById('section').value || 'na';
+      const sy = document.getElementById('school_year').value || 'na';
+      const si = document.getElementById('school_id').value || 'na';
+      const sn = document.getElementById('school_name').value || 'na';
+      return STORAGE_PREFIX + [ld, sd, gr, sc, sy, sn].join('_');
+  }
+
+  function loadStudents() {
+    const key = getStorageKey();
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      try {
+        students = JSON.parse(stored);
+        // Update the current session count in the stats card (guarded)
+        const curEl = document.getElementById('currentSessionCount');
+        if (curEl) {
+          curEl.textContent = students.length;
+        } else {
+          console.warn('Element #currentSessionCount not found when loading students');
         }
+      } catch (e) {
+        console.error('Error loading students:', e);
+        students = [];
+      }
+    }
+  }
 
-        const name = document.getElementById('name').value;
-        const birthday = document.getElementById('birthday').value;
-        const weight = document.getElementById('weight').value;
-        const height = document.getElementById('height').value;
-        const sex = document.getElementById('sex').value;
+  function saveStudents() {
+    const key = getStorageKey();
+    localStorage.setItem(key, JSON.stringify(students));
+    // Update the current session count
+    const curEl = document.getElementById('currentSessionCount');
+    if (curEl) curEl.textContent = students.length;
+  }
 
-        const student = calculateStudentData(name, birthday, weight, height, sex);
-        students.push(student);
-        saveStudents();
-        clearForm();
-        updateUI();
-        showAlert('Success', 'Student added to the list!');
+  function clearStoredStudents() {
+    const key = getStorageKey();
+    localStorage.removeItem(key);
+    const curEl = document.getElementById('currentSessionCount');
+    if (curEl) curEl.textContent = '0';
+  }
+
+  function calculateStudentData(name, birthday, weight, height, sex) {
+      let ageYears = 0, ageMonths = 0;
+      if (birthday) {
+          const bdate = new Date(birthday);
+          const today = new Date();
+          ageYears = today.getFullYear() - bdate.getFullYear();
+          ageMonths = today.getMonth() - bdate.getMonth();
+          if (ageMonths < 0) {
+              ageYears--;
+              ageMonths += 12;
+          }
       }
 
-      function removeStudent(idx) {
-        if (confirm('Remove this student?')) {
-          students.splice(idx, 1);
-          saveStudents();
-          updateUI();
-        }
-      }
+      const heightSq = (height * height).toFixed(4);
+      const bmi = (weight / (height * height)).toFixed(2);
 
-      function clearForm() {
-        document.getElementById('name').value = '';
-        document.getElementById('birthday').value = '';
-        document.getElementById('weight').value = '';
-        document.getElementById('height').value = '';
-        document.getElementById('sex').value = '';
-        document.getElementById('assessmentForm').classList.remove('was-validated');
-      }
+      let nutritionalStatus = 'Normal';
+      if (bmi < 16) nutritionalStatus = 'Severely Wasted';
+      else if (bmi < 18.5) nutritionalStatus = 'Wasted';
+      else if (bmi < 25) nutritionalStatus = 'Normal';
+      else if (bmi < 30) nutritionalStatus = 'Overweight';
+      else nutritionalStatus = 'Obese';
 
-      function clearAllStudents() {
-        if (!confirm('Clear all student records?')) return;
+      const sbfpBeneficiary = (nutritionalStatus === 'Severely Wasted' || nutritionalStatus === 'Wasted') ? 'Yes' : 'No';
+
+      return {
+          name: name.trim(),
+          birthday: birthday,
+          weight: parseFloat(weight),
+          height: parseFloat(height),
+          sex: sex,
+          grade: document.getElementById('grade').value,
+          section: document.getElementById('section').value,
+          school_year: document.getElementById('school_year').value, // Add this line
+          date: document.getElementById('date').value,
+          legislative_district: document.getElementById('legislative_district').value,
+          school_district: document.getElementById('school_district').value,
+          school_id: document.getElementById('school_id').value,
+          school_name: document.getElementById('school_name').value,
+          heightSquared: parseFloat(heightSq),
+          age: ageYears + '|' + ageMonths,
+          ageYears: ageYears,
+          ageMonths: ageMonths,
+          ageDisplay: ageYears + '|' + ageMonths,
+          bmi: parseFloat(bmi),
+          nutritionalStatus: nutritionalStatus,
+          heightForAge: 'Normal',
+          sbfpBeneficiary: sbfpBeneficiary
+      };
+  }
+
+  function addStudent() {
+    const form = document.getElementById('assessmentForm');
+    if (!form.checkValidity()) {
+      form.classList.add('was-validated');
+      return;
+    }
+
+    const name = document.getElementById('name').value;
+    const birthday = document.getElementById('birthday').value;
+    const weight = document.getElementById('weight').value;
+    const height = document.getElementById('height').value;
+    const sex = document.getElementById('sex').value;
+
+    const student = calculateStudentData(name, birthday, weight, height, sex);
+    students.push(student);
+    saveStudents();
+    clearForm();
+    updateUI();
+    showAlert('Success', 'Student added to the list!');
+  }
+
+  function removeStudent(idx) {
+    if (confirm('Remove this student?')) {
+      students.splice(idx, 1);
+      saveStudents();
+      updateUI();
+    }
+  }
+
+  function clearForm() {
+    document.getElementById('name').value = '';
+    document.getElementById('birthday').value = '';
+    document.getElementById('weight').value = '';
+    document.getElementById('height').value = '';
+    document.getElementById('sex').value = '';
+    document.getElementById('assessmentForm').classList.remove('was-validated');
+  }
+
+  function clearAllStudents() {
+    if (!confirm('Clear all student records?')) return;
+    students = [];
+    saveStudents();
+    updateUI();
+    showAlert('Success', 'All records cleared.');
+  }
+
+  function updateUI() {
+    const tbody = document.getElementById('studentTableBody');
+    const count = document.getElementById('studentCount');
+    const clearBtn = document.getElementById('clearAllBtn');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (count) {
+      count.textContent = students.length + ' Student' + (students.length !== 1 ? 's' : '');
+    } else {
+      console.warn('Element #studentCount not found');
+    }
+
+    if (clearBtn) clearBtn.disabled = students.length === 0;
+    if (submitBtn) submitBtn.disabled = students.length === 0;
+
+    const curEl = document.getElementById('currentSessionCount');
+    if (curEl) curEl.textContent = students.length;
+
+    if (!tbody) {
+      console.warn('Element #studentTableBody not found; skipping table render');
+      return;
+    }
+
+    if (students.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted">No student records yet. Add some students above.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = students.map((s, idx) => `
+      <tr class="${getRowClass(s.nutritionalStatus)}">
+          <td>${s.name}</td>
+          <td>${s.birthday}</td>
+          <td>${s.grade}</td>
+          <td>${s.school_year || s.year || 'N/A'}</td> <!-- Added School Year -->
+          <td>${s.weight}</td>
+          <td>${s.height}</td>
+          <td>${s.sex}</td>
+          <td>${s.heightSquared}</td>
+          <td>${s.ageDisplay}</td>
+          <td>${s.bmi}</td>
+          <td>${s.nutritionalStatus}</td>
+          <td>${s.heightForAge}</td>
+          <td>${s.sbfpBeneficiary}</td>
+          <td><button type="button" class="btn btn-sm btn-danger" onclick="removeStudent(${idx})"><i class="fas fa-trash"></i></button></td>
+      </tr>
+    `).join('');
+  }
+
+  function getRowClass(status) {
+    switch (status) {
+      case 'Severely Wasted': return 'status-severely-wasted';
+      case 'Wasted': return 'status-wasted';
+      case 'Overweight': return 'status-overweight';
+      case 'Obese': return 'status-obese';
+      default: return '';
+    }
+  }
+
+  async function submitReport() {
+    if (students.length === 0) {
+      showAlert('No Records', 'Add students before submitting.');
+      return;
+    }
+
+    if (!confirm('Submit ' + students.length + ' student record(s)?')) return;
+
+    loadingModal.show();
+
+    try {
+      // Get assessment_type from URL or default to baseline
+      const urlParams = new URLSearchParams(window.location.search);
+      const assessmentType = urlParams.get('assessment_type') || 'baseline';
+      
+      console.log("Submitting with assessment_type:", assessmentType);
+      
+      const response = await fetch('<?= site_url('nutritionalassessment/bulk_store') ?>', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'students=' + encodeURIComponent(JSON.stringify(students)) + 
+              '&assessment_type=' + encodeURIComponent(assessmentType)
+      });
+
+      const result = await response.json();
+      console.log("Server response:", result);
+
+      if (result.success) {
         students = [];
         saveStudents();
+        clearStoredStudents();
         updateUI();
-        showAlert('Success', 'All records cleared.');
+        loadingModal.hide();
+        showAlert('Success', result.message || 'Records submitted successfully!');
+        setTimeout(() => window.location.href = '<?= site_url('sbfpdashboard') ?>', 1500);
+      } else {
+        loadingModal.hide();
+        showAlert('Error', result.message || 'Error submitting records. Check console for details.');
+        console.error("Submission errors:", result.errors);
       }
+    } catch (e) {
+      loadingModal.hide();
+      console.error("Network error:", e);
+      showAlert('Network Error', 'Error communicating with server: ' + e.message);
+    }
+  }
 
-      function updateUI() {
-        const tbody = document.getElementById('studentTableBody');
-        const count = document.getElementById('studentCount');
-        const clearBtn = document.getElementById('clearAllBtn');
-        const submitBtn = document.getElementById('submitBtn');
+  function showAlert(title, message) {
+    const tEl = document.getElementById('alertTitle');
+    const bEl = document.getElementById('alertBody');
+    if (tEl) tEl.textContent = title;
+    if (bEl) bEl.textContent = message;
+    if (typeof alertModal !== 'undefined' && alertModal) {
+      alertModal.show();
+    } else {
+      // Fallback: use built-in alert
+      console.warn('alertModal not initialized; falling back to window.alert');
+      window.alert(title + '\n\n' + message);
+    }
+  }
 
-        if (count) {
-          count.textContent = students.length + ' Student' + (students.length !== 1 ? 's' : '');
-        } else {
-          console.warn('Element #studentCount not found');
-        }
-
-        if (clearBtn) clearBtn.disabled = students.length === 0;
-        if (submitBtn) submitBtn.disabled = students.length === 0;
-
-        const curEl = document.getElementById('currentSessionCount');
-        if (curEl) curEl.textContent = students.length;
-
-        if (!tbody) {
-          console.warn('Element #studentTableBody not found; skipping table render');
-          return;
-        }
-
-        if (students.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted">No student records yet. Add some students above.</td></tr>';
-          return;
-        }
-
-tbody.innerHTML = students.map((s, idx) => `
-    <tr class="${getRowClass(s.nutritionalStatus)}">
-        <td>${s.name}</td>
-        <td>${s.birthday}</td>
-        <td>${s.grade}</td>
-        <td>${s.school_year || s.year || 'N/A'}</td> <!-- Added School Year -->
-        <td>${s.weight}</td>
-        <td>${s.height}</td>
-        <td>${s.sex}</td>
-        <td>${s.heightSquared}</td>
-        <td>${s.ageDisplay}</td>
-        <td>${s.bmi}</td>
-        <td>${s.nutritionalStatus}</td>
-        <td>${s.heightForAge}</td>
-        <td>${s.sbfpBeneficiary}</td>
-        <td><button type="button" class="btn btn-sm btn-danger" onclick="removeStudent(${idx})"><i class="fas fa-trash"></i></button></td>
-    </tr>
-`).join('');
-      }
-
-      function getRowClass(status) {
-        switch (status) {
-          case 'Severely Wasted': return 'status-severely-wasted';
-          case 'Wasted': return 'status-wasted';
-          case 'Overweight': return 'status-overweight';
-          case 'Obese': return 'status-obese';
-          default: return '';
-        }
-      }
-
-      async function submitReport() {
-        if (students.length === 0) {
-          showAlert('No Records', 'Add students before submitting.');
-          return;
-        }
-
-        if (!confirm('Submit ' + students.length + ' student record(s)?')) return;
-
-        loadingModal.show();
-
-        try {
-          // Get assessment_type from URL or default to baseline
-          const urlParams = new URLSearchParams(window.location.search);
-          const assessmentType = urlParams.get('assessment_type') || 'baseline';
-          
-          console.log("Submitting with assessment_type:", assessmentType);
-          
-          const response = await fetch('<?= site_url('nutritionalassessment/bulk_store') ?>', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: 'students=' + encodeURIComponent(JSON.stringify(students)) + 
-                  '&assessment_type=' + encodeURIComponent(assessmentType)
-          });
-
-          const result = await response.json();
-          console.log("Server response:", result);
-
-          if (result.success) {
-            students = [];
-            saveStudents();
-            clearStoredStudents();
-            updateUI();
-            loadingModal.hide();
-            showAlert('Success', result.message || 'Records submitted successfully!');
-            setTimeout(() => window.location.href = '<?= site_url('sbfpdashboard') ?>', 1500);
-          } else {
-            loadingModal.hide();
-            showAlert('Error', result.message || 'Error submitting records. Check console for details.');
-            console.error("Submission errors:", result.errors);
-          }
-        } catch (e) {
-          loadingModal.hide();
-          console.error("Network error:", e);
-          showAlert('Network Error', 'Error communicating with server: ' + e.message);
-        }
-      }
-
-      function showAlert(title, message) {
-        const tEl = document.getElementById('alertTitle');
-        const bEl = document.getElementById('alertBody');
-        if (tEl) tEl.textContent = title;
-        if (bEl) bEl.textContent = message;
-        if (typeof alertModal !== 'undefined' && alertModal) {
-          alertModal.show();
-        } else {
-          // Fallback: use built-in alert
-          console.warn('alertModal not initialized; falling back to window.alert');
-          window.alert(title + '\n\n' + message);
-        }
-      }
-
-      function escapeHtml(unsafe) {
-        if (unsafe === null || unsafe === undefined) return '';
-        return unsafe
-          .toString()
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#039;");
-      }
-    </script>
+  function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return '';
+    return unsafe
+      .toString()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>
   </body>
 </html>
