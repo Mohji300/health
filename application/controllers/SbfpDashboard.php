@@ -164,6 +164,7 @@ class SbfpDashboard extends CI_Controller {
             $user->school_district,
             $grade,
             $section,
+            $school_year,
             $assessment_type
         );
 
@@ -432,29 +433,30 @@ class SbfpDashboard extends CI_Controller {
     /**
      * Create a section (POST)
      */
-    public function create_section()
-    {
-        $grade = $this->input->post('grade', TRUE);
-        $section = $this->input->post('section', TRUE);
-        $leg = $this->input->post('legislative_district', TRUE);
-        $school = $this->input->post('school_district', TRUE);
+public function create_section()
+{
+    $grade = $this->input->post('grade', TRUE);
+    $section = $this->input->post('section', TRUE);
+    $school_year = $this->input->post('school_year', TRUE); // Make sure this line exists
+    $leg = $this->input->post('legislative_district', TRUE);
+    $school = $this->input->post('school_district', TRUE);
 
-        if (!$grade || !$section || !$leg || !$school) {
-            $this->session->set_flashdata('error', 'Missing required fields');
-            redirect('sbfpdashboard');
-            return;
-        }
-
-        $inserted = $this->Section_model->create_section($grade, $section, $leg, $school);
-
-        if ($inserted) {
-            $this->session->set_flashdata('success', 'Section saved successfully');
-        } else {
-            $this->session->set_flashdata('error', 'Failed to save section (it may already exist)');
-        }
-
+    if (!$grade || !$section || !$school_year || !$leg || !$school) {
+        $this->session->set_flashdata('error', 'Missing required fields');
         redirect('sbfpdashboard');
+        return;
     }
+
+    $inserted = $this->Section_model->create_section($grade, $section, $school_year, $leg, $school);
+
+    if ($inserted) {
+        $this->session->set_flashdata('success', 'Section saved successfully');
+    } else {
+        $this->session->set_flashdata('error', 'Failed to save section (it may already exist)');
+    }
+
+    redirect('sbfpdashboard');
+}
 
     /**
      * Remove a section (POST)

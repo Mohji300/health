@@ -17,6 +17,7 @@ class Section_model extends CI_Model {
      */
     public function get_by_location($legislative_district, $school_district)
     {
+        $this->db->select('id, grade, section, year as school_year, legislative_district, school_district, created_at');
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
         $this->db->order_by('grade', 'ASC');
@@ -27,7 +28,7 @@ class Section_model extends CI_Model {
     /**
      * Create a new section
      */
-    public function create_section($grade, $section, $legislative_district, $school_district)
+    public function create_section($grade, $section, $school_year, $legislative_district, $school_district)
     {
         // Get current user ID from session
         $user_id = $this->session->userdata('user_id');
@@ -36,9 +37,10 @@ class Section_model extends CI_Model {
             return false; // No user logged in
         }
 
-        // Check if section already exists
+        // Check if section already exists (including school_year in the check)
         $this->db->where('grade', $grade);
         $this->db->where('section', $section);
+        $this->db->where('year', $school_year); // Changed to 'year'
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
         $this->db->where('user_id', $user_id);
@@ -51,6 +53,7 @@ class Section_model extends CI_Model {
         $data = [
             'grade' => $grade,
             'section' => $section,
+            'year' => $school_year, // Changed to 'year'
             'legislative_district' => $legislative_district,
             'school_district' => $school_district,
             'user_id' => $user_id, // Add the user_id
@@ -92,6 +95,7 @@ class Section_model extends CI_Model {
      */
     public function get_by_user($user_id)
     {
+        $this->db->select('id, grade, section, year as school_year, legislative_district, school_district, created_at');
         $this->db->where('user_id', $user_id);
         $this->db->order_by('grade', 'ASC');
         $this->db->order_by('section', 'ASC');

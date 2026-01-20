@@ -16,45 +16,47 @@ class NutritionalAssessment extends CI_Controller {
     /**
      * Show the nutritional assessment form
      */
-    public function index()
-    {
-        $data = [];
-        $data['legislative_district'] = $this->input->get('legislative_district', TRUE);
-        $data['school_district'] = $this->input->get('school_district', TRUE);
-        $data['grade'] = $this->input->get('grade', TRUE);
-        $data['section'] = $this->input->get('section', TRUE);
-        $data['school_id'] = $this->input->get('school_id', TRUE) ?: 'N/A'; 
-        $data['school_name'] = $this->input->get('school_name', TRUE) ?: 'Unknown School';
-        $data['assessment_type'] = $this->input->get('assessment_type', TRUE) ?: 'baseline';
-        
-        // Check if assessment already exists for this section and type
-        $data['has_existing_assessment'] = $this->Nutritional_assessment_model->assessment_exists(
-            $data['legislative_district'],
-            $data['school_district'],
-            $data['grade'],
-            $data['section'],
-            $data['assessment_type']
-        );
-        
-        // Get existing assessments for this section to show types
-        $data['existing_assessments'] = $this->Nutritional_assessment_model->get_assessment_types(
-            $data['legislative_district'],
-            $data['school_district'],
-            $data['grade'],
-            $data['section']
-        );
-        
-        // If this is endline assessment but baseline doesn't exist, show warning
-        if ($data['assessment_type'] == 'endline' && 
-            !$this->has_baseline_assessment($data['existing_assessments'])) {
-            $this->session->set_flashdata('warning', 
-                'You are creating an endline assessment without a baseline. '
-                . 'It is recommended to create a baseline assessment first.');
-        }
-
-        // Load view with form
-        $this->load->view('nutritional_assessment', $data);
+public function index()
+{
+    $data = [];
+    $data['legislative_district'] = $this->input->get('legislative_district', TRUE);
+    $data['school_district'] = $this->input->get('school_district', TRUE);
+    $data['grade'] = $this->input->get('grade', TRUE);
+    $data['section'] = $this->input->get('section', TRUE);
+    $data['school_year'] = $this->input->get('school_year', TRUE); // Add this line
+    $data['school_id'] = $this->input->get('school_id', TRUE) ?: 'N/A'; 
+    $data['school_name'] = $this->input->get('school_name', TRUE) ?: 'Unknown School';
+    $data['assessment_type'] = $this->input->get('assessment_type', TRUE) ?: 'baseline';
+    
+    // Check if assessment already exists for this section and type
+    $data['has_existing_assessment'] = $this->Nutritional_assessment_model->assessment_exists(
+        $data['legislative_district'],
+        $data['school_district'],
+        $data['grade'],
+        $data['section'],
+        $data['school_year'], // Add school_year parameter
+        $data['assessment_type']
+    );
+    
+    // Get existing assessments for this section to show types
+    $data['existing_assessments'] = $this->Nutritional_assessment_model->get_assessment_types(
+        $data['legislative_district'],
+        $data['school_district'],
+        $data['grade'],
+        $data['section']
+    );
+    
+    // If this is endline assessment but baseline doesn't exist, show warning
+    if ($data['assessment_type'] == 'endline' && 
+        !$this->has_baseline_assessment($data['existing_assessments'])) {
+        $this->session->set_flashdata('warning', 
+            'You are creating an endline assessment without a baseline. '
+            . 'It is recommended to create a baseline assessment first.');
     }
+
+    // Load view with form
+    $this->load->view('nutritional_assessment', $data);
+}
 
     /**
      * Store a single assessment
@@ -187,6 +189,7 @@ public function bulk_store()
                 'school_name' => isset($student['school_name']) ? $student['school_name'] : '',
                 'grade_level' => isset($student['grade']) ? $student['grade'] : '',
                 'section' => isset($student['section']) ? $student['section'] : '',
+                'year' => isset($student['school_year']) ? $student['school_year'] : (isset($student['year']) ? $student['year'] : ''),
                 'name' => isset($student['name']) ? trim($student['name']) : '',
                 'birthday' => isset($student['birthday']) ? $student['birthday'] : '',
                 'weight' => isset($student['weight']) ? floatval($student['weight']) : 0,
@@ -266,6 +269,7 @@ private function get_existing_assessment($assessment_data)
     $this->db->where('birthday', $assessment_data['birthday']);
     $this->db->where('grade_level', $assessment_data['grade_level']);
     $this->db->where('section', $assessment_data['section']);
+    $this->db->where('year', $assessment_data['year'] ?? '');
     $this->db->where('school_id', $assessment_data['school_id']);
     $this->db->where('assessment_type', $assessment_data['assessment_type']);
     $this->db->where('is_deleted', FALSE);
@@ -285,6 +289,7 @@ private function check_duplicate_assessment($assessment_data)
     $this->db->where('birthday', $assessment_data['birthday']);
     $this->db->where('grade_level', $assessment_data['grade_level']);
     $this->db->where('section', $assessment_data['section']);
+    $this->db->where('year', $assessment_data['year'] ?? '');
     $this->db->where('school_id', $assessment_data['school_id']);
     $this->db->where('assessment_type', $assessment_data['assessment_type']); 
     $this->db->where('is_deleted', FALSE);

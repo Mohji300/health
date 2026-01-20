@@ -120,24 +120,25 @@
           <!-- Assessment Details Info Box -->
           <?php if (!empty($legislative_district) && !empty($school_district) && !empty($grade) && !empty($section)): ?>
           <div class="alert alert-info mb-4 no-print">
-            <h5 class="alert-heading"><i class="fas fa-info-circle"></i> Assessment Details</h5>
-            <div class="row">
-              <div class="col-md-6">
-                <p class="mb-1"><strong>Legislative District:</strong> <?= htmlspecialchars($legislative_district) ?></p>
-                <p class="mb-0"><strong>School District:</strong> <?= htmlspecialchars($school_district) ?></p>
-                <p class="mb-1"><strong>School ID:</strong> <?= htmlspecialchars($school_id)?></p>
-                <p class="mb-0"><strong>School Name:</strong> <?= htmlspecialchars($school_name ?? 'Unknown') ?></p>
+              <h5 class="alert-heading"><i class="fas fa-info-circle"></i> Assessment Details</h5>
+              <div class="row">
+                  <div class="col-md-6">
+                      <p class="mb-1"><strong>Legislative District:</strong> <?= htmlspecialchars($legislative_district) ?></p>
+                      <p class="mb-0"><strong>School District:</strong> <?= htmlspecialchars($school_district) ?></p>
+                      <p class="mb-1"><strong>School ID:</strong> <?= htmlspecialchars($school_id)?></p>
+                      <p class="mb-0"><strong>School Name:</strong> <?= htmlspecialchars($school_name ?? 'Unknown') ?></p>
+                  </div>
+                  <div class="col-md-6">
+                      <p class="mb-1"><strong>Grade Level:</strong> <?= htmlspecialchars($grade) ?></p>
+                      <p class="mb-0"><strong>Section:</strong> <?= htmlspecialchars($section) ?></p>
+                      <p class="mb-0"><strong>School Year:</strong> <?= htmlspecialchars($school_year ?? 'Not set') ?></p>
+                      <p class="mb-0"><strong>Assessment Type:</strong> 
+                          <span class="badge <?php echo (isset($assessment_type) && $assessment_type == 'endline') ? 'badge-endline' : 'badge-baseline'; ?>">
+                              <?php echo isset($assessment_type) ? ucfirst($assessment_type) : 'Baseline'; ?>
+                          </span>
+                      </p>
+                  </div>
               </div>
-              <div class="col-md-6">
-                <p class="mb-1"><strong>Grade Level:</strong> <?= htmlspecialchars($grade) ?></p>
-                <p class="mb-0"><strong>Section:</strong> <?= htmlspecialchars($section) ?></p>
-                <p class="mb-0"><strong>Assessment Type:</strong> 
-                  <span class="badge <?php echo (isset($assessment_type) && $assessment_type == 'endline') ? 'badge-endline' : 'badge-baseline'; ?>">
-                    <?php echo isset($assessment_type) ? ucfirst($assessment_type) : 'Baseline'; ?>
-                  </span>
-                </p>
-              </div>
-            </div>
           </div>
           <?php endif; ?>
 
@@ -191,38 +192,45 @@
               <form id="assessmentForm" class="needs-validation" novalidate>
                 <div class="row">
                   <!-- Left Column -->
-                  <div class="col-md-6">
-                    <div class="mb-3">
-                      <label for="date" class="form-label fw-bold">Date of Weighing:</label>
-                      <input type="date" id="date" name="date" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                      <label for="name" class="form-label fw-bold">Name:</label>
-                      <input type="text" id="name" name="name" class="form-control" placeholder="Last Name, First Name" required>
-                    </div>
-                    <div class="mb-3">
-                      <label for="birthday" class="form-label fw-bold">Birthday:</label>
-                      <input type="date" id="birthday" name="birthday" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                      <label for="legislative_district" class="form-label fw-bold">Legislative District:</label>
-                      <input type="text" id="legislative_district" name="legislative_district" 
-                             class="form-control bg-light" 
-                             value="<?= htmlspecialchars($legislative_district ?? '') ?>" readonly>
-                    </div>
-                    <div class="mb-3">
-                      <label for="school_name" class="form-label fw-bold">School Name:</label>
-                      <input type="text" id="school_name" name="school_name" 
-                             class="form-control bg-light" 
-                             value="<?= htmlspecialchars($school_name ?? '') ?>" readonly>
-                    </div>
-                    <div class="mb-3">
-                      <label for="school_id" class="form-label fw-bold">School ID: </label>
-                      <input type="text" id="school_id" name="school_id" 
-                             class="form-control bg-light" 
-                             value="<?= htmlspecialchars($school_id ?? '') ?>" readonly>
-                    </div>
-                  </div>
+<!-- Left Column -->
+<div class="col-md-6">
+    <div class="mb-3">
+        <label for="date" class="form-label fw-bold">Date of Weighing:</label>
+        <input type="date" id="date" name="date" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label for="name" class="form-label fw-bold">Name:</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="Last Name, First Name" required>
+    </div>
+    <div class="mb-3">
+        <label for="birthday" class="form-label fw-bold">Birthday:</label>
+        <input type="date" id="birthday" name="birthday" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label for="school_year" class="form-label fw-bold">School Year:</label>
+        <input type="text" id="school_year" name="school_year" 
+               class="form-control bg-light" 
+               value="<?= htmlspecialchars($school_year ?? '') ?>" readonly>
+    </div>
+    <div class="mb-3">
+        <label for="legislative_district" class="form-label fw-bold">Legislative District:</label>
+        <input type="text" id="legislative_district" name="legislative_district" 
+               class="form-control bg-light" 
+               value="<?= htmlspecialchars($legislative_district ?? '') ?>" readonly>
+    </div>
+    <div class="mb-3">
+        <label for="school_name" class="form-label fw-bold">School Name:</label>
+        <input type="text" id="school_name" name="school_name" 
+               class="form-control bg-light" 
+               value="<?= htmlspecialchars($school_name ?? '') ?>" readonly>
+    </div>
+    <div class="mb-3">
+        <label for="school_id" class="form-label fw-bold">School ID: </label>
+        <input type="text" id="school_id" name="school_id" 
+               class="form-control bg-light" 
+               value="<?= htmlspecialchars($school_id ?? '') ?>" readonly>
+    </div>
+</div>
 
                   <!-- Right Column -->
                   <div class="col-md-6">
@@ -292,23 +300,24 @@
 
               <div class="table-responsive">
                 <table class="table table-sm table-striped" id="studentTable">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Birthday</th>
-                      <th>Grade</th>
-                      <th>Weight (kg)</th>
-                      <th>Height (m)</th>
-                      <th>Sex</th>
-                      <th>Height² (m²)</th>
-                      <th>Age (y|m)</th>
-                      <th>BMI</th>
-                      <th>Nutritional Status</th>
-                      <th>Height-For-Age</th>
-                      <th>SBFP Beneficiary</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Birthday</th>
+            <th>Grade</th>
+            <th>School Year</th>
+            <th>Weight (kg)</th>
+            <th>Height (m)</th>
+            <th>Sex</th>
+            <th>Height² (m²)</th>
+            <th>Age (y|m)</th>
+            <th>BMI</th>
+            <th>Nutritional Status</th>
+            <th>Height-For-Age</th>
+            <th>SBFP Beneficiary</th>
+            <th>Action</th>
+        </tr>
+    </thead>
                   <tbody id="studentTableBody">
                     <tr><td colspan="13" class="text-center text-muted">No student records yet. Add some students above.</td></tr>
                   </tbody>
@@ -573,6 +582,7 @@
             sex: extractedStudent.sex,
             grade: document.getElementById('grade').value,
             section: document.getElementById('section').value,
+            school_year: document.getElementById('school_year').value,
             date: document.getElementById('date').value,
             legislative_district: document.getElementById('legislative_district').value,
             school_district: document.getElementById('school_district').value,
@@ -603,15 +613,16 @@
       }
 
       // Existing Functions (keep all your existing functions the same)
-      function getStorageKey() {
-        const ld = document.getElementById('legislative_district').value || 'na';
-        const sd = document.getElementById('school_district').value || 'na';
-        const gr = document.getElementById('grade').value || 'na';
-        const sc = document.getElementById('section').value || 'na';
-        const si = document.getElementById('school_id').value || 'na';
-        const sn = document.getElementById('school_name').value || 'na';
-        return STORAGE_PREFIX + [ld, sd, gr, sc, sn].join('_');
-      }
+function getStorageKey() {
+    const ld = document.getElementById('legislative_district').value || 'na';
+    const sd = document.getElementById('school_district').value || 'na';
+    const gr = document.getElementById('grade').value || 'na';
+    const sc = document.getElementById('section').value || 'na';
+    const sy = document.getElementById('school_year').value || 'na';
+    const si = document.getElementById('school_id').value || 'na';
+    const sn = document.getElementById('school_name').value || 'na';
+    return STORAGE_PREFIX + [ld, sd, gr, sc, sy, sn].join('_');
+}
 
       function loadStudents() {
         const key = getStorageKey();
@@ -648,55 +659,56 @@
         if (curEl) curEl.textContent = '0';
       }
 
-      function calculateStudentData(name, birthday, weight, height, sex) {
-        let ageYears = 0, ageMonths = 0;
-        if (birthday) {
-          const bdate = new Date(birthday);
-          const today = new Date();
-          ageYears = today.getFullYear() - bdate.getFullYear();
-          ageMonths = today.getMonth() - bdate.getMonth();
-          if (ageMonths < 0) {
+function calculateStudentData(name, birthday, weight, height, sex) {
+    let ageYears = 0, ageMonths = 0;
+    if (birthday) {
+        const bdate = new Date(birthday);
+        const today = new Date();
+        ageYears = today.getFullYear() - bdate.getFullYear();
+        ageMonths = today.getMonth() - bdate.getMonth();
+        if (ageMonths < 0) {
             ageYears--;
             ageMonths += 12;
-          }
         }
+    }
 
-        const heightSq = (height * height).toFixed(4);
-        const bmi = (weight / (height * height)).toFixed(2);
+    const heightSq = (height * height).toFixed(4);
+    const bmi = (weight / (height * height)).toFixed(2);
 
-        let nutritionalStatus = 'Normal';
-        if (bmi < 16) nutritionalStatus = 'Severely Wasted';
-        else if (bmi < 18.5) nutritionalStatus = 'Wasted';
-        else if (bmi < 25) nutritionalStatus = 'Normal';
-        else if (bmi < 30) nutritionalStatus = 'Overweight';
-        else nutritionalStatus = 'Obese';
+    let nutritionalStatus = 'Normal';
+    if (bmi < 16) nutritionalStatus = 'Severely Wasted';
+    else if (bmi < 18.5) nutritionalStatus = 'Wasted';
+    else if (bmi < 25) nutritionalStatus = 'Normal';
+    else if (bmi < 30) nutritionalStatus = 'Overweight';
+    else nutritionalStatus = 'Obese';
 
-        const sbfpBeneficiary = (nutritionalStatus === 'Severely Wasted' || nutritionalStatus === 'Wasted') ? 'Yes' : 'No';
+    const sbfpBeneficiary = (nutritionalStatus === 'Severely Wasted' || nutritionalStatus === 'Wasted') ? 'Yes' : 'No';
 
-        return {
-          name: name.trim(),
-          birthday: birthday,
-          weight: parseFloat(weight),
-          height: parseFloat(height),
-          sex: sex,
-          grade: document.getElementById('grade').value,
-          section: document.getElementById('section').value,
-          date: document.getElementById('date').value,
-          legislative_district: document.getElementById('legislative_district').value,
-          school_district: document.getElementById('school_district').value,
-          school_id: document.getElementById('school_id').value,
-          school_name: document.getElementById('school_name').value,
-          heightSquared: parseFloat(heightSq),
-          age: ageYears + '|' + ageMonths,
-          ageYears: ageYears,
-          ageMonths: ageMonths,
-          ageDisplay: ageYears + '|' + ageMonths,
-          bmi: parseFloat(bmi),
-          nutritionalStatus: nutritionalStatus,
-          heightForAge: 'Normal',
-          sbfpBeneficiary: sbfpBeneficiary
-        };
-      }
+    return {
+        name: name.trim(),
+        birthday: birthday,
+        weight: parseFloat(weight),
+        height: parseFloat(height),
+        sex: sex,
+        grade: document.getElementById('grade').value,
+        section: document.getElementById('section').value,
+        school_year: document.getElementById('school_year').value, // Add this line
+        date: document.getElementById('date').value,
+        legislative_district: document.getElementById('legislative_district').value,
+        school_district: document.getElementById('school_district').value,
+        school_id: document.getElementById('school_id').value,
+        school_name: document.getElementById('school_name').value,
+        heightSquared: parseFloat(heightSq),
+        age: ageYears + '|' + ageMonths,
+        ageYears: ageYears,
+        ageMonths: ageMonths,
+        ageDisplay: ageYears + '|' + ageMonths,
+        bmi: parseFloat(bmi),
+        nutritionalStatus: nutritionalStatus,
+        heightForAge: 'Normal',
+        sbfpBeneficiary: sbfpBeneficiary
+    };
+}
 
       function addStudent() {
         const form = document.getElementById('assessmentForm');
@@ -768,27 +780,28 @@
         }
 
         if (students.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted">No student records yet. Add some students above.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted">No student records yet. Add some students above.</td></tr>';
           return;
         }
 
-        tbody.innerHTML = students.map((s, idx) => `
-          <tr class="${getRowClass(s.nutritionalStatus)}">
-            <td>${s.name}</td>
-            <td>${s.birthday}</td>
-            <td>${s.grade}</td>
-            <td>${s.weight}</td>
-            <td>${s.height}</td>
-            <td>${s.sex}</td>
-            <td>${s.heightSquared}</td>
-            <td>${s.ageDisplay}</td>
-            <td>${s.bmi}</td>
-            <td>${s.nutritionalStatus}</td>
-            <td>${s.heightForAge}</td>
-            <td>${s.sbfpBeneficiary}</td>
-            <td><button type="button" class="btn btn-sm btn-danger" onclick="removeStudent(${idx})"><i class="fas fa-trash"></i></button></td>
-          </tr>
-        `).join('');
+tbody.innerHTML = students.map((s, idx) => `
+    <tr class="${getRowClass(s.nutritionalStatus)}">
+        <td>${s.name}</td>
+        <td>${s.birthday}</td>
+        <td>${s.grade}</td>
+        <td>${s.school_year || s.year || 'N/A'}</td> <!-- Added School Year -->
+        <td>${s.weight}</td>
+        <td>${s.height}</td>
+        <td>${s.sex}</td>
+        <td>${s.heightSquared}</td>
+        <td>${s.ageDisplay}</td>
+        <td>${s.bmi}</td>
+        <td>${s.nutritionalStatus}</td>
+        <td>${s.heightForAge}</td>
+        <td>${s.sbfpBeneficiary}</td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="removeStudent(${idx})"><i class="fas fa-trash"></i></button></td>
+    </tr>
+`).join('');
       }
 
       function getRowClass(status) {

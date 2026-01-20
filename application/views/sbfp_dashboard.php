@@ -16,7 +16,7 @@ $next_type = $is_baseline ? 'endline' : 'baseline';
 $submitted_lookup = [];
 foreach ($submitted as $s) {
     if (($s->assessment_type ?? 'baseline') == $assessment_type) {
-        $key = $s->grade . '||' . $s->section;
+        $key = $s->grade . '||' . $s->section . '||' . ($s->school_year ?? '');
         $submitted_lookup[$key] = [
             'total_students' => $s->total_students ?? 0,
             'last_updated' => $s->last_updated ?? null
@@ -277,42 +277,48 @@ foreach ($submitted as $s) {
                     </span>
                   </div>
                   <div class="card-body">
-                    <!-- Create Section Form -->
-                    <div class="card border mb-4">
-                      <div class="card-header bg-light">
-                        <h6 class="mb-0">
-                          <i class="fas fa-plus-circle me-1"></i> Create New Section
-                        </h6>
-                      </div>
-                      <div class="card-body">
-                        <form action="<?php echo site_url('sbfpdashboard/create_section'); ?>" method="post" class="row g-3" id="createSectionForm">
-                          <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark">Grade Level</label>
-                            <select name="grade" class="form-select" required>
-                              <option value="">Select Grade</option>
-                              <?php $grades = ['Kindergarten','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
-                              foreach ($grades as $g): ?>
-                                <option value="<?php echo htmlspecialchars($g); ?>"><?php echo htmlspecialchars($g); ?></option>
-                              <?php endforeach; ?>
-                            </select>
-                          </div>
+<!-- Create Section Form -->
+<div class="card border mb-4">
+    <div class="card-header bg-light">
+        <h6 class="mb-0">
+            <i class="fas fa-plus-circle me-1"></i> Create New Section
+        </h6>
+    </div>
+    <div class="card-body">
+        <form action="<?php echo site_url('sbfpdashboard/create_section'); ?>" method="post" class="row g-3" id="createSectionForm">
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-dark">Grade Level</label>
+                <select name="grade" class="form-select" required>
+                    <option value="">Select Grade</option>
+                    <?php $grades = ['Kindergarten','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
+                    foreach ($grades as $g): ?>
+                        <option value="<?php echo htmlspecialchars($g); ?>"><?php echo htmlspecialchars($g); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
-                          <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark">Section Name</label>
-                            <input type="text" name="section" class="form-control" placeholder="e.g., Section A, Diamond, Emerald" required>
-                          </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-dark">Section Name</label>
+                <input type="text" name="section" class="form-control" placeholder="e.g., Section A, Diamond, Emerald" required>
+            </div>
 
-                          <input type="hidden" name="legislative_district" value="<?php echo htmlspecialchars($auth->legislative_district ?? ''); ?>">
-                          <input type="hidden" name="school_district" value="<?php echo htmlspecialchars($auth->school_district ?? ''); ?>">
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-dark">School Year</label>
+                <input type="text" name="school_year" class="form-control" placeholder="e.g., 2024-2025" required>
+                <small class="text-muted">Format: YYYY-YYYY (e.g., 2024-2025)</small>
+            </div>
 
-                          <div class="col-md-4 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100 py-2">
-                              <i class="fas fa-plus-circle me-1"></i> Create Section
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
+            <input type="hidden" name="legislative_district" value="<?php echo htmlspecialchars($auth->legislative_district ?? ''); ?>">
+            <input type="hidden" name="school_district" value="<?php echo htmlspecialchars($auth->school_district ?? ''); ?>">
+
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100 py-2">
+                    <i class="fas fa-plus-circle me-1"></i> Create Section
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
                     <?php if (!empty($sections)): ?>
                       <h6 class="mt-4 mb-3 fw-bold text-dark">
@@ -320,24 +326,30 @@ foreach ($submitted as $s) {
                       </h6>
                       <div class="table-responsive">
                         <table class="table table-bordered table-hover">
-                          <thead class="table-light">
-                            <tr>
-                              <th>Grade Level</th>
-                              <th>Section</th>
-                              <th class="text-center">Status</th>
-                              <th class="text-center">Actions</th>
-                            </tr>
-                          </thead>
+<thead class="table-light">
+    <tr>
+        <th>Grade Level</th>
+        <th>Section</th>
+        <th>School Year</th>
+        <th class="text-center">Status</th>
+        <th class="text-center">Actions</th>
+    </tr>
+</thead>
                           <tbody>
                           <?php foreach ($sections as $item):
-                            $key = $item->grade . '||' . $item->section;
+                            $key = $item->grade . '||' . $item->section . '||' . ($item->school_year ?? '');
                             $isSubmitted = isset($submitted_lookup[$key]);
                             $assessmentData = $isSubmitted ? $submitted_lookup[$key] : null;
                           ?>
-                            <tr>
-                              <td class="fw-bold"><?php echo htmlspecialchars($item->grade); ?></td>
-                              <td><?php echo htmlspecialchars($item->section); ?></td>
-                              <td class="text-center">
+<tr>
+    <td class="fw-bold"><?php echo htmlspecialchars($item->grade); ?></td>
+    <td><?php echo htmlspecialchars($item->section); ?></td>
+    <td>
+        <span class="badge bg-secondary">
+            <?php echo htmlspecialchars($item->school_year ?? 'N/A'); ?>
+        </span>
+    </td>
+    <td class="text-center">
                                 <?php if ($isSubmitted): ?>
                                   <div class="d-flex flex-column align-items-center">
                                     <span class="badge <?php echo $is_baseline ? 'bg-primary' : 'bg-success'; ?> mb-1">
@@ -358,48 +370,50 @@ foreach ($submitted as $s) {
                                 <?php endif; ?>
                               </td>
                               <td>
-                                <div class="d-flex justify-content-center gap-2">
-                                  <?php if (!$isSubmitted): ?>
-                                    <!-- Create Assessment Button -->
-                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
-                                       class="btn btn-<?php echo $is_baseline ? 'primary' : 'success'; ?> btn-sm">
-                                      <i class="fas fa-<?php echo $is_baseline ? 'flag' : 'flag-checkered'; ?> me-1"></i>
-                                      Create <?php echo $is_baseline ? 'Baseline' : 'Endline'; ?>
-                                    </a>
-                                    
-                                    <!-- Remove Section Button -->
-                                    <form action="<?php echo site_url('sbfpdashboard/remove_section'); ?>" method="post" onsubmit="return confirm('Remove this section? This action cannot be undone.');" class="d-inline">
-                                      <input type="hidden" name="section_id" value="<?php echo (int)$item->id; ?>">
-                                      <button type="submit" class="btn btn-outline-danger btn-sm">
-                                        <i class="fas fa-trash me-1"></i> Remove
-                                      </button>
-                                    </form>
-                                  <?php else: ?>
-                                    <!-- Edit Assessment Button -->
-                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
-                                       class="btn btn-outline-<?php echo $is_baseline ? 'primary' : 'success'; ?> btn-sm">
-                                      <i class="fas fa-edit me-1"></i> Edit
-                                    </a>
-                                    
-                                    <!-- Lock Button -->
-                                    <button class="btn btn-warning btn-sm toggle-lock" 
-                                            data-grade="<?php echo htmlspecialchars($item->grade); ?>"
-                                            data-section="<?php echo htmlspecialchars($item->section); ?>"
-                                            data-type="<?php echo $assessment_type; ?>"
-                                            title="Lock/Unlock Assessment">
-                                      <i class="fas fa-lock"></i>
-                                    </button>
-                                    
-                                    <!-- Delete Assessment Button -->
-                                    <button class="btn btn-danger btn-sm delete-assessment btn-delete"
-                                            data-grade="<?php echo htmlspecialchars($item->grade); ?>"
-                                            data-section="<?php echo htmlspecialchars($item->section); ?>"
-                                            data-type="<?php echo $assessment_type; ?>"
-                                            title="Delete Assessment">
-                                      <i class="fas fa-trash"></i>
-                                    </button>
-                                  <?php endif; ?>
-                                </div>
+              <div class="d-flex justify-content-center gap-2">
+    <?php if (!$isSubmitted): ?>
+        <!-- Create Assessment Button -->
+        <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
+           class="btn btn-<?php echo $is_baseline ? 'primary' : 'success'; ?> btn-sm">
+            <i class="fas fa-<?php echo $is_baseline ? 'flag' : 'flag-checkered'; ?> me-1"></i>
+            Create <?php echo $is_baseline ? 'Baseline' : 'Endline'; ?>
+        </a>
+        
+        <!-- Remove Section Button -->
+        <form action="<?php echo site_url('sbfpdashboard/remove_section'); ?>" method="post" onsubmit="return confirm('Remove this section? This action cannot be undone.');" class="d-inline">
+            <input type="hidden" name="section_id" value="<?php echo (int)$item->id; ?>">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="fas fa-trash me-1"></i> Remove
+            </button>
+        </form>
+    <?php else: ?>
+        <!-- Edit Assessment Button -->
+        <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
+           class="btn btn-outline-<?php echo $is_baseline ? 'primary' : 'success'; ?> btn-sm">
+            <i class="fas fa-edit me-1"></i> Edit
+        </a>
+        
+        <!-- Lock Button -->
+        <button class="btn btn-warning btn-sm toggle-lock"
+                data-grade="<?php echo htmlspecialchars($item->grade); ?>"
+                data-section="<?php echo htmlspecialchars($item->section); ?>"
+                data-school_year="<?php echo htmlspecialchars($item->school_year ?? ''); ?>"
+                data-type="<?php echo $assessment_type; ?>"
+                title="Lock/Unlock Assessment">
+            <i class="fas fa-lock"></i>
+        </button>
+        
+        <!-- Delete Assessment Button -->
+        <button class="btn btn-danger btn-sm delete-assessment btn-delete"
+                data-grade="<?php echo htmlspecialchars($item->grade); ?>"
+                data-section="<?php echo htmlspecialchars($item->section); ?>"
+                data-school_year="<?php echo htmlspecialchars($item->school_year ?? ''); ?>"
+                data-type="<?php echo $assessment_type; ?>"
+                title="Delete Assessment">
+            <i class="fas fa-trash"></i>
+        </button>
+    <?php endif; ?>
+</div>
                               </td>
                             </tr>
                           <?php endforeach; ?>
@@ -444,31 +458,38 @@ foreach ($submitted as $s) {
                       <div class="list-group list-group-flush">
                         <?php foreach ($filtered_assessments as $s): ?>
                           <div class="list-group-item border-0 px-0 py-3">
-                            <div class="d-flex justify-content-between align-items-start">
-                              <div>
-                                <strong class="d-block"><?php echo htmlspecialchars($s->grade . ' - ' . $s->section); ?></strong>
-                                <small class="text-muted">
-                                  <i class="fas fa-calendar me-1"></i> 
-                                  <?php echo htmlspecialchars(date('M j, Y', strtotime($s->last_updated))); ?>
-                                </small>
-                              </div>
-                              <span class="badge <?php echo $is_baseline ? 'bg-primary' : 'bg-success'; ?>">
-                                <i class="fas fa-<?php echo $is_baseline ? 'flag' : 'flag-checkered'; ?>"></i>
-                              </span>
-                            </div>
+<div class="d-flex justify-content-between align-items-start">
+    <div>
+        <strong class="d-block"><?php echo htmlspecialchars($s->grade . ' - ' . $s->section); ?></strong>
+        <div class="d-flex align-items-center gap-2">
+            <small class="text-muted">
+                <i class="fas fa-calendar me-1"></i> 
+                <?php echo htmlspecialchars(date('M j, Y', strtotime($s->last_updated))); ?>
+            </small>
+            <span class="badge bg-dark">
+                <i class="fas fa-graduation-cap me-1"></i>
+                <?php echo htmlspecialchars($s->school_year ?? 'N/A'); ?>
+            </span>
+        </div>
+    </div>
+    <span class="badge <?php echo $is_baseline ? 'bg-primary' : 'bg-success'; ?>">
+        <i class="fas fa-<?php echo $is_baseline ? 'flag' : 'flag-checkered'; ?>"></i>
+    </span>
+</div>
                             <div class="mt-2 d-flex justify-content-between align-items-center">
                               <small class="text-muted">
                                 <i class="fas fa-users me-1"></i> <?php echo $s->total_students ?? 0; ?> students
                               </small>
                               <div class="btn-group btn-group-sm">
-                                <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($s->grade) . '&section=' . urlencode($s->section) . '&assessment_type=' . urlencode($assessment_type)); ?>" 
+                                <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($s->grade) . '&section=' . urlencode($s->section) . '&school_year=' . urlencode($s->school_year ?? '') . '&assessment_type=' . urlencode($assessment_type)); ?>" 
                                    class="btn btn-outline-info btn-sm">
                                   <i class="fas fa-eye"></i>
                                 </a>
-                                <button class="btn btn-outline-danger btn-sm delete-assessment-list" 
-                                        data-grade="<?php echo htmlspecialchars($s->grade); ?>"
-                                        data-section="<?php echo htmlspecialchars($s->section); ?>"
-                                        data-type="<?php echo htmlspecialchars($assessment_type); ?>">
+<button class="btn btn-outline-danger btn-sm delete-assessment-list" 
+        data-grade="<?php echo htmlspecialchars($s->grade); ?>"
+        data-section="<?php echo htmlspecialchars($s->section); ?>"
+        data-school_year="<?php echo htmlspecialchars($s->school_year ?? ''); ?>"
+        data-type="<?php echo htmlspecialchars($assessment_type); ?>">
                                   <i class="fas fa-trash"></i>
                                 </button>
                               </div>
@@ -538,6 +559,7 @@ foreach ($submitted as $s) {
                 </p>
                 <p><strong>Grade:</strong> <span id="deleteGrade"></span></p>
                 <p><strong>Section:</strong> <span id="deleteSection"></span></p>
+                <p><strong>School Year:</strong> <span id="deleteSchoolYear"></span></p>
                 <p class="text-danger mt-3"><strong>Warning:</strong> This action cannot be undone!</p>
             </div>
             <div class="modal-footer">
@@ -591,128 +613,136 @@ $(document).ready(function() {
     }
     
     // Handle assessment deletion button clicks
-    $('.delete-assessment, .delete-assessment-list').click(function() {
-        var grade = $(this).data('grade');
-        var section = $(this).data('section');
-        var type = $(this).data('type');
-        
-        console.log('Delete clicked:', grade, section, type);
-        
-        $('#deleteGrade').text(grade);
-        $('#deleteSection').text(section);
-        
-        // Store data for deletion
-        $('#deleteAssessmentModal').data('grade', grade);
-        $('#deleteAssessmentModal').data('section', section);
-        $('#deleteAssessmentModal').data('type', type);
-        
-        // Show the modal
-        var deleteModal = new bootstrap.Modal(document.getElementById('deleteAssessmentModal'));
-        deleteModal.show();
-    });
+$('.delete-assessment, .delete-assessment-list').click(function() {
+    var grade = $(this).data('grade');
+    var section = $(this).data('section');
+    var school_year = $(this).data('school_year');
+    var type = $(this).data('type');
+    
+    console.log('Delete clicked:', grade, section, school_year, type);
+    
+    $('#deleteGrade').text(grade);
+    $('#deleteSection').text(section);
+    $('#deleteSchoolYear').text(school_year);
+    
+    // Store data for deletion
+    $('#deleteAssessmentModal').data('grade', grade);
+    $('#deleteAssessmentModal').data('section', section);
+    $('#deleteAssessmentModal').data('school_year', school_year);
+    $('#deleteAssessmentModal').data('type', type);
+    
+    // Show the modal
+    var deleteModal = new bootstrap.Modal(document.getElementById('deleteAssessmentModal'));
+    deleteModal.show();
+});
     
     // Handle delete confirmation
-    $('#confirmDeleteBtn').click(function() {
-        var modal = $('#deleteAssessmentModal');
-        var grade = modal.data('grade');
-        var section = modal.data('section');
-        var type = modal.data('type');
-        
-        if (!grade || !section || !type) {
-            alert('Error: Missing assessment data');
-            return;
-        }
-        
-        if (confirm('Are you absolutely sure? This will permanently delete the assessment data.')) {
-            // Show loading
-            var button = $(this);
-            var originalText = button.html();
-            button.html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
-            button.prop('disabled', true);
-            
-            $.ajax({
-                url: '<?php echo site_url("sbfpdashboard/delete_assessment"); ?>',
-                method: 'POST',
-                data: {
-                    grade: grade,
-                    section: section,
-                    assessment_type: type
-                },
-                dataType: 'json',
-                success: function(response) {
-                    console.log('Delete response:', response);
-                    if (response.success) {
-                        // Close modal and reload page
-                        var deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteAssessmentModal'));
-                        deleteModal.hide();
-                        location.reload();
-                    } else {
-                        alert('Error: ' + response.message);
-                        button.html(originalText);
-                        button.prop('disabled', false);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Delete AJAX error:', error);
-                    console.error('Response:', xhr.responseText);
-                    alert('Error communicating with server. Check console for details.');
-                    button.html(originalText);
-                    button.prop('disabled', false);
-                }
-            });
-        }
-    });
+$('#confirmDeleteBtn').click(function() {
+    var modal = $('#deleteAssessmentModal');
+    var grade = modal.data('grade');
+    var section = modal.data('section');
+    var school_year = modal.data('school_year');
+    var type = modal.data('type');
     
-    // Toggle Lock functionality
-    $('.toggle-lock').click(function() {
-        var grade = $(this).data('grade');
-        var section = $(this).data('section');
-        var type = $(this).data('type');
+    if (!grade || !section || !type) {
+        alert('Error: Missing assessment data');
+        return;
+    }
+    
+    if (confirm('Are you absolutely sure? This will permanently delete the assessment data.')) {
+        // Show loading
         var button = $(this);
-        
-        console.log('Toggle lock clicked:', grade, section, type);
-        
-        // Add loading state
-        var originalHtml = button.html();
-        button.html('<i class="fas fa-spinner fa-spin"></i>');
+        var originalText = button.html();
+        button.html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
         button.prop('disabled', true);
         
         $.ajax({
-            url: '<?php echo site_url("sbfpdashboard/toggle_lock"); ?>',
+            url: '<?php echo site_url("sbfpdashboard/delete_assessment"); ?>',
             method: 'POST',
             data: {
                 grade: grade,
                 section: section,
+                school_year: school_year,
                 assessment_type: type
             },
             dataType: 'json',
             success: function(response) {
-                console.log('Lock response:', response);
+                console.log('Delete response:', response);
                 if (response.success) {
-                    // Toggle lock icon
-                    if (button.find('i').hasClass('fa-lock')) {
-                        button.html('<i class="fas fa-unlock"></i>');
-                        button.removeClass('btn-warning').addClass('btn-success');
-                    } else {
-                        button.html('<i class="fas fa-lock"></i>');
-                        button.removeClass('btn-success').addClass('btn-warning');
-                    }
-                    alert('Assessment ' + response.message.toLowerCase());
+                    // Close modal and reload page
+                    var deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteAssessmentModal'));
+                    deleteModal.hide();
+                    location.reload();
                 } else {
                     alert('Error: ' + response.message);
-                    button.html(originalHtml);
+                    button.html(originalText);
+                    button.prop('disabled', false);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Lock AJAX error:', error);
-                alert('Error communicating with server');
-                button.html(originalHtml);
-            },
-            complete: function() {
+                console.error('Delete AJAX error:', error);
+                console.error('Response:', xhr.responseText);
+                alert('Error communicating with server. Check console for details.');
+                button.html(originalText);
                 button.prop('disabled', false);
             }
         });
+    }
+});
+    
+    // Toggle Lock functionality
+// Toggle Lock functionality
+$('.toggle-lock').click(function() {
+    var grade = $(this).data('grade');
+    var section = $(this).data('section');
+    var school_year = $(this).data('school_year');
+    var type = $(this).data('type');
+    var button = $(this);
+    
+    console.log('Toggle lock clicked:', grade, section, school_year, type);
+    
+    // Add loading state
+    var originalHtml = button.html();
+    button.html('<i class="fas fa-spinner fa-spin"></i>');
+    button.prop('disabled', true);
+    
+    $.ajax({
+        url: '<?php echo site_url("sbfpdashboard/toggle_lock"); ?>',
+        method: 'POST',
+        data: {
+            grade: grade,
+            section: section,
+            school_year: school_year,
+            assessment_type: type
+        },
+        dataType: 'json',
+        success: function(response) {
+            console.log('Lock response:', response);
+            if (response.success) {
+                // Toggle lock icon
+                if (button.find('i').hasClass('fa-lock')) {
+                    button.html('<i class="fas fa-unlock"></i>');
+                    button.removeClass('btn-warning').addClass('btn-success');
+                } else {
+                    button.html('<i class="fas fa-lock"></i>');
+                    button.removeClass('btn-success').addClass('btn-warning');
+                }
+                alert('Assessment ' + response.message.toLowerCase());
+            } else {
+                alert('Error: ' + response.message);
+                button.html(originalHtml);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Lock AJAX error:', error);
+            alert('Error communicating with server');
+            button.html(originalHtml);
+        },
+        complete: function() {
+            button.prop('disabled', false);
+        }
     });
+});
 });
 </script>
   </body>

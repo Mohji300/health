@@ -16,12 +16,12 @@ class Nutritional_assessment_model extends CI_Model {
      */
     public function get_submitted_summary($legislative_district, $school_district)
     {
-        $this->db->select('grade_level as grade, section, assessment_type, COUNT(*) as total_students, MAX(date_of_weighing) as last_updated');
+        $this->db->select('grade_level as grade, section, year as school_year, assessment_type, COUNT(*) as total_students, MAX(date_of_weighing) as last_updated');
         $this->db->from('nutritional_assessments');
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
-        $this->db->where('is_deleted', FALSE); // Only show non-deleted
-        $this->db->group_by(['grade_level', 'section', 'assessment_type']);
+        $this->db->where('is_deleted', FALSE);
+        $this->db->group_by(['grade_level', 'section', 'year', 'assessment_type']);
         $this->db->order_by('grade_level', 'ASC');
         $this->db->order_by('section', 'ASC');
         $this->db->order_by('assessment_type', 'ASC');
@@ -32,13 +32,18 @@ class Nutritional_assessment_model extends CI_Model {
     /**
      * Delete assessment (soft delete)
      */
-    public function delete_assessment($legislative_district, $school_district, $grade, $section, $assessment_type = null)
+    public function delete_assessment($legislative_district, $school_district, $grade, $section, $school_year = null, $assessment_type = null)
     {
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
         $this->db->where('grade_level', $grade);
         $this->db->where('section', $section);
         $this->db->where('is_deleted', FALSE);
+        
+        // Add school_year filter if provided
+        if ($school_year && $school_year !== 'N/A') {
+            $this->db->where('year', $school_year);
+        }
         
         if ($assessment_type && $assessment_type != 'both') {
             $this->db->where('assessment_type', $assessment_type);
@@ -57,14 +62,14 @@ class Nutritional_assessment_model extends CI_Model {
      */
     public function get_assessment_types($legislative_district, $school_district, $grade, $section)
     {
-        $this->db->select('assessment_type, COUNT(*) as count, MAX(date_of_weighing) as last_updated');
+        $this->db->select('assessment_type, year as school_year, COUNT(*) as count, MAX(date_of_weighing) as last_updated');
         $this->db->from('nutritional_assessments');
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
         $this->db->where('grade_level', $grade);
         $this->db->where('section', $section);
         $this->db->where('is_deleted', FALSE);
-        $this->db->group_by('assessment_type');
+        $this->db->group_by('assessment_type, year');
         
         return $this->db->get()->result();
     }
@@ -72,7 +77,7 @@ class Nutritional_assessment_model extends CI_Model {
     /**
      * Check if assessment exists for a section
      */
-    public function assessment_exists($legislative_district, $school_district, $grade, $section, $assessment_type = 'baseline')
+    public function assessment_exists($legislative_district, $school_district, $grade, $section, $school_year = null, $assessment_type = 'baseline')
     {
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
@@ -81,19 +86,29 @@ class Nutritional_assessment_model extends CI_Model {
         $this->db->where('assessment_type', $assessment_type);
         $this->db->where('is_deleted', FALSE);
         
+        // Add school_year filter if provided
+        if ($school_year && $school_year !== 'N/A') {
+            $this->db->where('year', $school_year);
+        }
+        
         return $this->db->count_all_results('nutritional_assessments') > 0;
     }
 
     /**
      * Get assessments by section
      */
-    public function get_by_section($legislative_district, $school_district, $grade_level, $section, $assessment_type = null)
+    public function get_by_section($legislative_district, $school_district, $grade_level, $section, $school_year = null, $assessment_type = null)
     {
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
         $this->db->where('grade_level', $grade_level);
         $this->db->where('section', $section);
         $this->db->where('is_deleted', FALSE);
+        
+        // Add school_year filter if provided
+        if ($school_year && $school_year !== 'N/A') {
+            $this->db->where('year', $school_year);
+        }
         
         if ($assessment_type) {
             $this->db->where('assessment_type', $assessment_type);
@@ -267,6 +282,7 @@ public function get_reports_with_filters($legislative_district = null, $school_d
         school_district, 
         grade_level, 
         section,
+        year as school_year,
         assessment_type,
         COUNT(*) as student_count, 
         MIN(created_at) as first_submission, 
@@ -274,7 +290,7 @@ public function get_reports_with_filters($legislative_district = null, $school_d
     ');
     $this->db->from($this->table);
     $this->db->where('is_deleted', FALSE);
-    $this->db->group_by('school_id, school_name, legislative_district, school_district, grade_level, section, assessment_type');
+    $this->db->group_by('school_id, school_name, legislative_district, school_district, grade_level, section, year, assessment_type');
 
     // Apply filters
     if (!empty($legislative_district)) {
@@ -473,6 +489,7 @@ public function get_sbfp_beneficiaries($filters = [])
         $this->db->select('
             grade_level, 
             section,
+            year as school_year,
             SUM(CASE WHEN LOWER(nutritional_status) = "severely wasted" THEN 1 ELSE 0 END) as severely_wasted,
             SUM(CASE WHEN LOWER(nutritional_status) = "wasted" THEN 1 ELSE 0 END) as wasted,
             SUM(CASE WHEN LOWER(nutritional_status) = "normal" THEN 1 ELSE 0 END) as normal_bmi,
@@ -505,7 +522,7 @@ public function get_sbfp_beneficiaries($filters = [])
             $this->db->where('date_of_weighing <=', $filters['date_to']);
         }
         
-        $this->db->group_by(['grade_level', 'section']);
+        $this->db->group_by(['grade_level', 'section', 'year']);
         $this->db->order_by('grade_level', 'ASC');
         $this->db->order_by('section', 'ASC');
         
@@ -560,6 +577,7 @@ public function get_sbfp_beneficiaries($filters = [])
             school_district,
             grade_level,
             section,
+            year as school_year,
             COUNT(*) as total_students,
             SUM(CASE WHEN LOWER(nutritional_status) = "severely wasted" THEN 1 ELSE 0 END) as severely_wasted,
             SUM(CASE WHEN LOWER(nutritional_status) = "wasted" THEN 1 ELSE 0 END) as wasted,
@@ -571,7 +589,7 @@ public function get_sbfp_beneficiaries($filters = [])
         
         $this->db->from($this->table);
         $this->db->where('is_deleted', FALSE);
-        $this->db->group_by('school_name, legislative_district, school_district, grade_level, section');
+        $this->db->group_by('school_name, legislative_district, school_district, grade_level, section, year');
         
         // Apply filters
         $this->apply_filters($filters);
@@ -680,6 +698,11 @@ private function apply_filters($filters = [])
         $this->db->where('assessment_type', $filters['assessment_type']);
     }
     
+    // Add school_year filter if specified
+    if (!empty($filters['school_year'])) {
+        $this->db->where('year', $filters['school_year']);
+    }
+    
     // Add nutritional_status filter if specified
     if (!empty($filters['nutritional_status'])) {
         $this->db->where('LOWER(nutritional_status)', strtolower($filters['nutritional_status']));
@@ -720,6 +743,7 @@ private function apply_filters($filters = [])
             school_district,
             grade_level,
             section,
+            year as school_year,
             name,
             birthday,
             age,
@@ -796,7 +820,7 @@ private function apply_filters($filters = [])
         return $this->db->get()->result();
     }
 
-    /**
+/**
  * Get export data with filters
  */
 public function get_export_data_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null)
