@@ -78,8 +78,8 @@ foreach ($submitted as $s) {
       
       /* Assessment type switcher */
       .assessment-switcher {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
+        background: #ffffff;
+        border: 1px solid #ffffff;
         border-radius: 50px;
         padding: 2px;
         display: inline-flex;
@@ -90,6 +90,7 @@ foreach ($submitted as $s) {
         padding: 5px 15px;
         font-size: 0.9rem;
         transition: all 0.3s;
+        min-width: 90px;
       }
       .assessment-switcher .btn.active {
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
@@ -104,6 +105,28 @@ foreach ($submitted as $s) {
         transform: scale(1.05);
         transition: transform 0.2s;
       }
+
+      /* Fix switcher visibility */
+      .assessment-switcher .btn {
+        font-weight: 600;
+      }
+
+      /* Baseline button colors */
+      .assessment-switcher .btn.btn-primary {
+        color: #0d6efd; /* Bootstrap primary blue */
+      }
+
+      /* Endline button colors */
+      .assessment-switcher .btn.btn-success {
+        color: #198754; /* Bootstrap success green */
+      }
+
+      /* Active state keeps white text */
+      .assessment-switcher .btn.active.btn-primary,
+      .assessment-switcher .btn.active.btn-success {
+        color: #ffffff !important;
+      }
+
       
       /* Modal styling */
       .modal-backdrop { opacity: 0.5; }
@@ -690,7 +713,6 @@ $('#confirmDeleteBtn').click(function() {
     }
 });
     
-    // Toggle Lock functionality
 // Toggle Lock functionality
 $('.toggle-lock').click(function() {
     var grade = $(this).data('grade');

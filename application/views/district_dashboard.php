@@ -56,6 +56,27 @@
         .assessment-switcher .btn:not(.active):hover {
             background: rgba(0,0,0,0.05);
         }
+
+        /* Fix switcher visibility */
+        .assessment-switcher .btn {
+            font-weight: 600;
+        }
+
+        /* Baseline button colors */
+        .assessment-switcher .btn.btn-primary {
+            color: #0d6efd; /* Bootstrap primary blue */
+        }
+
+        /* Endline button colors */
+        .assessment-switcher .btn.btn-success {
+            color: #198754; /* Bootstrap success green */
+        }
+
+        /* Active state keeps white text */
+        .assessment-switcher .btn.active.btn-primary,
+        .assessment-switcher .btn.active.btn-success {
+            color: #ffffff !important;
+        }
         
         /* Assessment type badge */
         .assessment-badge {
