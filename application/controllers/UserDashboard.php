@@ -47,6 +47,7 @@ class UserDashboard extends CI_Controller {
         
         // Get assessment counts for the toggle switch
         $data['baseline_count'] = $this->Nutritional_model->get_assessment_count_by_type('baseline');
+        $data['midline_count'] = $this->Nutritional_model->get_assessment_count_by_type('midline');
         $data['endline_count'] = $this->Nutritional_model->get_assessment_count_by_type('endline');
         
         // Check if current type has data
@@ -68,7 +69,8 @@ class UserDashboard extends CI_Controller {
         
         $assessment_type = $this->input->post('assessment_type', TRUE);
         
-        if (!in_array($assessment_type, ['baseline', 'endline'])) {
+        // Add 'midline' to the allowed assessment types
+        if (!in_array($assessment_type, ['baseline', 'midline', 'endline'])) {
             $this->output->set_content_type('application/json')->set_output(json_encode([
                 'success' => false,
                 'message' => 'Invalid assessment type'
@@ -94,6 +96,11 @@ class UserDashboard extends CI_Controller {
         if (!$this->input->is_ajax_request()) {
             show_404();
             return;
+        }
+        
+        // Validate type
+        if (!in_array($type, ['baseline', 'midline', 'endline'])) {
+            $type = 'baseline';
         }
         
         // Fetch processed nutritional data from model with assessment_type filter

@@ -86,7 +86,8 @@ class SbfpDashboard extends CI_Controller {
         
         $assessment_type = $this->input->post('assessment_type', TRUE);
         
-        if (!in_array($assessment_type, ['baseline', 'endline'])) {
+        // Add 'midline' to the allowed assessment types
+        if (!in_array($assessment_type, ['baseline', 'midline', 'endline'])) {
             $this->output->set_content_type('application/json')->set_output(json_encode([
                 'success' => false,
                 'message' => 'Invalid assessment type'

@@ -170,19 +170,22 @@ class Nutritional_model extends CI_Model {
     /**
      * Get assessment count by type
      */
-    public function get_assessment_count_by_type($assessment_type)
+    public function get_assessment_count_by_type($type)
     {
-        $this->db->where('assessment_type', $assessment_type);
-        return $this->db->count_all_results($this->table);
+        $this->db->where('assessment_type', $type);
+        $this->db->where('is_deleted', 0);
+        return $this->db->count_all_results('nutritional_assessments');
     }
 
     /**
      * Check if assessment type has data
      */
-    public function has_assessment_data($assessment_type)
+    public function has_assessment_data($type)
     {
-        $this->db->where('assessment_type', $assessment_type);
-        return $this->db->count_all_results($this->table) > 0;
+        $this->db->where('assessment_type', $type);
+        $this->db->where('is_deleted', 0);
+        $count = $this->db->count_all_results('nutritional_assessments');
+        return $count > 0;
     }
 
     /**

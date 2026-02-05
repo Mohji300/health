@@ -3,10 +3,12 @@
 // Get current assessment type from session or default to baseline
 $assessment_type = isset($assessment_type) ? $assessment_type : 'baseline';
 $is_baseline = ($assessment_type == 'baseline');
-$next_type = $is_baseline ? 'endline' : 'baseline';
+$is_midline = ($assessment_type == 'midline');
+$is_endline = ($assessment_type == 'endline');
 
 // Get counts
 $baseline_count = isset($baseline_count) ? $baseline_count : 0;
+$midline_count = isset($midline_count) ? $midline_count : 0;
 $endline_count = isset($endline_count) ? $endline_count : 0;
 
 // Helper functions and variable definitions must be at the TOP
@@ -111,6 +113,10 @@ $secondaryGrades = [
         color: #0d6efd; /* Bootstrap primary blue */
       }
 
+      .assessment-switcher .btn.btn-info {
+      color: #0dcaf0; /* Bootstrap info cyan */
+      }
+
       /* Endline button colors */
       .assessment-switcher .btn.btn-success {
         color: #198754; /* Bootstrap success green */
@@ -118,6 +124,7 @@ $secondaryGrades = [
 
       /* Active state keeps white text */
       .assessment-switcher .btn.active.btn-primary,
+      .assessment-switcher .btn.active.btn-info,
       .assessment-switcher .btn.active.btn-success {
         color: #ffffff !important;
       }
@@ -134,6 +141,13 @@ $secondaryGrades = [
         background: linear-gradient(45deg, #4e73df, #224abe);
         color: white;
       }
+
+      /* Add midline badge style */
+      .badge-midline {
+          background: linear-gradient(45deg, #5ae1f6, #11c2dd);
+          color: white;
+      }
+
       .badge-endline {
         background: linear-gradient(45deg, #1cc88a, #13855c);
         color: white;
@@ -176,14 +190,18 @@ $secondaryGrades = [
                 </div>
                 <div class="d-flex align-items-center">
                   <div class="assessment-switcher">
-                    <button class="btn btn-primary btn-sm <?php echo $is_baseline ? 'active' : ''; ?>" 
-                            id="switchToBaseline">
-                      <i class="fas fa-flag me-1"></i> Baseline
-                    </button>
-                    <button class="btn btn-success btn-sm <?php echo !$is_baseline ? 'active' : ''; ?>" 
-                            id="switchToEndline">
-                      <i class="fas fa-flag-checkered me-1"></i> Endline
-                    </button>
+                      <button class="btn btn-primary btn-sm <?php echo $is_baseline ? 'active' : ''; ?>" 
+                              id="switchToBaseline">
+                          <i class="fas fa-flag me-1"></i> Baseline
+                      </button>
+                      <button class="btn btn-info btn-sm <?php echo $is_midline ? 'active' : ''; ?>" 
+                              id="switchToMidline">
+                          <i class="fas fa-flag me-1"></i> Midline
+                      </button>
+                      <button class="btn btn-success btn-sm <?php echo $is_endline ? 'active' : ''; ?>" 
+                              id="switchToEndline">
+                          <i class="fas fa-flag-checkered me-1"></i> Endline
+                      </button>
                   </div>
                 </div>
               </div>
@@ -191,38 +209,40 @@ $secondaryGrades = [
           </div>
 
           <!-- Add this in your view, after the Assessment Info Card -->
-<?php if (!$has_data): ?>
-<div class="alert alert-warning mb-4">
-    <div class="d-flex align-items-center">
-        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
-        <div>
-            <h5 class="alert-heading mb-1">No <?php echo ucfirst($assessment_type); ?> Data Available</h5>
-            <p class="mb-0">
-                No <?php echo strtolower($assessment_type); ?> assessment data has been submitted yet. 
-                The table below shows all zeros. 
-                <?php if ($assessment_type == 'endline'): ?>
-                    You need to create endline assessments first to see data here.
-                <?php else: ?>
-                    You need to create baseline assessments first to see data here.
-                <?php endif; ?>
-            </p>
-        </div>
-    </div>
-</div>
-<?php elseif ($processed_count == 0): ?>
-<div class="alert alert-info mb-4">
-    <div class="d-flex align-items-center">
-        <i class="fas fa-info-circle fa-2x me-3"></i>
-        <div>
-            <h5 class="alert-heading mb-1">Data Processing Notice</h5>
-            <p class="mb-0">
-                <?php echo $processed_count; ?> <?php echo ucfirst($assessment_type); ?> assessment records processed. 
-                Some records may have been skipped due to missing or invalid data.
-            </p>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
+          <?php if (!$has_data): ?>
+          <div class="alert alert-warning mb-4">
+              <div class="d-flex align-items-center">
+                  <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                  <div>
+                      <h5 class="alert-heading mb-1">No <?php echo ucfirst($assessment_type); ?> Data Available</h5>
+                      <p class="mb-0">
+                          No <?php echo strtolower($assessment_type); ?> assessment data has been submitted yet. 
+                          The table below shows all zeros. 
+                          <?php if ($assessment_type == 'midline'): ?>
+                              You need to create midline assessments first to see data here.
+                          <?php elseif ($assessment_type == 'endline'): ?>
+                              You need to create endline assessments first to see data here.
+                          <?php else: ?>
+                              You need to create baseline assessments first to see data here.
+                          <?php endif; ?>
+                      </p>
+                  </div>
+              </div>
+          </div>
+          <?php elseif ($processed_count == 0): ?>
+          <div class="alert alert-info mb-4">
+              <div class="d-flex align-items-center">
+                  <i class="fas fa-info-circle fa-2x me-3"></i>
+                  <div>
+                      <h5 class="alert-heading mb-1">Data Processing Notice</h5>
+                      <p class="mb-0">
+                          <?php echo $processed_count; ?> <?php echo ucfirst($assessment_type); ?> assessment records processed. 
+                          Some records may have been skipped due to missing or invalid data.
+                      </p>
+                  </div>
+              </div>
+          </div>
+          <?php endif; ?>
 
           <!-- Assessment Info Card -->
           <div class="alert alert-info mb-4">
@@ -230,16 +250,34 @@ $secondaryGrades = [
               <div>
                 <h5 class="alert-heading mb-1">
                   <i class="fas fa-clipboard-list me-2"></i>
-                  <?php echo $is_baseline ? 'Baseline' : 'Endline'; ?> Assessment Report
-                  <span class="badge <?php echo $is_baseline ? 'badge-baseline' : 'badge-endline'; ?> assessment-badge">
-                    <?php echo ucfirst($assessment_type); ?>
+                  <?php 
+                    if ($is_baseline) {
+                      echo 'Baseline';
+                    } elseif ($is_midline) {
+                      echo 'Midline';
+                    } else {
+                      echo 'Endline';
+                    }
+                  ?> Assessment Report
+                  <span class="badge <?php 
+                      if ($is_baseline) {
+                          echo 'badge-baseline';
+                      } elseif ($is_midline) {
+                          echo 'badge-midline';
+                      } else {
+                          echo 'badge-endline';
+                      }
+                  ?> assessment-badge">
+                      <?php echo ucfirst($assessment_type); ?>
                   </span>
                 </h5>
                 <p class="mb-0">
                   Showing nutritional data for 
-                  <strong><?php echo $is_baseline ? 'baseline' : 'endline'; ?></strong> assessments.
+                  <strong><?php echo ucfirst($assessment_type); ?></strong> assessments.
                   <?php if ($is_baseline): ?>
                     Baseline assessments are initial measurements taken at the beginning of the program.
+                  <?php elseif ($is_midline): ?>
+                    Midline assessments are intermediate measurements taken during the program to track progress.
                   <?php else: ?>
                     Endline assessments are final measurements taken at the end of the program.
                   <?php endif; ?>
@@ -254,14 +292,22 @@ $secondaryGrades = [
               </div>
             </div>
           </div>
-
+          
           <!-- Main Content Card -->
           <div class="card shadow">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
               <h6 class="m-0 font-weight-bold text-primary">
                 Consolidated Nutritional Assessment Report
-                <span class="badge <?php echo $is_baseline ? 'badge-baseline' : 'badge-endline'; ?> ms-2">
-                  <?php echo ucfirst($assessment_type); ?>
+                <span class="badge <?php 
+                    if ($is_baseline) {
+                        echo 'badge-baseline';
+                    } elseif ($is_midline) {
+                        echo 'badge-midline';
+                    } else {
+                        echo 'badge-endline';
+                    }
+                ?> ms-2">
+                    <?php echo ucfirst($assessment_type); ?>
                 </span>
               </h6>
               <div class="no-print">
@@ -456,28 +502,25 @@ $secondaryGrades = [
     </div>
 
     <!-- Help Modal -->
-    <div class="modal fade" id="helpModal" tabindex="-1">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Assessment Types Help</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
           <div class="modal-body">
-            <h6><span class="badge badge-baseline me-2">Baseline</span> Assessment</h6>
-            <p>Initial measurements taken at the beginning of the School-Based Feeding Program (SBFP). 
-            Used as a reference point to measure progress.</p>
-            
-            <h6><span class="badge badge-endline me-2">Endline</span> Assessment</h6>
-            <p>Final measurements taken at the end of the SBFP. Used to evaluate the program's 
-            effectiveness by comparing with baseline data.</p>
-            
-            <div class="alert alert-info mt-3">
-              <i class="fas fa-lightbulb me-2"></i>
-              <strong>Tip:</strong> Switch between baseline and endline views to compare nutritional 
-              status changes over time.
-            </div>
-          </div>
+              <h6><span class="badge badge-baseline me-2">Baseline</span> Assessment</h6>
+              <p>Initial measurements taken at the beginning of the School-Based Feeding Program (SBFP). 
+              Used as a reference point to measure progress.</p>
+              
+              <h6><span class="badge badge-midline me-2">Midline</span> Assessment</h6>
+              <p>Intermediate measurements taken during the School-Based Feeding Program (SBFP). 
+              Used to track progress and make adjustments during the program.</p>
+              
+              <h6><span class="badge badge-endline me-2">Endline</span> Assessment</h6>
+              <p>Final measurements taken at the end of the SBFP. Used to evaluate the program's 
+              effectiveness by comparing with baseline and midline data.</p>
+              
+              <div class="alert alert-info mt-3">
+                  <i class="fas fa-lightbulb me-2"></i>
+                  <strong>Tip:</strong> Switch between baseline, midline, and endline views to compare nutritional 
+                  status changes over time and track program effectiveness.
+              </div>
+          </div>  
           <div class="modal-footer">
             <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it!</button>
           </div>
@@ -493,46 +536,61 @@ $secondaryGrades = [
         $('#switchToBaseline').click(function() {
           switchAssessmentType('baseline');
         });
+
+        $('#switchToMidline').click(function() {
+        switchAssessmentType('midline');
+        });
         
         $('#switchToEndline').click(function() {
           switchAssessmentType('endline');
         });
         
         function switchAssessmentType(type) {
-          // Show loading state
-          var activeBtn = type === 'baseline' ? $('#switchToBaseline') : $('#switchToEndline');
-          var inactiveBtn = type === 'baseline' ? $('#switchToEndline') : $('#switchToBaseline');
-          
-          var originalHtml = activeBtn.html();
-          activeBtn.html('<i class="fas fa-spinner fa-spin"></i> Switching...');
-          activeBtn.prop('disabled', true);
-          inactiveBtn.prop('disabled', true);
-          
-          $.ajax({
-            url: '<?php echo site_url("userdashboard/set_assessment_type"); ?>',
-            method: 'POST',
-            data: { assessment_type: type },
-            dataType: 'json',
-            success: function(response) {
-              console.log('Switch response:', response);
-              if (response.success) {
-                // Redirect back to the dashboard; preserve selected school when present
-                window.location.href = '<?php echo site_url("userdashboard") . (!empty($selected_school) ? "?school_name=" . urlencode($selected_school) : ""); ?>';
-              } else {
-                alert('Error: ' + response.message);
-                activeBtn.html(originalHtml);
-                activeBtn.prop('disabled', false);
-                inactiveBtn.prop('disabled', false);
-              }
-            },
-            error: function(xhr, status, error) {
-              console.error('Switch error:', error);
-              alert('Error switching assessment type. Please try again.');
-              activeBtn.html(originalHtml);
-              activeBtn.prop('disabled', false);
-              inactiveBtn.prop('disabled', false);
+            // Show loading state
+            var activeBtn;
+            if (type === 'baseline') {
+                activeBtn = $('#switchToBaseline');
+                $('#switchToMidline').prop('disabled', true);
+                $('#switchToEndline').prop('disabled', true);
+            } else if (type === 'midline') {
+                activeBtn = $('#switchToMidline');
+                $('#switchToBaseline').prop('disabled', true);
+                $('#switchToEndline').prop('disabled', true);
+            } else {
+                activeBtn = $('#switchToEndline');
+                $('#switchToBaseline').prop('disabled', true);
+                $('#switchToMidline').prop('disabled', true);
             }
-          });
+            
+            var originalHtml = activeBtn.html();
+            activeBtn.html('<i class="fas fa-spinner fa-spin"></i> Switching...');
+            activeBtn.prop('disabled', true);
+            
+            $.ajax({
+                url: '<?php echo site_url("userdashboard/set_assessment_type"); ?>',
+                method: 'POST',
+                data: { assessment_type: type },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Switch response:', response);
+                    if (response.success) {
+                        // Redirect back to the dashboard; preserve selected school when present
+                        window.location.href = '<?php echo site_url("userdashboard") . (!empty($selected_school) ? "?school_name=" . urlencode($selected_school) : ""); ?>';
+                    } else {
+                        alert('Error: ' + response.message);
+                        activeBtn.html(originalHtml);
+                        activeBtn.prop('disabled', false);
+                        $('.assessment-switcher .btn').prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Switch error:', error);
+                    alert('Error switching assessment type. Please try again.');
+                    activeBtn.html(originalHtml);
+                    activeBtn.prop('disabled', false);
+                    $('.assessment-switcher .btn').prop('disabled', false);
+                }
+            });
         }
         
         // Table switching

@@ -10,7 +10,8 @@ $related_schools = isset($related_schools) ? $related_schools : [];
 // Get current assessment type from session or default to baseline
 $assessment_type = $this->session->userdata('assessment_type') ?: 'baseline';
 $is_baseline = ($assessment_type == 'baseline');
-$next_type = $is_baseline ? 'endline' : 'baseline';
+$is_midline = ($assessment_type == 'midline');
+$is_endline = ($assessment_type == 'endline');
 
 // Helper to check submitted assessments for current type
 $submitted_lookup = [];
@@ -26,10 +27,14 @@ foreach ($submitted as $s) {
 
 // Count assessments for each type
 $baseline_count = 0;
+$midline_count = 0;
 $endline_count = 0;
 foreach ($submitted as $s) {
-    if (($s->assessment_type ?? 'baseline') == 'baseline') {
+    $type = $s->assessment_type ?? 'baseline';
+    if ($type == 'baseline') {
         $baseline_count++;
+    } elseif ($type == 'midline') {
+        $midline_count++;
     } else {
         $endline_count++;
     }
@@ -116,6 +121,10 @@ foreach ($submitted as $s) {
         color: #0d6efd; /* Bootstrap primary blue */
       }
 
+      .assessment-switcher .btn.btn-info {
+      color: #0dcaf0; /* Bootstrap info cyan */
+      }
+
       /* Endline button colors */
       .assessment-switcher .btn.btn-success {
         color: #198754; /* Bootstrap success green */
@@ -123,6 +132,7 @@ foreach ($submitted as $s) {
 
       /* Active state keeps white text */
       .assessment-switcher .btn.active.btn-primary,
+      .assessment-switcher .btn.active.btn-info,
       .assessment-switcher .btn.active.btn-success {
         color: #ffffff !important;
       }
@@ -281,67 +291,78 @@ foreach ($submitted as $s) {
                         <i class="fas fa-clipboard-list me-1"></i> 
                         Nutritional Status 
                         <span id="assessmentTypeTitle">
-                          <?php echo $is_baseline ? 'Baseline' : 'Endline'; ?> Assessment
+                            <?php if ($is_baseline) {
+                                echo 'Baseline';
+                            } elseif ($is_midline) {
+                                echo 'Midline';
+                            } else {
+                                echo 'Endline';
+                            }
+                            ?> Assessment
                         </span>
                       </h6>
-                      <div class="assessment-switcher">
+                    <div class="assessment-switcher">
                         <button class="btn btn-primary btn-sm <?php echo $is_baseline ? 'active' : ''; ?>" 
                                 id="switchToBaseline">
-                          <i class="fas fa-flag me-1"></i> Baseline
+                            <i class="fas fa-flag me-1"></i> Baseline
                         </button>
-                        <button class="btn btn-success btn-sm <?php echo !$is_baseline ? 'active' : ''; ?>" 
+                        <button class="btn btn-info btn-sm <?php echo $is_midline ? 'active' : ''; ?>" 
+                                id="switchToMidline">
+                            <i class="fas fa-flag me-1"></i> Midline
+                        </button>
+                        <button class="btn btn-success btn-sm <?php echo $is_endline ? 'active' : ''; ?>" 
                                 id="switchToEndline">
-                          <i class="fas fa-flag-checkered me-1"></i> Endline
+                            <i class="fas fa-flag-checkered me-1"></i> Endline
                         </button>
-                      </div>
+                    </div>
                     </div>
                     <span class="badge bg-primary rounded-pill" id="activeSectionsCount">
                       <?php echo count($sections); ?> Active Sections
                     </span>
                   </div>
                   <div class="card-body">
-<!-- Create Section Form -->
-<div class="card border mb-4">
-    <div class="card-header bg-light">
-        <h6 class="mb-0">
-            <i class="fas fa-plus-circle me-1"></i> Create New Section
-        </h6>
-    </div>
-    <div class="card-body">
-        <form action="<?php echo site_url('sbfpdashboard/create_section'); ?>" method="post" class="row g-3" id="createSectionForm">
-            <div class="col-md-3">
-                <label class="form-label fw-bold text-dark">Grade Level</label>
-                <select name="grade" class="form-select" required>
-                    <option value="">Select Grade</option>
-                    <?php $grades = ['Kindergarten','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
-                    foreach ($grades as $g): ?>
-                        <option value="<?php echo htmlspecialchars($g); ?>"><?php echo htmlspecialchars($g); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
+                  <!-- Create Section Form -->
+                  <div class="card border mb-4">
+                      <div class="card-header bg-light">
+                          <h6 class="mb-0">
+                              <i class="fas fa-plus-circle me-1"></i> Create New Section
+                          </h6>
+                      </div>
+                      <div class="card-body">
+                          <form action="<?php echo site_url('sbfpdashboard/create_section'); ?>" method="post" class="row g-3" id="createSectionForm">
+                              <div class="col-md-3">
+                                  <label class="form-label fw-bold text-dark">Grade Level</label>
+                                  <select name="grade" class="form-select" required>
+                                      <option value="">Select Grade</option>
+                                      <?php $grades = ['Kindergarten','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
+                                      foreach ($grades as $g): ?>
+                                          <option value="<?php echo htmlspecialchars($g); ?>"><?php echo htmlspecialchars($g); ?></option>
+                                      <?php endforeach; ?>
+                                  </select>
+                              </div>
 
-            <div class="col-md-3">
-                <label class="form-label fw-bold text-dark">Section Name</label>
-                <input type="text" name="section" class="form-control" placeholder="e.g., Section A, Diamond, Emerald" required>
-            </div>
+                              <div class="col-md-3">
+                                  <label class="form-label fw-bold text-dark">Section Name</label>
+                                  <input type="text" name="section" class="form-control" placeholder="e.g., Section A, Diamond, Emerald" required>
+                              </div>
 
-            <div class="col-md-3">
-                <label class="form-label fw-bold text-dark">School Year</label>
-                <input type="text" name="school_year" class="form-control" placeholder="e.g., 2024-2025" required>
-                <small class="text-muted">Format: YYYY-YYYY (e.g., 2024-2025)</small>
-            </div>
+                              <div class="col-md-3">
+                                  <label class="form-label fw-bold text-dark">School Year</label>
+                                  <input type="text" name="school_year" class="form-control" placeholder="e.g., 2024-2025" required>
+                                  <small class="text-muted">Format: YYYY-YYYY (e.g., 2024-2025)</small>
+                              </div>
 
-            <input type="hidden" name="legislative_district" value="<?php echo htmlspecialchars($auth->legislative_district ?? ''); ?>">
-            <input type="hidden" name="school_district" value="<?php echo htmlspecialchars($auth->school_district ?? ''); ?>">
+                              <input type="hidden" name="legislative_district" value="<?php echo htmlspecialchars($auth->legislative_district ?? ''); ?>">
+                              <input type="hidden" name="school_district" value="<?php echo htmlspecialchars($auth->school_district ?? ''); ?>">
 
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100 py-2">
-                    <i class="fas fa-plus-circle me-1"></i> Create Section
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+                              <div class="col-md-3 d-flex align-items-end">
+                                  <button type="submit" class="btn btn-primary w-100 py-2">
+                                      <i class="fas fa-plus-circle me-1"></i> Create Section
+                                  </button>
+                              </div>
+                          </form>
+                      </div>
+                  </div>
 
                     <?php if (!empty($sections)): ?>
                       <h6 class="mt-4 mb-3 fw-bold text-dark">
@@ -349,94 +370,124 @@ foreach ($submitted as $s) {
                       </h6>
                       <div class="table-responsive">
                         <table class="table table-bordered table-hover">
-<thead class="table-light">
-    <tr>
-        <th>Grade Level</th>
-        <th>Section</th>
-        <th>School Year</th>
-        <th class="text-center">Status</th>
-        <th class="text-center">Actions</th>
-    </tr>
-</thead>
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Grade Level</th>
+                                    <th>Section</th>
+                                    <th>School Year</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
                           <tbody>
                           <?php foreach ($sections as $item):
                             $key = $item->grade . '||' . $item->section . '||' . ($item->school_year ?? '');
                             $isSubmitted = isset($submitted_lookup[$key]);
                             $assessmentData = $isSubmitted ? $submitted_lookup[$key] : null;
                           ?>
-<tr>
-    <td class="fw-bold"><?php echo htmlspecialchars($item->grade); ?></td>
-    <td><?php echo htmlspecialchars($item->section); ?></td>
-    <td>
-        <span class="badge bg-secondary">
-            <?php echo htmlspecialchars($item->school_year ?? 'N/A'); ?>
-        </span>
-    </td>
-    <td class="text-center">
-                                <?php if ($isSubmitted): ?>
-                                  <div class="d-flex flex-column align-items-center">
-                                    <span class="badge <?php echo $is_baseline ? 'bg-primary' : 'bg-success'; ?> mb-1">
-                                      <i class="fas fa-<?php echo $is_baseline ? 'flag' : 'flag-checkered'; ?> me-1"></i>
-                                      <?php echo $is_baseline ? 'Baseline' : 'Endline'; ?> Submitted
+                            <tr>
+                                <td class="fw-bold"><?php echo htmlspecialchars($item->grade); ?></td>
+                                <td><?php echo htmlspecialchars($item->section); ?></td>
+                                <td>
+                                    <span class="badge bg-secondary">
+                                        <?php echo htmlspecialchars($item->school_year ?? 'N/A'); ?>
                                     </span>
-                                    <small class="text-muted">
-                                      <?php echo $assessmentData['total_students'] ?? 0; ?> students
-                                      <?php if ($assessmentData['last_updated']): ?>
-                                        <br><?php echo date('M d, Y', strtotime($assessmentData['last_updated'])); ?>
-                                      <?php endif; ?>
-                                    </small>
-                                  </div>
+                                </td>
+                                <td class="text-center">
+                                <?php if ($isSubmitted): ?>
+                                    <div class="d-flex flex-column align-items-center">
+                                        <?php
+                                        $badge_class = 'bg-primary';
+                                        $icon = 'fa-flag';
+                                        if ($is_baseline) {
+                                            $badge_class = 'bg-primary';
+                                            $icon = 'fa-flag';
+                                        } elseif ($is_midline) {
+                                            $badge_class = 'bg-info';
+                                            $icon = 'fa-flag';
+                                        } else {
+                                            $badge_class = 'bg-success';
+                                            $icon = 'fa-flag-checkered';
+                                        }
+                                        ?>
+                                        <span class="badge <?php echo $badge_class; ?> mb-1">
+                                            <i class="fas <?php echo $icon; ?> me-1"></i>
+                                            <?php echo ucfirst($assessment_type); ?> Submitted
+                                        </span>
+                                        <small class="text-muted">
+                                            <?php echo $assessmentData['total_students'] ?? 0; ?> students
+                                            <?php if ($assessmentData['last_updated']): ?>
+                                                <br><?php echo date('M d, Y', strtotime($assessmentData['last_updated'])); ?>
+                                            <?php endif; ?>
+                                        </small>
+                                    </div>
                                 <?php else: ?>
-                                  <span class="badge bg-warning">
-                                    <i class="fas fa-clock me-1"></i> Pending Assessment
-                                  </span>
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-clock me-1"></i> Pending Assessment
+                                    </span>
                                 <?php endif; ?>
                               </td>
                               <td>
-              <div class="d-flex justify-content-center gap-2">
-    <?php if (!$isSubmitted): ?>
-        <!-- Create Assessment Button -->
-        <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
-           class="btn btn-<?php echo $is_baseline ? 'primary' : 'success'; ?> btn-sm">
-            <i class="fas fa-<?php echo $is_baseline ? 'flag' : 'flag-checkered'; ?> me-1"></i>
-            Create <?php echo $is_baseline ? 'Baseline' : 'Endline'; ?>
-        </a>
-        
-        <!-- Remove Section Button -->
-        <form action="<?php echo site_url('sbfpdashboard/remove_section'); ?>" method="post" onsubmit="return confirm('Remove this section? This action cannot be undone.');" class="d-inline">
-            <input type="hidden" name="section_id" value="<?php echo (int)$item->id; ?>">
-            <button type="submit" class="btn btn-outline-danger btn-sm">
-                <i class="fas fa-trash me-1"></i> Remove
-            </button>
-        </form>
-    <?php else: ?>
-        <!-- Edit Assessment Button -->
-        <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
-           class="btn btn-outline-<?php echo $is_baseline ? 'primary' : 'success'; ?> btn-sm">
-            <i class="fas fa-edit me-1"></i> Edit
-        </a>
-        
-        <!-- Lock Button -->
-        <button class="btn btn-warning btn-sm toggle-lock"
-                data-grade="<?php echo htmlspecialchars($item->grade); ?>"
-                data-section="<?php echo htmlspecialchars($item->section); ?>"
-                data-school_year="<?php echo htmlspecialchars($item->school_year ?? ''); ?>"
-                data-type="<?php echo $assessment_type; ?>"
-                title="Lock/Unlock Assessment">
-            <i class="fas fa-lock"></i>
-        </button>
-        
-        <!-- Delete Assessment Button -->
-        <button class="btn btn-danger btn-sm delete-assessment btn-delete"
-                data-grade="<?php echo htmlspecialchars($item->grade); ?>"
-                data-section="<?php echo htmlspecialchars($item->section); ?>"
-                data-school_year="<?php echo htmlspecialchars($item->school_year ?? ''); ?>"
-                data-type="<?php echo $assessment_type; ?>"
-                title="Delete Assessment">
-            <i class="fas fa-trash"></i>
-        </button>
-    <?php endif; ?>
-</div>
+                              <div class="d-flex justify-content-center gap-2">
+                                <?php if (!$isSubmitted): ?>
+                                    <!-- Create Assessment Button -->
+                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
+                                      class="btn btn-<?php 
+                                            if ($is_baseline) {
+                                                echo 'primary';
+                                            } elseif ($is_midline) {
+                                                echo 'info';
+                                            } else {
+                                                echo 'success';
+                                            }
+                                      ?> btn-sm">
+                                        <i class="fas fa-<?php echo $is_endline ? 'flag-checkered' : 'flag'; ?> me-1"></i>
+                                        Create <?php echo ucfirst($assessment_type); ?>
+                                    </a>
+                                    
+                                    <!-- Remove Section Button -->
+                                    <form action="<?php echo site_url('sbfpdashboard/remove_section'); ?>" method="post" onsubmit="return confirm('Remove this section? This action cannot be undone.');" class="d-inline">
+                                        <input type="hidden" name="section_id" value="<?php echo (int)$item->id; ?>">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-trash me-1"></i> Remove
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <!-- Edit Assessment Button -->
+                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
+                                      class="btn btn-outline-<?php 
+                                            if ($is_baseline) {
+                                                echo 'primary';
+                                            } elseif ($is_midline) {
+                                                echo 'info';
+                                            } else {
+                                                echo 'success';
+                                            }
+                                      ?> btn-sm">
+                                        <i class="fas fa-edit me-1"></i> Edit
+                                    </a>
+                                    
+                                    <!-- Lock Button -->
+                                    <button class="btn btn-warning btn-sm toggle-lock"
+                                            data-grade="<?php echo htmlspecialchars($item->grade); ?>"
+                                            data-section="<?php echo htmlspecialchars($item->section); ?>"
+                                            data-school_year="<?php echo htmlspecialchars($item->school_year ?? ''); ?>"
+                                            data-type="<?php echo $assessment_type; ?>"
+                                            title="Lock/Unlock Assessment">
+                                        <i class="fas fa-lock"></i>
+                                    </button>
+                                    
+                                    <!-- Delete Assessment Button -->
+                                    <button class="btn btn-danger btn-sm delete-assessment btn-delete"
+                                            data-grade="<?php echo htmlspecialchars($item->grade); ?>"
+                                            data-section="<?php echo htmlspecialchars($item->section); ?>"
+                                            data-school_year="<?php echo htmlspecialchars($item->school_year ?? ''); ?>"
+                                            data-type="<?php echo $assessment_type; ?>"
+                                            title="Delete Assessment">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                <?php endif; ?>
+                              </div>
                               </td>
                             </tr>
                           <?php endforeach; ?>
@@ -462,7 +513,12 @@ foreach ($submitted as $s) {
                       <i class="fas fa-chart-line me-1"></i> Assessment Overview
                     </h6>
                     <span class="badge bg-info rounded-pill" id="totalAssessments">
-                      <?php echo $is_baseline ? $baseline_count : $endline_count; ?> <?php echo $is_baseline ? 'Baseline' : 'Endline'; ?>
+                        <?php $current_count = 0; 
+                        if ($is_baseline) $current_count = $baseline_count;
+                        elseif ($is_midline) $current_count = $midline_count;
+                        else $current_count = $endline_count;
+                        echo $current_count . ' ' . ucfirst($assessment_type);
+                        ?>
                     </span>
                   </div>
                   <div class="card-body">
@@ -481,24 +537,24 @@ foreach ($submitted as $s) {
                       <div class="list-group list-group-flush">
                         <?php foreach ($filtered_assessments as $s): ?>
                           <div class="list-group-item border-0 px-0 py-3">
-<div class="d-flex justify-content-between align-items-start">
-    <div>
-        <strong class="d-block"><?php echo htmlspecialchars($s->grade . ' - ' . $s->section); ?></strong>
-        <div class="d-flex align-items-center gap-2">
-            <small class="text-muted">
-                <i class="fas fa-calendar me-1"></i> 
-                <?php echo htmlspecialchars(date('M j, Y', strtotime($s->last_updated))); ?>
-            </small>
-            <span class="badge bg-dark">
-                <i class="fas fa-graduation-cap me-1"></i>
-                <?php echo htmlspecialchars($s->school_year ?? 'N/A'); ?>
-            </span>
-        </div>
-    </div>
-    <span class="badge <?php echo $is_baseline ? 'bg-primary' : 'bg-success'; ?>">
-        <i class="fas fa-<?php echo $is_baseline ? 'flag' : 'flag-checkered'; ?>"></i>
-    </span>
-</div>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong class="d-block"><?php echo htmlspecialchars($s->grade . ' - ' . $s->section); ?></strong>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i> 
+                                            <?php echo htmlspecialchars(date('M j, Y', strtotime($s->last_updated))); ?>
+                                        </small>
+                                        <span class="badge bg-dark">
+                                            <i class="fas fa-graduation-cap me-1"></i>
+                                            <?php echo htmlspecialchars($s->school_year ?? 'N/A'); ?>
+                                        </span>
+                                    </div>
+                                </div>
+                                <span class="badge <?php echo $is_baseline ? 'bg-primary' : 'bg-success'; ?>">
+                                    <i class="fas fa-<?php echo $is_baseline ? 'flag' : 'flag-checkered'; ?>"></i>
+                                </span>
+                            </div>
                             <div class="mt-2 d-flex justify-content-between align-items-center">
                               <small class="text-muted">
                                 <i class="fas fa-users me-1"></i> <?php echo $s->total_students ?? 0; ?> students
@@ -508,11 +564,11 @@ foreach ($submitted as $s) {
                                    class="btn btn-outline-info btn-sm">
                                   <i class="fas fa-eye"></i>
                                 </a>
-<button class="btn btn-outline-danger btn-sm delete-assessment-list" 
-        data-grade="<?php echo htmlspecialchars($s->grade); ?>"
-        data-section="<?php echo htmlspecialchars($s->section); ?>"
-        data-school_year="<?php echo htmlspecialchars($s->school_year ?? ''); ?>"
-        data-type="<?php echo htmlspecialchars($assessment_type); ?>">
+                                <button class="btn btn-outline-danger btn-sm delete-assessment-list" 
+                                        data-grade="<?php echo htmlspecialchars($s->grade); ?>"
+                                        data-section="<?php echo htmlspecialchars($s->section); ?>"
+                                        data-school_year="<?php echo htmlspecialchars($s->school_year ?? ''); ?>"
+                                        data-type="<?php echo htmlspecialchars($assessment_type); ?>">
                                   <i class="fas fa-trash"></i>
                                 </button>
                               </div>
@@ -535,26 +591,36 @@ foreach ($submitted as $s) {
                     
                     <!-- Quick Stats -->
                     <div class="row mt-4">
-                      <div class="col-6">
-                        <div class="card border-left-primary">
-                          <div class="card-body text-center py-2">
-                            <div class="h4 mb-0 fw-bold text-primary" id="baselineCount">
-                              <?php echo $baseline_count; ?>
+                        <div class="col-4">
+                            <div class="card border-left-primary">
+                                <div class="card-body text-center py-2">
+                                    <div class="h4 mb-0 fw-bold text-primary" id="baselineCount">
+                                        <?php echo $baseline_count; ?>
+                                    </div>
+                                    <div class="text-xs text-muted">Baseline</div>
+                                </div>
                             </div>
-                            <div class="text-xs text-muted">Baseline</div>
-                          </div>
                         </div>
-                      </div>
-                      <div class="col-6">
-                        <div class="card border-left-success">
-                          <div class="card-body text-center py-2">
-                            <div class="h4 mb-0 fw-bold text-success" id="endlineCount">
-                              <?php echo $endline_count; ?>
+                        <div class="col-4">
+                            <div class="card border-left-info">
+                                <div class="card-body text-center py-2">
+                                    <div class="h4 mb-0 fw-bold text-info" id="midlineCount">
+                                        <?php echo $midline_count; ?>
+                                    </div>
+                                    <div class="text-xs text-muted">Midline</div>
+                                </div>
                             </div>
-                            <div class="text-xs text-muted">Endline</div>
-                          </div>
                         </div>
-                      </div>
+                        <div class="col-4">
+                            <div class="card border-left-success">
+                                <div class="card-body text-center py-2">
+                                    <div class="h4 mb-0 fw-bold text-success" id="endlineCount">
+                                        <?php echo $endline_count; ?>
+                                    </div>
+                                    <div class="text-xs text-muted">Endline</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                   </div>
                 </div>
@@ -605,6 +671,11 @@ $(document).ready(function() {
     $('#switchToBaseline').click(function() {
         console.log('Switching to baseline...');
         switchAssessmentType('baseline');
+    });
+
+    $('#switchToMidline').click(function() {
+    console.log('Switching to midline...');
+    switchAssessmentType('midline');
     });
     
     $('#switchToEndline').click(function() {
