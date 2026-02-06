@@ -77,6 +77,12 @@
         background: linear-gradient(45deg, #4e73df, #224abe);
         color: white;
       }
+
+      .badge-midline {
+      background: linear-gradient(45deg, #36b9cc, #258391);
+      color: white;
+      }
+
       .badge-endline {
         background: linear-gradient(45deg, #1cc88a, #13855c);
         color: white;
@@ -133,7 +139,10 @@
                       <p class="mb-0"><strong>Section:</strong> <?= htmlspecialchars($section) ?></p>
                       <p class="mb-0"><strong>School Year:</strong> <?= htmlspecialchars($school_year ?? 'Not set') ?></p>
                       <p class="mb-0"><strong>Assessment Type:</strong> 
-                          <span class="badge <?php echo (isset($assessment_type) && $assessment_type == 'endline') ? 'badge-endline' : 'badge-baseline'; ?>">
+                          <span class="badge <?php 
+                              echo (isset($assessment_type) && $assessment_type == 'endline') ? 'badge-endline' : 
+                                  ((isset($assessment_type) && $assessment_type == 'midline') ? 'badge-midline' : 'badge-baseline'); 
+                                ?>">
                               <?php echo isset($assessment_type) ? ucfirst($assessment_type) : 'Baseline'; ?>
                           </span>
                       </p>
@@ -174,45 +183,45 @@
               <form id="assessmentForm" class="needs-validation" novalidate>
                 <div class="row">
                   <!-- Left Column -->
-<!-- Left Column -->
-<div class="col-md-6">
-    <div class="mb-3">
-        <label for="date" class="form-label fw-bold">Date of Weighing:</label>
-        <input type="date" id="date" name="date" class="form-control" required>
-    </div>
-    <div class="mb-3">
-        <label for="name" class="form-label fw-bold">Name:</label>
-        <input type="text" id="name" name="name" class="form-control" placeholder="Last Name, First Name" required>
-    </div>
-    <div class="mb-3">
-        <label for="birthday" class="form-label fw-bold">Birthday:</label>
-        <input type="date" id="birthday" name="birthday" class="form-control" required>
-    </div>
-    <div class="mb-3">
-        <label for="school_year" class="form-label fw-bold">School Year:</label>
-        <input type="text" id="school_year" name="school_year" 
-               class="form-control bg-light" 
-               value="<?= htmlspecialchars($school_year ?? '') ?>" readonly>
-    </div>
-    <div class="mb-3">
-        <label for="legislative_district" class="form-label fw-bold">Legislative District:</label>
-        <input type="text" id="legislative_district" name="legislative_district" 
-               class="form-control bg-light" 
-               value="<?= htmlspecialchars($legislative_district ?? '') ?>" readonly>
-    </div>
-    <div class="mb-3">
-        <label for="school_name" class="form-label fw-bold">School Name:</label>
-        <input type="text" id="school_name" name="school_name" 
-               class="form-control bg-light" 
-               value="<?= htmlspecialchars($school_name ?? '') ?>" readonly>
-    </div>
-    <div class="mb-3">
-        <label for="school_id" class="form-label fw-bold">School ID: </label>
-        <input type="text" id="school_id" name="school_id" 
-               class="form-control bg-light" 
-               value="<?= htmlspecialchars($school_id ?? '') ?>" readonly>
-    </div>
-</div>
+
+                  <div class="col-md-6">
+                      <div class="mb-3">
+                          <label for="date" class="form-label fw-bold">Date of Weighing:</label>
+                          <input type="date" id="date" name="date" class="form-control" required>
+                      </div>
+                      <div class="mb-3">
+                          <label for="name" class="form-label fw-bold">Name:</label>
+                          <input type="text" id="name" name="name" class="form-control" placeholder="Last Name, First Name" required>
+                      </div>
+                      <div class="mb-3">
+                          <label for="birthday" class="form-label fw-bold">Birthday:</label>
+                          <input type="date" id="birthday" name="birthday" class="form-control" required>
+                      </div>
+                      <div class="mb-3">
+                          <label for="school_year" class="form-label fw-bold">School Year:</label>
+                          <input type="text" id="school_year" name="school_year" 
+                                class="form-control bg-light" 
+                                value="<?= htmlspecialchars($school_year ?? '') ?>" readonly>
+                      </div>
+                      <div class="mb-3">
+                          <label for="legislative_district" class="form-label fw-bold">Legislative District:</label>
+                          <input type="text" id="legislative_district" name="legislative_district" 
+                                class="form-control bg-light" 
+                                value="<?= htmlspecialchars($legislative_district ?? '') ?>" readonly>
+                      </div>
+                      <div class="mb-3">
+                          <label for="school_name" class="form-label fw-bold">School Name:</label>
+                          <input type="text" id="school_name" name="school_name" 
+                                class="form-control bg-light" 
+                                value="<?= htmlspecialchars($school_name ?? '') ?>" readonly>
+                      </div>
+                      <div class="mb-3">
+                          <label for="school_id" class="form-label fw-bold">School ID: </label>
+                          <input type="text" id="school_id" name="school_id" 
+                                class="form-control bg-light" 
+                                value="<?= htmlspecialchars($school_id ?? '') ?>" readonly>
+                      </div>
+                  </div>
 
                   <!-- Right Column -->
                   <div class="col-md-6">
@@ -748,10 +757,10 @@
     }
   }
 
-  async function submitReport() {
+async function submitReport() {
     if (students.length === 0) {
-      showAlert('No Records', 'Add students before submitting.');
-      return;
+        showAlert('No Records', 'Add students before submitting.');
+        return;
     }
 
     if (!confirm('Submit ' + students.length + ' student record(s)?')) return;
@@ -759,44 +768,49 @@
     loadingModal.show();
 
     try {
-      // Get assessment_type from URL or default to baseline
-      const urlParams = new URLSearchParams(window.location.search);
-      const assessmentType = urlParams.get('assessment_type') || 'baseline';
-      
-      console.log("Submitting with assessment_type:", assessmentType);
-      
-      const response = await fetch('<?= site_url('nutritionalassessment/bulk_store') ?>', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: 'students=' + encodeURIComponent(JSON.stringify(students)) + 
-              '&assessment_type=' + encodeURIComponent(assessmentType)
-      });
+        const urlParams = new URLSearchParams(window.location.search);
+        let assessmentType = urlParams.get('assessment_type') || 'baseline';
+        
+        // Validate assessment type
+        const validTypes = ['baseline', 'midline', 'endline'];
+        if (!validTypes.includes(assessmentType)) {
+            assessmentType = 'baseline';
+        }
+        
+        console.log("Submitting with assessment_type:", assessmentType);
+        
+        const response = await fetch('<?= site_url('nutritionalassessment/bulk_store') ?>', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'students=' + encodeURIComponent(JSON.stringify(students)) + 
+                  '&assessment_type=' + encodeURIComponent(assessmentType)
+        });
 
-      const result = await response.json();
-      console.log("Server response:", result);
+        const result = await response.json();
+        console.log("Server response:", result);
 
-      if (result.success) {
-        students = [];
-        saveStudents();
-        clearStoredStudents();
-        updateUI();
-        loadingModal.hide();
-        showAlert('Success', result.message || 'Records submitted successfully!');
-        setTimeout(() => window.location.href = '<?= site_url('sbfpdashboard') ?>', 1500);
-      } else {
-        loadingModal.hide();
-        showAlert('Error', result.message || 'Error submitting records. Check console for details.');
-        console.error("Submission errors:", result.errors);
-      }
+        if (result.success) {
+            students = [];
+            saveStudents();
+            clearStoredStudents();
+            updateUI();
+            loadingModal.hide();
+            showAlert('Success', result.message || 'Records submitted successfully!');
+            setTimeout(() => window.location.href = '<?= site_url('sbfpdashboard') ?>', 1500);
+        } else {
+            loadingModal.hide();
+            showAlert('Error', result.message || 'Error submitting records. Check console for details.');
+            console.error("Submission errors:", result.errors);
+        }
     } catch (e) {
-      loadingModal.hide();
-      console.error("Network error:", e);
-      showAlert('Network Error', 'Error communicating with server: ' + e.message);
+        loadingModal.hide();
+        console.error("Network error:", e);
+        showAlert('Network Error', 'Error communicating with server: ' + e.message);
     }
-  }
+}
 
   function showAlert(title, message) {
     const tEl = document.getElementById('alertTitle');

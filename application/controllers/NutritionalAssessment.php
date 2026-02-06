@@ -23,10 +23,16 @@ public function index()
     $data['school_district'] = $this->input->get('school_district', TRUE);
     $data['grade'] = $this->input->get('grade', TRUE);
     $data['section'] = $this->input->get('section', TRUE);
-    $data['school_year'] = $this->input->get('school_year', TRUE); // Add this line
+    $data['school_year'] = $this->input->get('school_year', TRUE);
     $data['school_id'] = $this->input->get('school_id', TRUE) ?: 'N/A'; 
     $data['school_name'] = $this->input->get('school_name', TRUE) ?: 'Unknown School';
     $data['assessment_type'] = $this->input->get('assessment_type', TRUE) ?: 'baseline';
+    
+    // Validate assessment type
+    $valid_types = ['baseline', 'midline', 'endline'];
+    if (!in_array($data['assessment_type'], $valid_types)) {
+        $data['assessment_type'] = 'baseline';
+    }
     
     // Check if assessment already exists for this section and type
     $data['has_existing_assessment'] = $this->Nutritional_assessment_model->assessment_exists(
@@ -34,7 +40,7 @@ public function index()
         $data['school_district'],
         $data['grade'],
         $data['section'],
-        $data['school_year'], // Add school_year parameter
+        $data['school_year'],
         $data['assessment_type']
     );
     
@@ -51,6 +57,14 @@ public function index()
         !$this->has_baseline_assessment($data['existing_assessments'])) {
         $this->session->set_flashdata('warning', 
             'You are creating an endline assessment without a baseline. '
+            . 'It is recommended to create a baseline assessment first.');
+    }
+    
+    // If this is midline assessment but baseline doesn't exist, show warning
+    if ($data['assessment_type'] == 'midline' && 
+        !$this->has_baseline_assessment($data['existing_assessments'])) {
+        $this->session->set_flashdata('warning', 
+            'You are creating a midline assessment without a baseline. '
             . 'It is recommended to create a baseline assessment first.');
     }
 
@@ -71,7 +85,7 @@ public function index()
         $this->form_validation->set_rules('sex', 'Sex', 'required|in_list[M,F]');
         $this->form_validation->set_rules('grade', 'Grade', 'required|trim');
         $this->form_validation->set_rules('date_of_weighing', 'Date of Weighing', 'required|valid_date[Y-m-d]');
-        $this->form_validation->set_rules('assessment_type', 'Assessment Type', 'required|in_list[baseline,endline]');
+        $this->form_validation->set_rules('assessment_type', 'Assessment Type', 'required|in_list[baseline,midline,endline]');
 
         if ($this->form_validation->run() == FALSE) {
             // Return validation errors as JSON
@@ -139,11 +153,17 @@ public function index()
  /**
  * Bulk store multiple assessments (via AJAX/form submission from localStorage)
  */
-public function bulk_store()
-{
+    public function bulk_store()
+    {
     // Get the raw POST data
     $students_json = $this->input->post('students');
     $assessment_type = $this->input->post('assessment_type', TRUE) ?: 'baseline';
+    
+    // Validate assessment type
+    $valid_types = ['baseline', 'midline', 'endline'];
+    if (!in_array($assessment_type, $valid_types)) {
+        $assessment_type = 'baseline';
+    }
     
     if (!$students_json) {
         return $this->output
@@ -416,6 +436,7 @@ private function check_duplicate_assessment($assessment_data)
         $data['assessment_types'] = [
             '' => 'All Types',
             'baseline' => 'Baseline',
+            'midline' => 'Midline',
             'endline' => 'Endline'
         ];
         
