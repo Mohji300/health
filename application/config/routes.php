@@ -202,4 +202,23 @@ $route['division/reports/export_detail'] = 'Division_reports_controller/export_d
 $route['division/reports/export_statistics'] = 'Division_reports_controller/export_statistics';
 $route['division/reports/comparison_report'] = 'Division_reports_controller/comparison_report';
 
+// ========================
+// SBFP BENEFICIARIES ROUTES
+// ========================
+$route['sbfp-beneficiaries'] = 'sbfp_beneficiaries';
+$route['sbfp-beneficiaries/export_excel'] = 'sbfp_beneficiaries/export_excel';
+$route['sbfp-beneficiaries/print_report'] = 'sbfp_beneficiaries/print_report';
+$route['sbfp-beneficiaries/set_assessment_type'] = 'sbfp_beneficiaries/set_assessment_type';
+$route['sbfp-beneficiaries/set_school_level'] = 'sbfp_beneficiaries/set_school_level';
+
+// ========================
+// ARCHIVE ROUTES
+// ========================
+$route['archive'] = 'archive_controller';
+$route['archive/process_archive'] = 'archive_controller/process_archive';
+$route['archive/get_record_details/(:num)'] = 'archive_controller/get_record_details/$1';
+$route['archive/restore_record/(:num)'] = 'archive_controller/restore_record/$1';
+$route['archive/export'] = 'archive_controller/export_archive';
+$route['archive/process_archive'] = 'archive_controller/process_archive';
+
 
