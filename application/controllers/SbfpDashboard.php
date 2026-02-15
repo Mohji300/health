@@ -36,6 +36,14 @@ class SbfpDashboard extends CI_Controller {
             return;
         }
 
+            // NEW: Check for and remove sections with deleted assessments
+        $removed_count = $this->Section_model->check_and_remove_sections_with_deleted_assessments($user_id);
+        
+        if ($removed_count > 0) {
+            // Optional: Show a message that sections were removed
+            $this->session->set_flashdata('info', $removed_count . ' sections were removed because their assessments were Archived or Deleted.');
+        }
+
         $data = [];
         $data['auth_user'] = [
             'legislative_district' => $user->legislative_district,

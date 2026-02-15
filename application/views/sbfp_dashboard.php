@@ -446,12 +446,13 @@ foreach ($submitted as $s) {
                                     </a>
                                     
                                     <!-- Remove Section Button -->
-                                    <form action="<?php echo site_url('sbfpdashboard/remove_section'); ?>" method="post" onsubmit="return confirm('Remove this section? This action cannot be undone.');" class="d-inline">
-                                        <input type="hidden" name="section_id" value="<?php echo (int)$item->id; ?>">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                                            <i class="fas fa-trash me-1"></i> Remove
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-section-btn" 
+                                            data-section-id="<?php echo (int)$item->id; ?>"
+                                            data-grade="<?php echo htmlspecialchars($item->grade); ?>"
+                                            data-section="<?php echo htmlspecialchars($item->section); ?>"
+                                            data-school_year="<?php echo htmlspecialchars($item->school_year ?? ''); ?>">
+                                        <i class="fas fa-trash me-1"></i> Remove
+                                    </button>
                                 <?php else: ?>
                                     <!-- Edit Assessment Button -->
                                     <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
@@ -659,6 +660,40 @@ foreach ($submitted as $s) {
     </div>
 </div>
 
+<!-- Remove Section Modal -->
+<div class="modal fade" id="removeSectionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Remove Section</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove this section?</p>
+                <p><strong>Grade:</strong> <span id="removeGrade"></span></p>
+                <p><strong>Section:</strong> <span id="removeSection"></span></p>
+                <p><strong>School Year:</strong> <span id="removeSchoolYear"></span></p>
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Important:</strong> 
+                    <ul class="mb-0 mt-1">
+                        <li>This section will be permanently removed</li>
+                        <li>If there are any assessments associated with this section, they will also be deleted</li>
+                        <li>This action cannot be undone</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="removeSectionForm" method="post" action="<?php echo site_url('sbfpdashboard/remove_section'); ?>" style="display: inline;">
+                    <input type="hidden" name="section_id" id="removeSectionId" value="">
+                    <button type="submit" class="btn btn-danger">Remove Section</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
@@ -707,51 +742,120 @@ $(document).ready(function() {
     }
     
     // Handle assessment deletion button clicks
-$('.delete-assessment, .delete-assessment-list').click(function() {
-    var grade = $(this).data('grade');
-    var section = $(this).data('section');
-    var school_year = $(this).data('school_year');
-    var type = $(this).data('type');
+    $('.delete-assessment, .delete-assessment-list').click(function() {
+        var grade = $(this).data('grade');
+        var section = $(this).data('section');
+        var school_year = $(this).data('school_year');
+        var type = $(this).data('type');
+        
+        console.log('Delete clicked:', grade, section, school_year, type);
+        
+        $('#deleteGrade').text(grade);
+        $('#deleteSection').text(section);
+        $('#deleteSchoolYear').text(school_year);
+        
+        // Store data for deletion
+        $('#deleteAssessmentModal').data('grade', grade);
+        $('#deleteAssessmentModal').data('section', section);
+        $('#deleteAssessmentModal').data('school_year', school_year);
+        $('#deleteAssessmentModal').data('type', type);
+        
+        // Show the modal
+        var deleteModal = new bootstrap.Modal(document.getElementById('deleteAssessmentModal'));
+        deleteModal.show();
+    });
     
-    console.log('Delete clicked:', grade, section, school_year, type);
-    
-    $('#deleteGrade').text(grade);
-    $('#deleteSection').text(section);
-    $('#deleteSchoolYear').text(school_year);
-    
-    // Store data for deletion
-    $('#deleteAssessmentModal').data('grade', grade);
-    $('#deleteAssessmentModal').data('section', section);
-    $('#deleteAssessmentModal').data('school_year', school_year);
-    $('#deleteAssessmentModal').data('type', type);
-    
-    // Show the modal
-    var deleteModal = new bootstrap.Modal(document.getElementById('deleteAssessmentModal'));
-    deleteModal.show();
-});
+    // Handle remove section button clicks
+    $('.remove-section-btn').click(function() {
+        var sectionId = $(this).data('section-id');
+        var grade = $(this).data('grade');
+        var section = $(this).data('section');
+        var schoolYear = $(this).data('school_year');
+        
+        console.log('Remove section clicked:', sectionId, grade, section, schoolYear);
+        
+        // Set modal content
+        $('#removeGrade').text(grade);
+        $('#removeSection').text(section);
+        $('#removeSchoolYear').text(schoolYear);
+        $('#removeSectionId').val(sectionId);
+        
+        // Show the modal
+        var removeModal = new bootstrap.Modal(document.getElementById('removeSectionModal'));
+        removeModal.show();
+    });
     
     // Handle delete confirmation
-$('#confirmDeleteBtn').click(function() {
-    var modal = $('#deleteAssessmentModal');
-    var grade = modal.data('grade');
-    var section = modal.data('section');
-    var school_year = modal.data('school_year');
-    var type = modal.data('type');
+    $('#confirmDeleteBtn').click(function() {
+        var modal = $('#deleteAssessmentModal');
+        var grade = modal.data('grade');
+        var section = modal.data('section');
+        var school_year = modal.data('school_year');
+        var type = modal.data('type');
+        
+        if (!grade || !section || !type) {
+            alert('Error: Missing assessment data');
+            return;
+        }
+        
+        if (confirm('Are you absolutely sure? This will permanently delete the assessment data.')) {
+            // Show loading
+            var button = $(this);
+            var originalText = button.html();
+            button.html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+            button.prop('disabled', true);
+            
+            $.ajax({
+                url: '<?php echo site_url("sbfpdashboard/delete_assessment"); ?>',
+                method: 'POST',
+                data: {
+                    grade: grade,
+                    section: section,
+                    school_year: school_year,
+                    assessment_type: type
+                },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Delete response:', response);
+                    if (response.success) {
+                        // Close modal and reload page
+                        var deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteAssessmentModal'));
+                        deleteModal.hide();
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.message);
+                        button.html(originalText);
+                        button.prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Delete AJAX error:', error);
+                    console.error('Response:', xhr.responseText);
+                    alert('Error communicating with server. Check console for details.');
+                    button.html(originalText);
+                    button.prop('disabled', false);
+                }
+            });
+        }
+    });
     
-    if (!grade || !section || !type) {
-        alert('Error: Missing assessment data');
-        return;
-    }
-    
-    if (confirm('Are you absolutely sure? This will permanently delete the assessment data.')) {
-        // Show loading
+    // Toggle Lock functionality
+    $('.toggle-lock').click(function() {
+        var grade = $(this).data('grade');
+        var section = $(this).data('section');
+        var school_year = $(this).data('school_year');
+        var type = $(this).data('type');
         var button = $(this);
-        var originalText = button.html();
-        button.html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+        
+        console.log('Toggle lock clicked:', grade, section, school_year, type);
+        
+        // Add loading state
+        var originalHtml = button.html();
+        button.html('<i class="fas fa-spinner fa-spin"></i>');
         button.prop('disabled', true);
         
         $.ajax({
-            url: '<?php echo site_url("sbfpdashboard/delete_assessment"); ?>',
+            url: '<?php echo site_url("sbfpdashboard/toggle_lock"); ?>',
             method: 'POST',
             data: {
                 grade: grade,
@@ -761,81 +865,32 @@ $('#confirmDeleteBtn').click(function() {
             },
             dataType: 'json',
             success: function(response) {
-                console.log('Delete response:', response);
+                console.log('Lock response:', response);
                 if (response.success) {
-                    // Close modal and reload page
-                    var deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteAssessmentModal'));
-                    deleteModal.hide();
-                    location.reload();
+                    // Toggle lock icon
+                    if (button.find('i').hasClass('fa-lock')) {
+                        button.html('<i class="fas fa-unlock"></i>');
+                        button.removeClass('btn-warning').addClass('btn-success');
+                    } else {
+                        button.html('<i class="fas fa-lock"></i>');
+                        button.removeClass('btn-success').addClass('btn-warning');
+                    }
+                    alert('Assessment ' + response.message.toLowerCase());
                 } else {
                     alert('Error: ' + response.message);
-                    button.html(originalText);
-                    button.prop('disabled', false);
+                    button.html(originalHtml);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Delete AJAX error:', error);
-                console.error('Response:', xhr.responseText);
-                alert('Error communicating with server. Check console for details.');
-                button.html(originalText);
+                console.error('Lock AJAX error:', error);
+                alert('Error communicating with server');
+                button.html(originalHtml);
+            },
+            complete: function() {
                 button.prop('disabled', false);
             }
         });
-    }
-});
-    
-// Toggle Lock functionality
-$('.toggle-lock').click(function() {
-    var grade = $(this).data('grade');
-    var section = $(this).data('section');
-    var school_year = $(this).data('school_year');
-    var type = $(this).data('type');
-    var button = $(this);
-    
-    console.log('Toggle lock clicked:', grade, section, school_year, type);
-    
-    // Add loading state
-    var originalHtml = button.html();
-    button.html('<i class="fas fa-spinner fa-spin"></i>');
-    button.prop('disabled', true);
-    
-    $.ajax({
-        url: '<?php echo site_url("sbfpdashboard/toggle_lock"); ?>',
-        method: 'POST',
-        data: {
-            grade: grade,
-            section: section,
-            school_year: school_year,
-            assessment_type: type
-        },
-        dataType: 'json',
-        success: function(response) {
-            console.log('Lock response:', response);
-            if (response.success) {
-                // Toggle lock icon
-                if (button.find('i').hasClass('fa-lock')) {
-                    button.html('<i class="fas fa-unlock"></i>');
-                    button.removeClass('btn-warning').addClass('btn-success');
-                } else {
-                    button.html('<i class="fas fa-lock"></i>');
-                    button.removeClass('btn-success').addClass('btn-warning');
-                }
-                alert('Assessment ' + response.message.toLowerCase());
-            } else {
-                alert('Error: ' + response.message);
-                button.html(originalHtml);
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error('Lock AJAX error:', error);
-            alert('Error communicating with server');
-            button.html(originalHtml);
-        },
-        complete: function() {
-            button.prop('disabled', false);
-        }
     });
-});
 });
 </script>
   </body>
