@@ -139,23 +139,38 @@
     </div>
   </div>
 
+  <?php
+  $user_role = $this->session->userdata('role') ?? 'user';
+  $is_admin = in_array($user_role, ['super_admin','admin']);
+  $is_district = ($user_role == 'district');
+  $is_division = ($user_role == 'division');
+  $is_regular_user = ($user_role == 'user');
+
+  // Get the current URI segment for better active state detection
+  $current_uri = $this->uri->uri_string();
+  $current_url = current_url();
+
+  // FIX: Check if function already exists before declaring
+  if (!function_exists('is_active_page')) {
+      function is_active_page($uri_segment, $current_uri) {
+          if (empty($uri_segment)) {
+              return $current_uri == '' || $current_uri == $uri_segment;
+          }
+          return strpos($current_uri, $uri_segment) === 0 || $current_uri == $uri_segment;
+      }
+  }
+  ?>
+
   <!-- NAV -->
   <nav class="flex-grow-1 overflow-auto py-3">
-    <ul class="nav flex-column px-2">
-      <?php
-        $user_role = $this->session->userdata('role') ?? 'user';
-        $is_admin = in_array($user_role, ['super_admin','admin']);
-        $is_district = ($user_role == 'district');
-        $is_division = ($user_role == 'division');
-        $is_regular_user = ($user_role == 'user');
-        $current_url = current_url();
-      ?>
+      <ul class="nav flex-column px-2">
+        
 
       <?php if ($is_admin): ?>
       <li class="nav-item mb-2 px-2">
         <h6 class="text-uppercase text-gray-400 small fw-semibold mb-2 main-sidebar-text">Administration</h6>
         <a href="<?php echo site_url('superadmin'); ?>"
-           class="nav-link rounded-2 <?php echo strpos($current_url,'superadmin')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 <?php echo is_active_page('superadmin', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-tachometer-alt"></i>
           <span class="main-sidebar-text"> Admin Dashboard</span>
         </a>
@@ -168,7 +183,7 @@
         <!-- Show to Admin and Regular Users only -->
         <?php if ($is_admin || $is_regular_user): ?>
         <a href="<?php echo site_url('user'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'user')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('user', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-user"></i>
           <span class="main-sidebar-text"> User Dashboard</span>
         </a>
@@ -177,7 +192,7 @@
         <!-- Assessments - Only for Admin -->
         <?php if ($is_admin): ?>
         <a href="<?php echo site_url('assessments'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'assessments')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('assessments', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-clipboard-list"></i>
           <span class="main-sidebar-text"> Assessments</span>
         </a>
@@ -186,16 +201,29 @@
         <!-- SBFP Dashboard - Show to Admin and Regular Users only -->
         <?php if ($is_admin || $is_regular_user): ?>
         <a href="<?php echo site_url('sbfp'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'sbfp')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 mb-1 <?php echo $current_uri == 'sbfp' || $current_uri == '' ? 'active' : ''; ?>">
           <i class="fas fa-chart-pie"></i>
           <span class="main-sidebar-text"> SBFP Dashboard</span>
         </a>
         <?php endif; ?>
 
-                <!-- District Dashboard - Show to Admin and District only -->
+        <!-- SBFP Beneficiaries - Show to ALL ROLES (Admin, District, Division, Regular User) -->
+        <a href="<?php echo site_url('sbfp-beneficiaries'); ?>"
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('sbfp-beneficiaries', $current_uri) ? 'active' : ''; ?>">
+          <i class="fas fa-users"></i>
+          <span class="main-sidebar-text"> SBFP Beneficiaries</span>
+        </a>
+
+        <a href="<?php echo site_url('archive'); ?>" 
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('archive', $current_uri) ? 'active' : ''; ?>">
+          <i class="fas fa-archive"></i>
+          <span class="main-sidebar-text"> Archive</span>
+        </a>
+
+        <!-- District Dashboard - Show to Admin and District only -->
         <?php if ($is_admin || $is_district): ?>
         <a href="<?php echo site_url('district_dashboard'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'district_dashboard')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('district_dashboard', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-building"></i>
           <span class="main-sidebar-text"> District Dashboard</span>
         </a>
@@ -204,7 +232,7 @@
         <!-- Division Dashboard - Show to Admin and Division only -->
         <?php if ($is_admin || $is_division): ?>
         <a href="<?php echo site_url('division_dashboard'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'division_dashboard')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('division_dashboard', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-sitemap"></i>
           <span class="main-sidebar-text"> Division Dashboard</span>
         </a>
@@ -214,28 +242,28 @@
         <?php if ($is_admin): ?>
           <!-- Admin sees Admin Reports -->
           <a href="<?php echo site_url('admin/reports'); ?>"
-             class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'admin/reports')!==false ? 'active' : ''; ?>">
+             class="nav-link rounded-2 mb-1 <?php echo is_active_page('admin/reports', $current_uri) ? 'active' : ''; ?>">
             <i class="fas fa-file-alt"></i>
             <span class="main-sidebar-text"> Admin Reports</span>
           </a>
         <?php elseif ($is_regular_user): ?>
           <!-- Regular User sees User Reports -->
           <a href="<?php echo site_url('reports'); ?>"
-             class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'reports')!==false ? 'active' : ''; ?>">
+             class="nav-link rounded-2 mb-1 <?php echo is_active_page('reports', $current_uri) ? 'active' : ''; ?>">
             <i class="fas fa-file-alt"></i>
             <span class="main-sidebar-text"> Reports</span>
           </a>
         <?php elseif ($is_district): ?>
           <!-- District sees District Reports -->
           <a href="<?php echo site_url('district/reports'); ?>"
-             class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'district/reports')!==false ? 'active' : ''; ?>">
+             class="nav-link rounded-2 mb-1 <?php echo is_active_page('district/reports', $current_uri) ? 'active' : ''; ?>">
             <i class="fas fa-file-alt"></i>
             <span class="main-sidebar-text"> District Reports</span>
           </a>
         <?php elseif ($is_division): ?>
           <!-- Division sees Division Reports -->
           <a href="<?php echo site_url('division/reports'); ?>"
-             class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'division/reports')!==false ? 'active' : ''; ?>">
+             class="nav-link rounded-2 mb-1 <?php echo is_active_page('division/reports', $current_uri) ? 'active' : ''; ?>">
             <i class="fas fa-file-alt"></i>
             <span class="main-sidebar-text"> Division Reports</span>
           </a>
@@ -248,19 +276,19 @@
         <h6 class="text-uppercase text-gray-400 small fw-semibold mb-2 main-sidebar-text">Data Management</h6>
 
         <a href="<?php echo site_url('excel_upload'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'excel_upload')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('excel_upload', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-file-excel"></i>
           <span class="main-sidebar-text"> Excel Upload</span>
         </a>
 
         <a href="<?php echo site_url('superadmin/add-user'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'add-user')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('superadmin/add-user', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-user-plus"></i>
           <span class="main-sidebar-text"> Add User</span>
         </a>
 
         <a href="<?php echo site_url('nutritional_upload'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'nutritional_upload')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('nutritional_upload', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-upload"></i>
           <span class="main-sidebar-text"> Nutritional Data</span>
         </a>
@@ -274,21 +302,21 @@
         
         <!-- Admin Statistics -->
         <a href="<?php echo site_url('admin/reports/statistics'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'admin/reports/statistics')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('admin/reports/statistics', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-chart-bar"></i>
           <span class="main-sidebar-text"> Statistics</span>
         </a>
         
         <!-- Admin Export -->
         <a href="<?php echo site_url('admin/reports/export'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'admin/reports/export')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('admin/reports/export', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-download"></i>
           <span class="main-sidebar-text"> Export Data</span>
         </a>
         
         <!-- Admin Export All Students -->
         <a href="<?php echo site_url('admin/reports/export_all_students'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo strpos($current_url,'admin/reports/export_all_students')!==false ? 'active' : ''; ?>">
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('admin/reports/export_all_students', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-file-export"></i>
           <span class="main-sidebar-text"> Export All Students</span>
         </a>
