@@ -44,17 +44,32 @@ class District_dashboard_controller extends CI_Controller {
         // Parse user district
         $parsed_district = $user_district ? preg_replace('/\s+(District|Division)$/', '', $user_district) : 'Unknown';
         
-        // Get assessment type from URL or session
-        $assessment_type = $this->input->get('assessment_type') ?? 'baseline';
+        // Get assessment type from URL, session, or default to baseline
+        $assessment_type = $this->input->get('assessment_type') ?: 
+                          ($this->session->userdata('district_assessment_type') ?: 'baseline');
+        
+        // Get school level filter from URL, session, or default to 'all'
+        $school_level = $this->input->get('school_level') ?: 
+                       ($this->session->userdata('district_school_level') ?: 'all');
+        
+        // Store in session
+        $this->session->set_userdata('district_assessment_type', $assessment_type);
+        $this->session->set_userdata('district_school_level', $school_level);
+        
         $data['assessment_type'] = $assessment_type;
+        $data['school_level'] = $school_level;
         
-        // Get nutritional data for district with assessment type filter
-        $data['nutritional_data'] = $this->district_dashboard_model->get_district_nutritional_data($parsed_district, $assessment_type);
-        $data['grand_total'] = $this->district_dashboard_model->get_district_grand_total($parsed_district, $assessment_type);
+        // Get nutritional data for district with assessment type and school level filters
+        $result = $this->district_dashboard_model->get_district_nutritional_data($parsed_district, $assessment_type, $school_level);
+        $data['nutritional_data'] = $result['nutritionalData'];
+        $data['grand_total'] = $result['grandTotal'];
+        $data['has_data'] = $result['has_data'];
+        $data['processed_count'] = $result['processed_count'];
         
-        // Get assessment counts
-        $assessment_counts = $this->district_dashboard_model->get_assessment_counts($parsed_district);
+        // Get assessment counts with school level filter
+        $assessment_counts = $this->district_dashboard_model->get_assessment_counts($parsed_district, $school_level);
         $data['baseline_count'] = $assessment_counts['baseline'];
+        $data['midline_count'] = $assessment_counts['midline'];
         $data['endline_count'] = $assessment_counts['endline'];
         
         // Get district reports
@@ -92,15 +107,62 @@ class District_dashboard_controller extends CI_Controller {
             );
         }
         
-        // Check if we have data for the current assessment type
-        $data['has_data'] = !empty($data['nutritional_data']);
-        $data['processed_count'] = $data['grand_total'];
+        // Define grade arrays for the view
+        $data['elementaryGrades'] = [
+            'Kinder_m' => 'Kinder (M)', 'Kinder_f' => 'Kinder (F)', 'Kinder_total' => 'Kinder (Total)',
+            'Grade 1_m' => 'Grade 1 (M)', 'Grade 1_f' => 'Grade 1 (F)', 'Grade 1_total' => 'Grade 1 (Total)',
+            'Grade 2_m' => 'Grade 2 (M)', 'Grade 2_f' => 'Grade 2 (F)', 'Grade 2_total' => 'Grade 2 (Total)',
+            'Grade 3_m' => 'Grade 3 (M)', 'Grade 3_f' => 'Grade 3 (F)', 'Grade 3_total' => 'Grade 3 (Total)',
+            'Grade 4_m' => 'Grade 4 (M)', 'Grade 4_f' => 'Grade 4 (F)', 'Grade 4_total' => 'Grade 4 (Total)',
+            'Grade 5_m' => 'Grade 5 (M)', 'Grade 5_f' => 'Grade 5 (F)', 'Grade 5_total' => 'Grade 5 (Total)',
+            'Grade 6_m' => 'Grade 6 (M)', 'Grade 6_f' => 'Grade 6 (F)', 'Grade 6_total' => 'Grade 6 (Total)'
+        ];
+        
+        $data['secondaryGrades'] = [
+            'Grade 7_m' => 'Grade 7 (M)', 'Grade 7_f' => 'Grade 7 (F)', 'Grade 7_total' => 'Grade 7 (Total)',
+            'Grade 8_m' => 'Grade 8 (M)', 'Grade 8_f' => 'Grade 8 (F)', 'Grade 8_total' => 'Grade 8 (Total)',
+            'Grade 9_m' => 'Grade 9 (M)', 'Grade 9_f' => 'Grade 9 (F)', 'Grade 9_total' => 'Grade 9 (Total)',
+            'Grade 10_m' => 'Grade 10 (M)', 'Grade 10_f' => 'Grade 10 (F)', 'Grade 10_total' => 'Grade 10 (Total)',
+            'Grade 11_m' => 'Grade 11 (M)', 'Grade 11_f' => 'Grade 11 (F)', 'Grade 11_total' => 'Grade 11 (Total)',
+            'Grade 12_m' => 'Grade 12 (M)', 'Grade 12_f' => 'Grade 12 (F)', 'Grade 12_total' => 'Grade 12 (Total)'
+        ];
         
         // Set title for template
         $data['title'] = 'District Dashboard';
         
         // Load view
         $this->load->view('district_dashboard', $data);
+    }
+    
+    /**
+     * AJAX: Set school level filter in session
+     */
+    public function set_school_level() {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+            return;
+        }
+        
+        $school_level = $this->input->post('school_level', TRUE);
+        $assessment_type = $this->input->post('assessment_type', TRUE);
+        
+        // Validate school level
+        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary'];
+        if (!in_array($school_level, $valid_levels)) {
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'Invalid school level'
+            ]));
+            return;
+        }
+
+        $this->session->set_userdata('district_school_level', $school_level);
+        
+        $this->output->set_content_type('application/json')->set_output(json_encode([
+            'success' => true,
+            'message' => 'School level filter updated',
+            'redirect' => site_url('district_dashboard?assessment_type=' . $assessment_type . '&school_level=' . $school_level)
+        ]));
     }
     
     public function get_school_details($school_name) {

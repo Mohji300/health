@@ -1,3 +1,55 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+// ============ CRITICAL: Helper functions must be defined at the TOP ============
+function gdata($data, $key, $field) {
+    if (!isset($data[$key])) return 0;
+    return isset($data[$key][$field]) ? (int)$data[$key][$field] : 0;
+}
+
+function pct($num, $den) {
+    if (!$den || $den == 0) return '0%';
+    return round(($num / $den) * 100) . '%';
+}
+// ============================================================================
+
+// Get current assessment type from session or default to baseline
+$assessment_type = isset($assessment_type) ? $assessment_type : 'baseline';
+$is_baseline = ($assessment_type == 'baseline');
+$is_midline = ($assessment_type == 'midline');
+$is_endline = ($assessment_type == 'endline');
+
+// Get school level filter
+$school_level = isset($school_level) ? $school_level : 'all';
+
+// Get counts
+$baseline_count = isset($baseline_count) ? $baseline_count : 0;
+$midline_count = isset($midline_count) ? $midline_count : 0;
+$endline_count = isset($endline_count) ? $endline_count : 0;
+
+// Define grade arrays here (or they can stay where they are in your view)
+$elementaryGrades = [
+    'Kinder_m' => 'Kinder (M)', 'Kinder_f' => 'Kinder (F)', 'Kinder_total' => 'Kinder (Total)',
+    'Grade 1_m' => 'Grade 1 (M)', 'Grade 1_f' => 'Grade 1 (F)', 'Grade 1_total' => 'Grade 1 (Total)',
+    'Grade 2_m' => 'Grade 2 (M)', 'Grade 2_f' => 'Grade 2 (F)', 'Grade 2_total' => 'Grade 2 (Total)',
+    'Grade 3_m' => 'Grade 3 (M)', 'Grade 3_f' => 'Grade 3 (F)', 'Grade 3_total' => 'Grade 3 (Total)',
+    'Grade 4_m' => 'Grade 4 (M)', 'Grade 4_f' => 'Grade 4 (F)', 'Grade 4_total' => 'Grade 4 (Total)',
+    'Grade 5_m' => 'Grade 5 (M)', 'Grade 5_f' => 'Grade 5 (F)', 'Grade 5_total' => 'Grade 5 (Total)',
+    'Grade 6_m' => 'Grade 6 (M)', 'Grade 6_f' => 'Grade 6 (F)', 'Grade 6_total' => 'Grade 6 (Total)'
+];
+
+$secondaryGrades = [
+    'Grade 7_m' => 'Grade 7 (M)', 'Grade 7_f' => 'Grade 7 (F)', 'Grade 7_total' => 'Grade 7 (Total)',
+    'Grade 8_m' => 'Grade 8 (M)', 'Grade 8_f' => 'Grade 8 (F)', 'Grade 8_total' => 'Grade 8 (Total)',
+    'Grade 9_m' => 'Grade 9 (M)', 'Grade 9_f' => 'Grade 9 (F)', 'Grade 9_total' => 'Grade 9 (Total)',
+    'Grade 10_m' => 'Grade 10 (M)', 'Grade 10_f' => 'Grade 10 (F)', 'Grade 10_total' => 'Grade 10 (Total)',
+    'Grade 11_m' => 'Grade 11 (M)', 'Grade 11_f' => 'Grade 11 (F)', 'Grade 11_total' => 'Grade 11 (Total)',
+    'Grade 12_m' => 'Grade 12 (M)', 'Grade 12_f' => 'Grade 12 (F)', 'Grade 12_total' => 'Grade 12 (Total)'
+];
+
+$bmiFields = ['severely_wasted','wasted','normal_bmi','overweight','obese'];
+$hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,7 +78,7 @@
         
         /* Enhanced table styling from user dashboard */
         .table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
-        .table-bordered th, .table-bordered td { border: 1px solid #e3e6f0; }
+        .table-bordered th, .table-bordered td { border: 1px solid #000000; }
         .table-fixed { table-layout: fixed; }
         .small-cell { font-size: 0.85rem; }
         
@@ -57,23 +109,24 @@
             background: rgba(0,0,0,0.05);
         }
 
-        /* Fix switcher visibility */
         .assessment-switcher .btn {
             font-weight: 600;
         }
 
-        /* Baseline button colors */
         .assessment-switcher .btn.btn-primary {
-            color: #0d6efd; /* Bootstrap primary blue */
+            color: #0d6efd;
         }
 
-        /* Endline button colors */
+        .assessment-switcher .btn.btn-info {
+            color: #0dcaf0;
+        }
+
         .assessment-switcher .btn.btn-success {
-            color: #198754; /* Bootstrap success green */
+            color: #198754;
         }
 
-        /* Active state keeps white text */
         .assessment-switcher .btn.active.btn-primary,
+        .assessment-switcher .btn.active.btn-info,
         .assessment-switcher .btn.active.btn-success {
             color: #ffffff !important;
         }
@@ -90,46 +143,64 @@
             background: linear-gradient(45deg, #4e73df, #224abe);
             color: white;
         }
-                .badge-endline {
-                        background: linear-gradient(45deg, #1cc88a, #13855c);
-                        color: white;
-                }
+        .badge-midline {
+            background: linear-gradient(45deg, #5ae1f6, #11c2dd);
+            color: white;
+        }
+        .badge-endline {
+            background: linear-gradient(45deg, #1cc88a, #13855c);
+            color: white;
+        }
 
-                /* small helper used to visually verify print CSS in print preview */
-                .print-debug { display: none; }
+        .print-debug { display: none; }
 
-                /* Print layout for A4 (bond) - single page landscape */
-            @page { size: A4 landscape; margin: 8mm; }
-            @media print {
-                html, body { background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: Arial, Helvetica, sans-serif; font-size: 8px; margin: 0; padding: 0; line-height: 1.2; }
-                .no-print, .btn, .assessment-switcher, .modal, #sidebar-wrapper, .btn-group { display: none !important; }
-                #wrapper { display: block !important; }
-                #page-content-wrapper { padding: 4px !important; }
-                .card { box-shadow: none !important; border: none !important; padding: 0 !important; }
-                /* Aggressive compression for single-page fit */
-                table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; font-size: 8px !important; margin: 0 !important; }
-                th, td { padding: 2px !important; border: 0.5px solid #dee2e6 !important; word-wrap: break-word; white-space: normal; line-height: 1.1; }
-                .small-cell td, .small-cell th { padding: 1.5px !important; }
-                .table thead { background: #f8f9fc !important; -webkit-print-color-adjust: exact; }
-                .table-primary { background-color: #f1f5f9 !important; }
-                /* Minimize header/footer */
-                h3 { font-size: 10px; margin: 0 0 2px 0; font-weight: bold; }
-                p { font-size: 7px; margin: 0 0 4px 0; }
+        /* Print layout for A4 (bond) - single page landscape */
+        @page { size: A4 landscape; margin: 8mm; }
+        @media print {
+            html, body { background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: Arial, Helvetica, sans-serif; font-size: 8px; margin: 0; padding: 0; line-height: 1.2; }
+            .no-print, .btn, .assessment-switcher, .modal, #sidebar-wrapper, .btn-group { display: none !important; }
+            #wrapper { display: block !important; }
+            #page-content-wrapper { padding: 4px !important; }
+            .card { box-shadow: none !important; border: none !important; padding: 0 !important; }
+            table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; font-size: 8px !important; margin: 0 !important; }
+            th, td { padding: 2px !important; border: 0.5px solid #dee2e6 !important; word-wrap: break-word; white-space: normal; line-height: 1.1; }
+            .small-cell td, .small-cell th { padding: 1.5px !important; }
+            .table thead { background: #f8f9fc !important; -webkit-print-color-adjust: exact; }
+            .table-primary { background-color: #f1f5f9 !important; }
+            h3 { font-size: 10px; margin: 0 0 2px 0; font-weight: bold; }
+            p { font-size: 7px; margin: 0 0 4px 0; }
+            .print-debug { display: block !important; position: fixed !important; top: 4mm !important; left: 8mm !important; background: #ffeb3b !important; color: #000 !important; padding: 4px 8px !important; z-index: 99999 !important; font-weight: 700 !important; border-radius: 3px !important; }
+        }
 
-                /* show debug banner only in print preview/print */
-                .print-debug { display: block !important; position: fixed !important; top: 4mm !important; left: 8mm !important; background: #ffeb3b !important; color: #000 !important; padding: 4px 8px !important; z-index: 99999 !important; font-weight: 700 !important; border-radius: 3px !important; }
-
-                }
+        /* Integrated sub-menu styling */
+        #integratedSubMenu {
+            padding: 10px 15px;
+            background-color: #f8f9fc;
+            border-bottom: 1px solid #e3e6ea;
+        }
+        #integratedSubMenu .btn-group {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        /* Filter badge */
+        .filter-badge {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background-color: #6c757d;
+            color: white;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body class="bg-light">
-        <div id="wrapper">
-            <?php $this->load->view('templates/sidebar'); ?>
-            <div id="page-content-wrapper">
-                <div class="container-fluid py-4">
-                    <div class="print-debug">PRINT CSS ACTIVE — visible in print preview</div>
+    <div id="wrapper">
+        <?php $this->load->view('templates/sidebar'); ?>
+        <div id="page-content-wrapper">
+            <div class="container-fluid py-4">
+                <div class="print-debug">PRINT CSS ACTIVE — visible in print preview</div>
                 
-                <!-- Welcome Message -->
+                <!-- Welcome Message with Assessment Switcher (UPDATED with Midline) -->
                 <div class="alert alert-info">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -141,6 +212,10 @@
                                     id="switchToBaseline">
                                 <i class="fas fa-flag me-1"></i> Baseline
                             </button>
+                            <button class="btn btn-info btn-sm <?php echo ($assessment_type ?? 'baseline') == 'midline' ? 'active' : ''; ?>" 
+                                    id="switchToMidline">
+                                <i class="fas fa-flag me-1"></i> Midline
+                            </button>
                             <button class="btn btn-success btn-sm <?php echo ($assessment_type ?? 'baseline') == 'endline' ? 'active' : ''; ?>" 
                                     id="switchToEndline">
                                 <i class="fas fa-flag-checkered me-1"></i> Endline
@@ -148,6 +223,42 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- No Data Alert (UPDATED with Midline) -->
+                <?php if (!$has_data): ?>
+                <div class="alert alert-warning mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                        <div>
+                            <h5 class="alert-heading mb-1">No <?php echo ucfirst($assessment_type); ?> Data Available</h5>
+                            <p class="mb-0">
+                                No <?php echo strtolower($assessment_type); ?> assessment data has been submitted yet for this district. 
+                                The table below shows all zeros.
+                                <?php if ($assessment_type == 'midline'): ?>
+                                    You need to create midline assessments first to see data here.
+                                <?php elseif ($assessment_type == 'endline'): ?>
+                                    You need to create endline assessments first to see data here.
+                                <?php else: ?>
+                                    You need to create baseline assessments first to see data here.
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <?php elseif ($processed_count == 0): ?>
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle fa-2x me-3"></i>
+                        <div>
+                            <h5 class="alert-heading mb-1">Data Processing Notice</h5>
+                            <p class="mb-0">
+                                <?php echo $processed_count; ?> <?php echo ucfirst($assessment_type); ?> assessment records processed. 
+                                Some records may have been skipped due to missing or invalid data.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
                 
                 <!-- Overall Summary Card -->
                 <div class="card bg-primary text-white mb-4 cursor-pointer no-print" id="overallSummaryCard">
@@ -254,58 +365,48 @@
                     </div>
                 </div>
                 
-                <!-- Detailed Nutritional Status Table (from user dashboard) -->
-                <?php 
-                // Define grade arrays and helper functions
-                function gdata($data, $key, $field) {
-                    if (!isset($data[$key])) return 0;
-                    return isset($data[$key][$field]) ? (int)$data[$key][$field] : 0;
-                }
-                
-                function pct($num, $den) {
-                    if (!$den || $den == 0) return '0%';
-                    return round(($num / $den) * 100) . '%';
-                }
-                
-                $elementaryGrades = [
-                    'Kinder_m' => 'Kinder (M)', 'Kinder_f' => 'Kinder (F)', 'Kinder_total' => 'Kinder (Total)',
-                    'Grade 1_m' => 'Grade 1 (M)', 'Grade 1_f' => 'Grade 1 (F)', 'Grade 1_total' => 'Grade 1 (Total)',
-                    'Grade 2_m' => 'Grade 2 (M)', 'Grade 2_f' => 'Grade 2 (F)', 'Grade 2_total' => 'Grade 2 (Total)',
-                    'Grade 3_m' => 'Grade 3 (M)', 'Grade 3_f' => 'Grade 3 (F)', 'Grade 3_total' => 'Grade 3 (Total)',
-                    'Grade 4_m' => 'Grade 4 (M)', 'Grade 4_f' => 'Grade 4 (F)', 'Grade 4_total' => 'Grade 4 (Total)',
-                    'Grade 5_m' => 'Grade 5 (M)', 'Grade 5_f' => 'Grade 5 (F)', 'Grade 5_total' => 'Grade 5 (Total)',
-                    'Grade 6_m' => 'Grade 6 (M)', 'Grade 6_f' => 'Grade 6 (F)', 'Grade 6_total' => 'Grade 6 (Total)'
-                ];
-                
-                $secondaryGrades = [
-                    'Grade 7_m' => 'Grade 7 (M)', 'Grade 7_f' => 'Grade 7 (F)', 'Grade 7_total' => 'Grade 7 (Total)',
-                    'Grade 8_m' => 'Grade 8 (M)', 'Grade 8_f' => 'Grade 8 (F)', 'Grade 8_total' => 'Grade 8 (Total)',
-                    'Grade 9_m' => 'Grade 9 (M)', 'Grade 9_f' => 'Grade 9 (F)', 'Grade 9_total' => 'Grade 9 (Total)',
-                    'Grade 10_m' => 'Grade 10 (M)', 'Grade 10_f' => 'Grade 10 (F)', 'Grade 10_total' => 'Grade 10 (Total)',
-                    'Grade 11_m' => 'Grade 11 (M)', 'Grade 11_f' => 'Grade 11 (F)', 'Grade 11_total' => 'Grade 11 (Total)',
-                    'Grade 12_m' => 'Grade 12 (M)', 'Grade 12_f' => 'Grade 12 (F)', 'Grade 12_total' => 'Grade 12 (Total)'
-                ];
-                
-                $bmiFields = ['severely_wasted','wasted','normal_bmi','overweight','obese'];
-                $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
-                ?>
-                
+                <!-- Main Nutritional Assessment Card (UPDATED with School Level Filtering) -->
                 <?php if (!empty($nutritional_data)): ?>
                 <div class="card shadow">
-                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center flex-wrap">
                         <h6 class="m-0 font-weight-bold text-primary">
-                            Consolidated Nutritional Assessment Report - <?php echo htmlspecialchars($parsed_user_district); ?> District
-                            <span class="badge <?php echo ($assessment_type ?? 'baseline') == 'baseline' ? 'badge-baseline' : 'badge-endline'; ?> ms-2">
+                            District Nutritional Assessment Report - <br> <?php echo htmlspecialchars($parsed_user_district); ?> District
+                            <span class="badge <?php 
+                                if ($assessment_type == 'baseline') echo 'badge-baseline';
+                                elseif ($assessment_type == 'midline') echo 'badge-midline';
+                                else echo 'badge-endline';
+                            ?> ms-2">
                                 <?php echo ucfirst($assessment_type ?? 'baseline'); ?>
                             </span>
+                            <!-- Show active filter badge -->
+                            <?php if ($school_level !== 'all'): ?>
+                            <span class="badge bg-secondary ms-2 filter-badge">
+                                <i class="fas fa-filter me-1"></i>
+                                <?php 
+                                    if ($school_level === 'integrated_elementary') echo 'Integrated (Elementary)';
+                                    elseif ($school_level === 'integrated_secondary') echo 'Integrated (Secondary)';
+                                    else echo ucfirst($school_level); 
+                                ?>
+                            </span>
+                            <?php endif; ?>
                         </h6>
-                        <div class="no-print">
-                            <div class="btn-group me-2" role="group">
-                                <button id="btnElementary" type="button" class="btn btn-outline-primary active">
+                        <div class="no-print d-flex flex-wrap align-items-center">
+                            <!-- School Level Filter Buttons (using the District Nutritional Assessment Report table buttons) -->
+                            <div class="btn-group me-2 mb-2 mb-sm-0" role="group">
+                                <button id="btnElementary" type="button" 
+                                        class="btn btn-outline-primary <?php echo ($school_level === 'all' || $school_level === 'elementary' || $school_level === 'integrated_elementary') ? 'active' : ''; ?>">
                                     <i class="fas fa-child me-1"></i> Elementary
+                                    <span class="badge bg-info ms-1">K-6</span>
                                 </button>
-                                <button id="btnSecondary" type="button" class="btn btn-outline-primary">
+                                <button id="btnSecondary" type="button" 
+                                        class="btn btn-outline-primary <?php echo ($school_level === 'secondary' || $school_level === 'integrated_secondary') ? 'active' : ''; ?>">
                                     <i class="fas fa-graduation-cap me-1"></i> Secondary
+                                    <span class="badge bg-info ms-1">7-12</span>
+                                </button>
+                                <button id="btnIntegrated" type="button" 
+                                        class="btn btn-outline-primary <?php echo (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) ? 'active' : ''; ?>">
+                                    <i class="fas fa-university me-1"></i> Integrated
+                                    <span class="badge bg-info ms-1">K-12</span>
                                 </button>
                             </div>
                             <button id="btnPrint" class="btn btn-success">
@@ -313,235 +414,197 @@
                             </button>
                         </div>
                     </div>
+                    
+                    <!-- Integrated Sub-Menu (UPDATED) -->
+                    <div id="integratedSubMenu" class="no-print <?php echo (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) ? '' : 'd-none'; ?>">
+                        <div class="btn-group" role="group">
+                            <button id="btnIntegratedElementary" type="button" 
+                                    class="btn btn-sm <?php echo (in_array($school_level, ['integrated', 'integrated_elementary'])) ? 'btn-primary' : 'btn-outline-primary'; ?>">
+                                <i class="fas fa-child me-1"></i> Integrated Elementary
+                                <span class="badge bg-info ms-1">K-6</span>
+                            </button>
+                            <button id="btnIntegratedSecondary" type="button" 
+                                    class="btn btn-sm <?php echo ($school_level === 'integrated_secondary') ? 'btn-primary' : 'btn-outline-primary'; ?>">
+                                <i class="fas fa-graduation-cap me-1"></i> Integrated Secondary
+                                <span class="badge bg-info ms-1">7-12</span>
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="card-body p-0">
                         <div id="tableContainer" class="table-responsive p-3">
                             
-<!-- Elementary Table -->
-<table id="elementaryTable" class="table table-bordered table-sm table-fixed small-cell mb-0">
-    <thead class="table-light">
-        <tr>
-            <th rowspan="3">Grade Levels</th>
-            <th rowspan="3" class="text-center">Enrolment</th>
-            <th rowspan="3" class="text-center">Pupils Weighed</th>
-            <th colspan="10" class="text-center">BODY MASS INDEX (BMI)</th>
-            <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
-        </tr>
-        <tr class="table-secondary">
-            <th colspan="2" class="text-center">Severely Wasted</th>
-            <th colspan="2" class="text-center">Wasted</th>
-            <th colspan="2" class="text-center">Normal BMI</th>
-            <th colspan="2" class="text-center">Overweight</th>
-            <th colspan="2" class="text-center">Obese</th>
+                            <!-- Elementary Table (UPDATED with proper gdata usage) -->
+                            <table id="elementaryTable" class="table table-bordered table-sm table-fixed small-cell mb-0 <?php echo ($school_level === 'secondary' || $school_level === 'integrated_secondary') ? 'd-none' : ''; ?>">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th rowspan="3">Grade Levels</th>
+                                        <th rowspan="3" class="text-center">Enrolment</th>
+                                        <th rowspan="3" class="text-center">Pupils Weighed</th>
+                                        <th colspan="10" class="text-center">BODY MASS INDEX (BMI)</th>
+                                        <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
+                                    </tr>
+                                    <tr class="table-secondary">
+                                        <th colspan="2" class="text-center">Severely Wasted</th>
+                                        <th colspan="2" class="text-center">Wasted</th>
+                                        <th colspan="2" class="text-center">Normal BMI</th>
+                                        <th colspan="2" class="text-center">Overweight</th>
+                                        <th colspan="2" class="text-center">Obese</th>
+                                        <th colspan="2" class="text-center">Severely Stunted</th>
+                                        <th colspan="2" class="text-center">Stunted</th>
+                                        <th colspan="2" class="text-center">Normal HFA</th>
+                                        <th colspan="2" class="text-center">Tall</th>
+                                        <th colspan="2" class="text-center">Pupils Height</th>
+                                    </tr>
+                                    <tr class="table-secondary">
+                                        <?php for ($i=0;$i<10;$i++): ?>
+                                            <th class="text-center">Count</th>
+                                            <th class="text-center">%</th>
+                                        <?php endfor; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    $bmiFields = ['severely_wasted','wasted','normal_bmi','overweight','obese'];
+                                    $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
+                                    ?>
+                                    <?php foreach ($elementaryGrades as $gkey => $glabel): ?>
+                                        <?php $enrol = gdata($nutritional_data, $gkey, 'enrolment'); ?>
+                                        <tr>
+                                            <td class="fw-bold"><?= htmlspecialchars($glabel) ?></td>
+                                            <td class="text-center"><?= $enrol ?></td>
+                                            <td class="text-center"><?= gdata($nutritional_data, $gkey, 'pupils_weighed') ?></td>
 
-            <th colspan="2" class="text-center">Severely Stunted</th>
-            <th colspan="2" class="text-center">Stunted</th>
-            <th colspan="2" class="text-center">Normal HFA</th>
-            <th colspan="2" class="text-center">Tall</th>
-            <th colspan="2" class="text-center">Pupils Height</th>
-        </tr>
-        <tr class="table-secondary">
-            <!-- For each category: count and % -->
-            <?php for ($i=0;$i<10;$i++): ?>
-                <th class="text-center">Count</th>
-                <th class="text-center">%</th>
-            <?php endfor; ?>
-        </tr>
-    </thead>
-    <tbody>
-        <?php foreach ($elementaryGrades as $gkey => $glabel): ?>
-            <?php 
-            // For district view, get data if it exists
-            $gradeData = isset($nutritional_data[$gkey]) ? $nutritional_data[$gkey] : [];
-            $enrol = isset($gradeData['enrolment']) ? $gradeData['enrolment'] : 0;
-            $weighed = isset($gradeData['pupils_weighed']) ? $gradeData['pupils_weighed'] : $enrol;
-            ?>
-            <tr>
-                <td class="fw-bold"><?= htmlspecialchars($glabel) ?></td>
-                <td class="text-center"><?= $enrol ?></td>
-                <td class="text-center"><?= $weighed ?></td>
+                                            <!-- BMI columns -->
+                                            <?php foreach ($bmiFields as $bf): ?>
+                                                <?php $val = gdata($nutritional_data, $gkey, $bf); ?>
+                                                <td class="text-center"><?= $val ?></td>
+                                                <td class="text-center"><?= pct($val, $enrol) ?></td>
+                                            <?php endforeach; ?>
 
-                <!-- BMI columns -->
-                <?php
-                // BMI fields from model
-                $bmiFields = ['severely_wasted', 'wasted', 'normal_bmi', 'overweight', 'obese'];
-                foreach ($bmiFields as $field):
-                    $val = isset($gradeData[$field]) ? $gradeData[$field] : 0;
-                ?>
-                    <td class="text-center"><?= $val ?></td>
-                    <td class="text-center"><?= pct($val, $enrol) ?></td>
-                <?php endforeach; ?>
+                                            <!-- HFA columns -->
+                                            <?php foreach ($hfaFields as $hf): ?>
+                                                <?php $val = gdata($nutritional_data, $gkey, $hf); ?>
+                                                <td class="text-center"><?= $val ?></td>
+                                                <td class="text-center"><?= pct($val, $enrol) ?></td>
+                                            <?php endforeach; ?>
+                                        </tr>
+                                    <?php endforeach; ?>
 
-                <!-- HFA columns -->
-                <?php
-                // HFA fields from model
-                $hfaFields = ['severely_stunted', 'stunted', 'normal_hfa', 'tall', 'pupils_height'];
-                foreach ($hfaFields as $field):
-                    $val = isset($gradeData[$field]) ? $gradeData[$field] : 0;
-                ?>
-                    <td class="text-center"><?= $val ?></td>
-                    <td class="text-center"><?= pct($val, $enrol) ?></td>
-                <?php endforeach; ?>
-            </tr>
-        <?php endforeach; ?>
+                                    <!-- Grand total row - Elementary -->
+                                    <tr class="table-primary">
+                                        <td class="fw-bold">Grand Total (Elementary)</td>
+                                        <?php
+                                        $totalEnrol = 0; $totalWeighed = 0;
+                                        $grandCounts = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                        foreach ($elementaryGrades as $gkey => $glabel) {
+                                            if (substr($gkey, -6) === '_total') {
+                                                $totalEnrol += gdata($nutritional_data, $gkey, 'enrolment');
+                                                $totalWeighed += gdata($nutritional_data, $gkey, 'pupils_weighed');
+                                                foreach ($grandCounts as $k => &$v) {
+                                                    $v += gdata($nutritional_data, $gkey, $k);
+                                                }
+                                                unset($v);
+                                            }
+                                        }
+                                        ?>
+                                        <td class="text-center fw-bold"><?= $totalEnrol ?></td>
+                                        <td class="text-center fw-bold"><?= $totalWeighed ?></td>
+                                        <?php foreach ($bmiFields as $bf): $val = $grandCounts[$bf]; ?>
+                                            <td class="text-center fw-bold"><?= $val ?></td>
+                                            <td class="text-center fw-bold"><?= pct($val, $totalEnrol) ?></td>
+                                        <?php endforeach; ?>
+                                        <?php foreach ($hfaFields as $hf): $val = $grandCounts[$hf]; ?>
+                                            <td class="text-center fw-bold"><?= $val ?></td>
+                                            <td class="text-center fw-bold"><?= pct($val, $totalEnrol) ?></td>
+                                        <?php endforeach; ?>
+                                    </tr>
+                                </tbody>
+                            </table>
 
-        <!-- Grand total row -->
-        <tr class="table-primary">
-            <td class="fw-bold">Grand Total (Elementary)</td>
-            <?php
-            $totalEnrol = 0;
-            $totalWeighed = 0;
-            $bmiTotals = array_fill_keys($bmiFields, 0);
-            $hfaTotals = array_fill_keys($hfaFields, 0);
-            
-            // Calculate totals only for _total rows
-            foreach ($elementaryGrades as $gkey => $glabel):
-                if (strpos($gkey, '_total') !== false && isset($nutritional_data[$gkey])):
-                    $gradeData = $nutritional_data[$gkey];
-                    $enrol = isset($gradeData['enrolment']) ? $gradeData['enrolment'] : 0;
-                    $totalEnrol += $enrol;
-                    
-                    $weighed = isset($gradeData['pupils_weighed']) ? $gradeData['pupils_weighed'] : $enrol;
-                    $totalWeighed += $weighed;
-                    
-                    // Add BMI totals
-                    foreach ($bmiFields as $field):
-                        $bmiTotals[$field] += isset($gradeData[$field]) ? $gradeData[$field] : 0;
-                    endforeach;
-                    
-                    // Add HFA totals
-                    foreach ($hfaFields as $field):
-                        $hfaTotals[$field] += isset($gradeData[$field]) ? $gradeData[$field] : 0;
-                    endforeach;
-                endif;
-            endforeach;
-            ?>
-            <td class="text-center fw-bold"><?= $totalEnrol ?></td>
-            <td class="text-center fw-bold"><?= $totalWeighed ?></td>
-            
-            <!-- BMI totals -->
-            <?php foreach ($bmiTotals as $val): ?>
-                <td class="text-center fw-bold"><?= $val ?></td>
-                <td class="text-center fw-bold"><?= pct($val, $totalEnrol) ?></td>
-            <?php endforeach; ?>
-            
-            <!-- HFA totals -->
-            <?php foreach ($hfaTotals as $val): ?>
-                <td class="text-center fw-bold"><?= $val ?></td>
-                <td class="text-center fw-bold"><?= pct($val, $totalEnrol) ?></td>
-            <?php endforeach; ?>
-        </tr>
-    </tbody>
-</table>
+                            <!-- Secondary Table (UPDATED with proper gdata usage) -->
+                            <table id="secondaryTable" class="table table-bordered table-sm table-fixed small-cell mb-0 <?php echo ($school_level === 'secondary' || $school_level === 'integrated_secondary') ? '' : 'd-none'; ?>">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th rowspan="3">Grade Levels</th>
+                                        <th rowspan="3" class="text-center">Enrolment</th>
+                                        <th rowspan="3" class="text-center">Pupils Weighed</th>
+                                        <th colspan="10" class="text-center">BODY MASS INDEX (BMI)</th>
+                                        <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
+                                    </tr>
+                                    <tr class="table-secondary">
+                                        <th colspan="2" class="text-center">Severely Wasted</th>
+                                        <th colspan="2" class="text-center">Wasted</th>
+                                        <th colspan="2" class="text-center">Normal BMI</th>
+                                        <th colspan="2" class="text-center">Overweight</th>
+                                        <th colspan="2" class="text-center">Obese</th>
+                                        <th colspan="2" class="text-center">Severely Stunted</th>
+                                        <th colspan="2" class="text-center">Stunted</th>
+                                        <th colspan="2" class="text-center">Normal HFA</th>
+                                        <th colspan="2" class="text-center">Tall</th>
+                                        <th colspan="2" class="text-center">Pupils Height</th>
+                                    </tr>
+                                    <tr class="table-secondary">
+                                        <?php for ($i=0;$i<10;$i++): ?>
+                                            <th class="text-center">Count</th>
+                                            <th class="text-center">%</th>
+                                        <?php endfor; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($secondaryGrades as $gkey => $glabel): ?>
+                                        <?php $enrol = gdata($nutritional_data, $gkey, 'enrolment'); ?>
+                                        <tr>
+                                            <td class="fw-bold"><?= htmlspecialchars($glabel) ?></td>
+                                            <td class="text-center"><?= $enrol ?></td>
+                                            <td class="text-center"><?= gdata($nutritional_data, $gkey, 'pupils_weighed') ?></td>
 
-<!-- Secondary Table (hidden by default) -->
-<table id="secondaryTable" class="table table-bordered table-sm table-fixed small-cell mb-0 d-none">
-    <thead class="table-light">
-        <tr>
-            <th rowspan="3">Grade Levels</th>
-            <th rowspan="3" class="text-center">Enrolment</th>
-            <th rowspan="3" class="text-center">Pupils Weighed</th>
-            <th colspan="10" class="text-center">BODY MASS INDEX (BMI)</th>
-            <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
-        </tr>
-        <tr class="table-secondary">
-            <th colspan="2" class="text-center">Severely Wasted</th>
-            <th colspan="2" class="text-center">Wasted</th>
-            <th colspan="2" class="text-center">Normal BMI</th>
-            <th colspan="2" class="text-center">Overweight</th>
-            <th colspan="2" class="text-center">Obese</th>
+                                            <!-- BMI columns -->
+                                            <?php foreach ($bmiFields as $bf): ?>
+                                                <?php $val = gdata($nutritional_data, $gkey, $bf); ?>
+                                                <td class="text-center"><?= $val ?></td>
+                                                <td class="text-center"><?= pct($val, $enrol) ?></td>
+                                            <?php endforeach; ?>
 
-            <th colspan="2" class="text-center">Severely Stunted</th>
-            <th colspan="2" class="text-center">Stunted</th>
-            <th colspan="2" class="text-center">Normal HFA</th>
-            <th colspan="2" class="text-center">Tall</th>
-            <th colspan="2" class="text-center">Pupils Height</th>
-        </tr>
-        <tr class="table-secondary">
-            <?php for ($i=0;$i<10;$i++): ?>
-                <th class="text-center">Count</th>
-                <th class="text-center">%</th>
-            <?php endfor; ?>
-        </tr>
-    </thead>
-    <tbody>
-        <?php foreach ($secondaryGrades as $gkey => $glabel): ?>
-            <?php 
-            $gradeData = isset($nutritional_data[$gkey]) ? $nutritional_data[$gkey] : [];
-            $enrol = isset($gradeData['enrolment']) ? $gradeData['enrolment'] : 0;
-            $weighed = isset($gradeData['pupils_weighed']) ? $gradeData['pupils_weighed'] : $enrol;
-            ?>
-            <tr>
-                <td class="fw-bold"><?= htmlspecialchars($glabel) ?></td>
-                <td class="text-center"><?= $enrol ?></td>
-                <td class="text-center"><?= $weighed ?></td>
+                                            <!-- HFA columns -->
+                                            <?php foreach ($hfaFields as $hf): ?>
+                                                <?php $val = gdata($nutritional_data, $gkey, $hf); ?>
+                                                <td class="text-center"><?= $val ?></td>
+                                                <td class="text-center"><?= pct($val, $enrol) ?></td>
+                                            <?php endforeach; ?>
+                                        </tr>
+                                    <?php endforeach; ?>
 
-                <!-- BMI columns -->
-                <?php
-                $bmiFields = ['severely_wasted', 'wasted', 'normal_bmi', 'overweight', 'obese'];
-                foreach ($bmiFields as $field):
-                    $val = isset($gradeData[$field]) ? $gradeData[$field] : 0;
-                ?>
-                    <td class="text-center"><?= $val ?></td>
-                    <td class="text-center"><?= pct($val, $enrol) ?></td>
-                <?php endforeach; ?>
-
-                <!-- HFA columns -->
-                <?php
-                $hfaFields = ['severely_stunted', 'stunted', 'normal_hfa', 'tall', 'pupils_height'];
-                foreach ($hfaFields as $field):
-                    $val = isset($gradeData[$field]) ? $gradeData[$field] : 0;
-                ?>
-                    <td class="text-center"><?= $val ?></td>
-                    <td class="text-center"><?= pct($val, $enrol) ?></td>
-                <?php endforeach; ?>
-            </tr>
-        <?php endforeach; ?>
-
-        <!-- Grand total for Secondary -->
-        <tr class="table-primary">
-            <td class="fw-bold">Grand Total (Secondary)</td>
-            <?php
-            $totalEnrol2 = 0;
-            $totalWeighed2 = 0;
-            $bmiTotals2 = array_fill_keys($bmiFields, 0);
-            $hfaTotals2 = array_fill_keys($hfaFields, 0);
-            
-            foreach ($secondaryGrades as $gkey => $glabel):
-                if (strpos($gkey, '_total') !== false && isset($nutritional_data[$gkey])):
-                    $gradeData = $nutritional_data[$gkey];
-                    $enrol = isset($gradeData['enrolment']) ? $gradeData['enrolment'] : 0;
-                    $totalEnrol2 += $enrol;
-                    
-                    $weighed = isset($gradeData['pupils_weighed']) ? $gradeData['pupils_weighed'] : $enrol;
-                    $totalWeighed2 += $weighed;
-                    
-                    foreach ($bmiFields as $field):
-                        $bmiTotals2[$field] += isset($gradeData[$field]) ? $gradeData[$field] : 0;
-                    endforeach;
-                    
-                    foreach ($hfaFields as $field):
-                        $hfaTotals2[$field] += isset($gradeData[$field]) ? $gradeData[$field] : 0;
-                    endforeach;
-                endif;
-            endforeach;
-            ?>
-            <td class="text-center fw-bold"><?= $totalEnrol2 ?></td>
-            <td class="text-center fw-bold"><?= $totalWeighed2 ?></td>
-            
-            <!-- BMI totals -->
-            <?php foreach ($bmiTotals2 as $val): ?>
-                <td class="text-center fw-bold"><?= $val ?></td>
-                <td class="text-center fw-bold"><?= pct($val, $totalEnrol2) ?></td>
-            <?php endforeach; ?>
-            
-            <!-- HFA totals -->
-            <?php foreach ($hfaTotals2 as $val): ?>
-                <td class="text-center fw-bold"><?= $val ?></td>
-                <td class="text-center fw-bold"><?= pct($val, $totalEnrol2) ?></td>
-            <?php endforeach; ?>
-        </tr>
-    </tbody>
-</table>
+                                    <!-- Grand total row - Secondary -->
+                                    <tr class="table-primary">
+                                        <td class="fw-bold">Grand Total (Secondary)</td>
+                                        <?php
+                                        $totalEnrol2 = 0; $totalWeighed2 = 0;
+                                        $grandCounts2 = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                        foreach ($secondaryGrades as $gkey => $glabel) {
+                                            if (substr($gkey, -6) === '_total') {
+                                                $totalEnrol2 += gdata($nutritional_data, $gkey, 'enrolment');
+                                                $totalWeighed2 += gdata($nutritional_data, $gkey, 'pupils_weighed');
+                                                foreach ($grandCounts2 as $k => &$v) {
+                                                    $v += gdata($nutritional_data, $gkey, $k);
+                                                }
+                                                unset($v);
+                                            }
+                                        }
+                                        ?>
+                                        <td class="text-center fw-bold"><?= $totalEnrol2 ?></td>
+                                        <td class="text-center fw-bold"><?= $totalWeighed2 ?></td>
+                                        <?php foreach ($bmiFields as $bf): $val = $grandCounts2[$bf]; ?>
+                                            <td class="text-center fw-bold"><?= $val ?></td>
+                                            <td class="text-center fw-bold"><?= pct($val, $totalEnrol2) ?></td>
+                                        <?php endforeach; ?>
+                                        <?php foreach ($hfaFields as $hf): $val = $grandCounts2[$hf]; ?>
+                                            <td class="text-center fw-bold"><?= $val ?></td>
+                                            <td class="text-center fw-bold"><?= pct($val, $totalEnrol2) ?></td>
+                                        <?php endforeach; ?>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -577,11 +640,191 @@
     $(document).ready(function() {
         console.log('Document ready - JavaScript loaded');
         
-        // Toggle schools box
-        $('#overallSummaryCard').click(function(e) {
-            console.log('Summary card clicked');
-            e.stopPropagation(); // Prevent event bubbling
+        // ============ ASSESSMENT TYPE SWITCHING (with Midline) ============
+        $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
+        $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
+        $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
+        
+        function switchAssessmentType(type) {
+            var activeBtn = type === 'baseline' ? $('#switchToBaseline') : 
+                           (type === 'midline' ? $('#switchToMidline') : $('#switchToEndline'));
+            var allBtns = $('.assessment-switcher .btn');
             
+            var originalHtml = activeBtn.html();
+            activeBtn.html('<i class="fas fa-spinner fa-spin"></i> Switching...');
+            allBtns.prop('disabled', true);
+            
+            // Get current school level filter
+            var currentSchoolLevel = '<?php echo $school_level ?? 'all'; ?>';
+            
+            // Build URL with parameters
+            var url = '<?php echo site_url("District_dashboard_controller"); ?>?assessment_type=' + type;
+            if (currentSchoolLevel && currentSchoolLevel !== 'all') {
+                url += '&school_level=' + encodeURIComponent(currentSchoolLevel);
+            }
+            
+            window.location.href = url;
+        }
+        
+        // ============ SCHOOL LEVEL FILTERING (using the District Nutritional Assessment Report table buttons) ============
+        $('#btnElementary').click(function() { 
+            $('#btnIntegrated').removeClass('active');
+            $('#integratedSubMenu').addClass('d-none');
+            enableTableSwitching();
+            setSchoolLevelFilter('elementary'); 
+        });
+        
+        $('#btnSecondary').click(function() { 
+            $('#btnIntegrated').removeClass('active');
+            $('#integratedSubMenu').addClass('d-none');
+            enableTableSwitching();
+            setSchoolLevelFilter('secondary'); 
+        });
+        
+        $('#btnIntegrated').click(function(e) {
+            e.preventDefault();
+            $(this).toggleClass('active');
+            
+            if ($(this).hasClass('active')) {
+                disableTableSwitching();
+                $('#integratedSubMenu').removeClass('d-none');
+                setSchoolLevelFilter('integrated');
+            } else {
+                enableTableSwitching();
+                $('#integratedSubMenu').addClass('d-none');
+                setSchoolLevelFilter('all');
+            }
+        });
+        
+        $('#btnIntegratedElementary').click(function() { 
+            setSchoolLevelFilter('integrated_elementary'); 
+        });
+        
+        $('#btnIntegratedSecondary').click(function() { 
+            setSchoolLevelFilter('integrated_secondary'); 
+        });
+        
+        function enableTableSwitching() {
+            $('#btnElementary, #btnSecondary').css({
+                'pointerEvents': 'auto',
+                'opacity': '1'
+            });
+        }
+        
+        function disableTableSwitching() {
+            $('#btnElementary, #btnSecondary').css({
+                'pointerEvents': 'none',
+                'opacity': '0.5'
+            });
+        }
+        
+        function setSchoolLevelFilter(level) {
+            // Show loading on buttons
+            $('#btnElementary, #btnSecondary, #btnIntegrated').html('<i class="fas fa-spinner fa-spin"></i>');
+            $('#btnElementary, #btnSecondary, #btnIntegrated').prop('disabled', true);
+            
+            $.ajax({
+                url: '<?php echo site_url("District_dashboard_controller/set_school_level"); ?>',
+                method: 'POST',
+                data: { school_level: level, assessment_type: '<?php echo $assessment_type; ?>' },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        // Reload with current assessment type and new school level
+                        var url = '<?php echo site_url("District_dashboard_controller"); ?>?assessment_type=<?php echo $assessment_type; ?>';
+                        if (level !== 'all') {
+                            url += '&school_level=' + encodeURIComponent(level);
+                        }
+                        window.location.href = url;
+                    } else {
+                        alert('Error: ' + response.message);
+                        resetButtonStates();
+                    }
+                },
+                error: function() {
+                    alert('Error applying filter. Please try again.');
+                    resetButtonStates();
+                }
+            });
+        }
+        
+        function resetButtonStates() {
+            $('#btnElementary').html('<i class="fas fa-child me-1"></i> Elementary <span class="badge bg-info ms-1">K-6</span>');
+            $('#btnSecondary').html('<i class="fas fa-graduation-cap me-1"></i> Secondary <span class="badge bg-info ms-1">7-12</span>');
+            $('#btnIntegrated').html('<i class="fas fa-university me-1"></i> Integrated <span class="badge bg-info ms-1">K-12</span>');
+            $('#btnElementary, #btnSecondary, #btnIntegrated').prop('disabled', false);
+        }
+        
+        // ============ TABLE SWITCHING (Elementary/Secondary) ============
+        const btnElem = document.getElementById('btnElementary');
+        const btnSec = document.getElementById('btnSecondary');
+        const elemTable = document.getElementById('elementaryTable');
+        const secTable = document.getElementById('secondaryTable');
+        
+        if (btnElem && btnSec && elemTable && secTable) {
+            btnElem.addEventListener('click', function() {
+                btnElem.classList.add('active');
+                btnSec.classList.remove('active');
+                elemTable.classList.remove('d-none');
+                secTable.classList.add('d-none');
+            });
+
+            btnSec.addEventListener('click', function() {
+                btnSec.classList.add('active');
+                btnElem.classList.remove('active');
+                secTable.classList.remove('d-none');
+                elemTable.classList.add('d-none');
+            });
+        }
+        
+        // ============ PRINT FUNCTIONALITY ============
+        const btnPrint = document.getElementById('btnPrint');
+        if (btnPrint) {
+            btnPrint.addEventListener('click', function() {
+                const win = window.open('', '_blank');
+                const isElemVisible = !elemTable.classList.contains('d-none');
+                const tableHtml = (isElemVisible ? elemTable : secTable).outerHTML;
+                
+                const assessmentType = '<?php echo ucfirst($assessment_type ?? "baseline"); ?>';
+                const reportDate = new Date().toLocaleDateString();
+                const districtName = '<?php echo htmlspecialchars($parsed_user_district); ?>';
+                const schoolLevel = '<?php echo $school_level ?? 'all'; ?>';
+                
+                let schoolLevelDisplay = 'All Schools (Elementary View)';
+                switch(schoolLevel) {
+                    case 'all': schoolLevelDisplay = 'All Schools (Elementary View)'; break;
+                    case 'elementary': schoolLevelDisplay = 'Elementary Schools'; break;
+                    case 'secondary': schoolLevelDisplay = 'Secondary Schools'; break;
+                    case 'integrated': schoolLevelDisplay = 'Integrated Schools (Elementary View)'; break;
+                    case 'integrated_elementary': schoolLevelDisplay = 'Integrated Schools (Elementary Only)'; break;
+                    case 'integrated_secondary': schoolLevelDisplay = 'Integrated Schools (Secondary Only)'; break;
+                }
+
+                const printCss = '<style>' +
+                    '@page{size:A4 landscape;margin:8mm;} body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:4px;color:#000;font-size:8px;line-height:1.2;}' +
+                    'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px;margin:0;} th,td{border:0.5px solid #dee2e6;padding:2px;word-wrap:break-word;line-height:1.1;}' +
+                    '.no-print{display:none!important;} h3{font-size:10px;margin:0 0 2px 0;font-weight:bold;} p{font-size:7px;margin:0 0 4px 0;}' +
+                    '.print-header { text-align: center; margin-bottom: 10px; }' +
+                    '</style>';
+
+                win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>District Nutritional Report - ' + districtName + '</title>' +
+                    '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">' +
+                    printCss +
+                    '</head><body>');
+                win.document.write('<div class="print-header">');
+                win.document.write('<h3>Nutritional Status Report - ' + districtName + ' District</h3>');
+                win.document.write('<p><strong>Assessment Type:</strong> ' + assessmentType + ' | <strong>School Level:</strong> ' + schoolLevelDisplay + ' | <strong>Report Date:</strong> ' + reportDate + '</p>');
+                win.document.write('</div>');
+                win.document.write(tableHtml);
+                win.document.write('<script>window.onload=function(){ setTimeout(function(){ window.print(); window.onafterprint=function(){ window.close(); } },200); }<\/script>');
+                win.document.write('</body></html>');
+                win.document.close();
+            });
+        }
+        
+        // ============ SCHOOLS BOX TOGGLE ============
+        $('#overallSummaryCard').click(function(e) {
+            e.stopPropagation();
             $('#schoolsBox').toggleClass('d-none');
             const icon = $(this).find('.fa-chevron-up');
             const text = $(this).find('.small');
@@ -596,20 +839,17 @@
         });
         
         $('#closeSchoolsBox').click(function(e) {
-            console.log('Close button clicked');
             e.preventDefault();
             e.stopPropagation();
-            
             $('#schoolsBox').addClass('d-none');
             $('#overallSummaryCard').find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
             $('#overallSummaryCard').find('.small').html('<i class="fas fa-chevron-up me-1"></i> Click to view schools');
         });
         
-        // Show school details
+        // ============ SCHOOL DETAILS MODAL ============
         $(document).on('click', '.school-item', function(e) {
             e.preventDefault();
             const schoolName = $(this).data('school');
-            console.log('School item clicked:', schoolName);
             showSchoolDetails(schoolName);
         });
         
@@ -627,30 +867,25 @@
             modal.show();
             
             $.ajax({
-                url: '<?php echo base_url("district_dashboard/get_school_details/"); ?>' + encodeURIComponent(schoolName),
+                url: '<?php echo base_url("District_dashboard_controller/get_school_details/"); ?>' + encodeURIComponent(schoolName),
                 method: 'GET',
                 dataType: 'json',
                 success: function(response) {
-                    console.log('AJAX success:', response);
                     if (response.success && response.data) {
                         const details = response.data;
                         $('#schoolModalBody').html(`
                             <div class="row">
                                 <div class="col-12 mb-3">
                                     <label class="form-label fw-bold">School Name</label>
-                                    <div class="form-control bg-light">${details.school_name || 'N/A'}</div>
+                                    <div class="form-control bg-light">${details.name || 'N/A'}</div>
                                 </div>
                                 <div class="col-12 mb-3">
                                     <label class="form-label fw-bold">School Address</label>
-                                    <div class="form-control bg-light">${details.school_address || 'N/A'}</div>
+                                    <div class="form-control bg-light">${details.address || 'N/A'}</div>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-bold">Legislative District</label>
-                                    <div class="form-control bg-light">${details.legislative_district || 'N/A'}</div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-bold">School District</label>
-                                    <div class="form-control bg-light">${details.school_district || 'N/A'}</div>
+                                    <label class="form-label fw-bold">School ID</label>
+                                    <div class="form-control bg-light">${details.school_id || 'N/A'}</div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold">School Level</label>
@@ -660,9 +895,9 @@
                                     <label class="form-label fw-bold">School Head Name</label>
                                     <div class="form-control bg-light">${details.school_head_name || 'N/A'}</div>
                                 </div>
-                                <div class="col-12 mb-3">
+                                <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold">Email Address</label>
-                                    <div class="form-control bg-light">${details.email_address || 'N/A'}</div>
+                                    <div class="form-control bg-light">${details.email || 'N/A'}</div>
                                 </div>
                             </div>
                         `);
@@ -674,8 +909,7 @@
                         `);
                     }
                 },
-                error: function(xhr, status, error) {
-                    console.log('AJAX error:', error);
+                error: function() {
                     $('#schoolModalBody').html(`
                         <div class="alert alert-danger">
                             Error loading school details. Please try again.
@@ -685,83 +919,7 @@
             });
         }
         
-        // Assessment type switching
-        $('#switchToBaseline').click(function(e) {
-            e.preventDefault();
-            switchAssessmentType('baseline');
-        });
-        
-        $('#switchToEndline').click(function(e) {
-            e.preventDefault();
-            switchAssessmentType('endline');
-        });
-        
-        function switchAssessmentType(type) {
-            var activeBtn = type === 'baseline' ? $('#switchToBaseline') : $('#switchToEndline');
-            var inactiveBtn = type === 'baseline' ? $('#switchToEndline') : $('#switchToBaseline');
-            
-            var originalHtml = activeBtn.html();
-            activeBtn.html('<i class="fas fa-spinner fa-spin"></i> Switching...');
-            activeBtn.prop('disabled', true);
-            inactiveBtn.prop('disabled', true);
-            
-            // Redirect with assessment type parameter
-            window.location.href = '<?php echo site_url("district_dashboard"); ?>?assessment_type=' + type;
-        }
-        
-        // Table switching
-        const btnElem = document.getElementById('btnElementary');
-        const btnSec = document.getElementById('btnSecondary');
-        const elemTable = document.getElementById('elementaryTable');
-        const secTable = document.getElementById('secondaryTable');
-        const btnPrint = document.getElementById('btnPrint');
-
-        if (btnElem && btnSec && elemTable && secTable) {
-            btnElem.addEventListener('click', () => {
-                btnElem.classList.add('active');
-                btnSec.classList.remove('active');
-                elemTable.classList.remove('d-none');
-                secTable.classList.add('d-none');
-            });
-
-            btnSec.addEventListener('click', () => {
-                btnSec.classList.add('active');
-                btnElem.classList.remove('active');
-                secTable.classList.remove('d-none');
-                elemTable.classList.add('d-none');
-            });
-        }
-
-        if (btnPrint) {
-            btnPrint.addEventListener('click', () => {
-                // Open a new window and print only the visible table
-                const win = window.open('', '_blank');
-                const isElemVisible = !elemTable.classList.contains('d-none');
-                const tableHtml = (isElemVisible ? elemTable : secTable).outerHTML;
-                
-                const assessmentType = '<?php echo ucfirst($assessment_type ?? "baseline"); ?>';
-                const reportDate = new Date().toLocaleDateString();
-                const districtName = '<?php echo htmlspecialchars($parsed_user_district); ?>';
-
-                win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>District Nutritional Report - ' + districtName + '</title>' +
-                    '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">' +
-                    '<style>body{padding:20px;} table{width:100%; border-collapse:collapse;} th, td{border:1px solid #dee2e6; font-size:12px;}' +
-                    '.print-header { margin-bottom: 20px; text-align: center; }' +
-                    '.print-header h3 { color: #2c3e50; }' +
-                    '</style>' +
-                    '</head><body>');
-                win.document.write('<div class="print-header">');
-                win.document.write('<h3>Nutritional Status Report - ' + districtName + ' District</h3>');
-                win.document.write('<p><strong>Assessment Type:</strong> ' + assessmentType + ' | <strong>Report Date:</strong> ' + reportDate + '</p>');
-                win.document.write('</div>');
-                win.document.write(tableHtml);
-                win.document.write('<script>window.onload=function(){ window.print(); window.onafterprint=function(){ window.close(); } }<\/script>');
-                win.document.write('</body></html>');
-                win.document.close();
-            });
-        }
-        
-        // Search box filtering for schools list
+        // ============ SCHOOLS SEARCH ============
         $('#schoolSearch').on('keyup', function() {
             const term = $(this).val().toLowerCase().trim();
             let visible = 0;
@@ -789,14 +947,22 @@
             $('.school-item').show();
         });
         
-        // Add a test click handler to check if jQuery is working
-        console.log('jQuery version:', $.fn.jquery);
-        console.log('Bootstrap version:', typeof bootstrap !== 'undefined' ? 'Loaded' : 'Not loaded');
-        
-        // Test if the summary card is being clicked
-        $('#overallSummaryCard').on('mousedown mouseup click', function(e) {
-            console.log('Event triggered:', e.type);
-        });
+        // ============ INITIALIZE BASED ON CURRENT FILTER ============
+        var currentLevel = '<?php echo $school_level ?? 'all'; ?>';
+        if (currentLevel.startsWith('integrated')) {
+            $('#integratedSubMenu').removeClass('d-none');
+            $('#btnIntegrated').addClass('active');
+            disableTableSwitching();
+            
+            $('#integratedSubMenu .btn').removeClass('btn-primary').addClass('btn-outline-primary');
+            if (currentLevel === 'integrated' || currentLevel === 'integrated_elementary') {
+                $('#btnIntegratedElementary').removeClass('btn-outline-primary').addClass('btn-primary');
+            } else if (currentLevel === 'integrated_secondary') {
+                $('#btnIntegratedSecondary').removeClass('btn-outline-primary').addClass('btn-primary');
+            }
+        } else {
+            enableTableSwitching();
+        }
     });
     </script>
 </body>
