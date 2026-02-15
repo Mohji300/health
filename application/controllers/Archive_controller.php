@@ -23,48 +23,22 @@ class Archive_controller extends CI_Controller {
                 redirect('login');
             }
         }
+        
+        // Store user role for easy access
+        $this->user_role = $this->session->userdata('role') ?: 'user';
     }
     
     public function index() {
         try {
-            // Load pagination library
-            $this->load->library('pagination');
+            // Get archived summary for grouped view
+            $data['archived_summary'] = $this->Archive_model->get_archived_summary_by_year_school();
             
-            // Configure pagination
-            $config['base_url'] = site_url('archive');
-            $config['total_rows'] = $this->Archive_model->count_all_archived_records();
-            $config['per_page'] = 20;
-            $config['uri_segment'] = 2;
-            $config['full_tag_open'] = '<ul class="pagination">';
-            $config['full_tag_close'] = '</ul>';
-            $config['first_tag_open'] = '<li class="page-item">';
-            $config['first_tag_close'] = '</li>';
-            $config['last_tag_open'] = '<li class="page-item">';
-            $config['last_tag_close'] = '</li>';
-            $config['next_tag_open'] = '<li class="page-item">';
-            $config['next_tag_close'] = '</li>';
-            $config['prev_tag_open'] = '<li class="page-item">';
-            $config['prev_tag_close'] = '</li>';
-            $config['num_tag_open'] = '<li class="page-item">';
-            $config['num_tag_close'] = '</li>';
-            $config['cur_tag_open'] = '<li class="page-item active"><span class="page-link">';
-            $config['cur_tag_close'] = '</span></li>';
-            $config['attributes'] = ['class' => 'page-link'];
-            
-            $this->pagination->initialize($config);
-            
-            $page = ($this->uri->segment(2)) ? $this->uri->segment(2) : 0;
-            
-            // Get archived records
-            $data['archived_records'] = $this->Archive_model->get_all_archived_records(
-                $config['per_page'], 
-                $page
-            );
-            
-            // Get school years from nutritional_assessments table
+            // Get school years from nutritional_assessments table (for archive dropdown)
             $data['school_years'] = $this->Archive_model->get_distinct_school_years();
             
-            $data['pagination'] = $this->pagination->create_links();
+            // Get user role from session
+            $data['user_role'] = $this->session->userdata('role') ?: 'user';
+            
             $data['title'] = 'Nutritional Assessment Archive';
             
             $this->load->view('archive', $data);
@@ -76,6 +50,79 @@ class Archive_controller extends CI_Controller {
             // Show error page
             show_error('An error occurred while loading the archive page. Please try again later.', 500);
         }
+    }
+
+    public function get_school_details() {
+        if (!$this->input->is_ajax_request()) {
+            $this->output->set_status_header(400);
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode([
+                    'success' => false,
+                    'message' => 'Invalid request. Only AJAX requests are allowed.'
+                ]));
+            return;
+        }
+        
+        try {
+            // Get parameters from GET request
+            $year = $this->input->get('year', TRUE);
+            $school = $this->input->get('school', TRUE);
+            $type = $this->input->get('type', TRUE) ?: 'all';
+            
+            if (empty($year) || empty($school)) {
+                throw new Exception('Year and school name are required.');
+            }
+            
+            // Decode URL encoded values
+            $year = urldecode($year);
+            $school = urldecode($school);
+            
+            // Get records for this school and year
+            $records = $this->Archive_model->get_archived_records_by_year_school($year, $school);
+            
+            if (empty($records)) {
+                $response = [
+                    'success' => true,
+                    'records' => [],
+                    'message' => 'No records found for this school and year.',
+                    'year' => $year,
+                    'school' => $school,
+                    'type' => $type
+                ];
+            } else {
+                // Filter by assessment type if needed
+                if ($type !== 'all') {
+                    $filtered_records = [];
+                    foreach ($records as $record) {
+                        if ($record->assessment_type === $type) {
+                            $filtered_records[] = $record;
+                        }
+                    }
+                    $records = $filtered_records;
+                }
+                
+                $response = [
+                    'success' => true,
+                    'records' => $records,
+                    'year' => $year,
+                    'school' => $school,
+                    'type' => $type
+                ];
+            }
+            
+        } catch (Exception $e) {
+            log_message('error', 'Get school details error: ' . $e->getMessage());
+            
+            $response = [
+                'success' => false,
+                'message' => 'Failed to load school details: ' . $e->getMessage()
+            ];
+        }
+        
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($response));
     }
     
     public function process_archive() {
@@ -92,6 +139,11 @@ class Archive_controller extends CI_Controller {
         }
         
         try {
+            // Check if user has admin role
+            if ($this->user_role !== 'admin') {
+                throw new Exception('You do not have permission to perform this action. Only administrators can archive records.');
+            }
+            
             $school_year = $this->input->post('school_year', TRUE);
             
             if (empty($school_year)) {
@@ -210,6 +262,11 @@ class Archive_controller extends CI_Controller {
         }
         
         try {
+            // Check if user has admin role
+            if ($this->user_role !== 'admin') {
+                throw new Exception('You do not have permission to perform this action. Only administrators can restore records.');
+            }
+            
             // Validate record ID
             if (!is_numeric($record_id) || $record_id <= 0) {
                 throw new Exception('Invalid record ID');

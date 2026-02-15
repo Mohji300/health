@@ -198,6 +198,69 @@ class Archive_model extends CI_Model {
         
         return $query->row();
     }
+
+    /**
+     * Get archived records grouped by year and school
+     */
+    public function get_archived_records_by_year_school($year, $school_name = null) {
+        $this->db->select('*');
+        $this->db->from('nutritional_assessment_archive');
+        $this->db->where('year', $year);
+        
+        if ($school_name) {
+            $this->db->where('school_name', $school_name);
+        }
+        
+        $this->db->order_by('name', 'ASC');
+        $this->db->order_by('grade_level', 'ASC');
+        
+        $query = $this->db->get();
+        return $query->result();
+    }
+
+    /**
+     * Get archived records for a specific year and school
+     */
+    public function get_archived_summary_by_year_school() {
+        $this->db->select('
+            year,
+            school_name,
+            school_id,
+            COUNT(*) as total_records,
+            COUNT(CASE WHEN assessment_type = "baseline" THEN 1 END) as baseline,
+            COUNT(CASE WHEN assessment_type = "midline" THEN 1 END) as midline,
+            COUNT(CASE WHEN assessment_type = "endline" THEN 1 END) as endline,
+            MIN(archived_at) as first_archived,
+            MAX(archived_at) as last_archived
+        ');
+        
+        $this->db->from('nutritional_assessment_archive');
+        $this->db->group_by('year, school_name, school_id');
+        $this->db->order_by('year', 'DESC');
+        $this->db->order_by('school_name', 'ASC');
+        
+        $query = $this->db->get();
+        return $query->result();
+    }
+
+    /**
+     * Get distinct years from archived records
+     */
+    public function get_distinct_years_from_archive() {
+        $this->db->select('year');
+        $this->db->distinct();
+        $this->db->from('nutritional_assessment_archive');
+        $this->db->where('year IS NOT NULL');
+        $this->db->where("year != ''");
+        $this->db->order_by('year', 'DESC');
+        
+        $query = $this->db->get();
+        $years = [];
+        foreach ($query->result() as $row) {
+            $years[] = $row->year;
+        }
+        return $years;
+    }
     
     /**
      * Restore a record from archive to main table
