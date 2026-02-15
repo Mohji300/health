@@ -214,11 +214,10 @@ $route['sbfp-beneficiaries/set_school_level'] = 'sbfp_beneficiaries/set_school_l
 // ========================
 // ARCHIVE ROUTES
 // ========================
-$route['archive'] = 'archive_controller';
-$route['archive/process_archive'] = 'archive_controller/process_archive';
-$route['archive/get_record_details/(:num)'] = 'archive_controller/get_record_details/$1';
-$route['archive/restore_record/(:num)'] = 'archive_controller/restore_record/$1';
-$route['archive/export'] = 'archive_controller/export_archive';
-$route['archive/process_archive'] = 'archive_controller/process_archive';
-
+$route['archive'] = 'Archive_controller';
+$route['archive/get_school_details'] = 'Archive_controller/get_school_details';
+$route['archive/process_archive'] = 'Archive_controller/process_archive';
+$route['archive/get_record_details/(:num)'] = 'Archive_controller/get_record_details/$1';
+$route['archive/restore_record/(:num)'] = 'Archive_controller/restore_record/$1';
+$route['archive/export'] = 'Archive_controller/export_archive';
 
