@@ -97,6 +97,20 @@ public function index()
                 ]));
         }
 
+        // Get school_level from users table based on current user
+        $current_user_id = $this->session->userdata('user_id');
+        $school_level = '';
+        
+        if ($current_user_id) {
+            $this->db->select('school_level');
+            $this->db->where('id', $current_user_id);
+            $user = $this->db->get('users')->row();
+            
+            if ($user && isset($user->school_level)) {
+                $school_level = $user->school_level;
+            }
+        }
+
         $assessment_data = [
             'name' => $this->input->post('name'),
             'birthday' => $this->input->post('birthday'),
@@ -110,6 +124,7 @@ public function index()
             'school_district' => $this->input->post('school_district'),
             'school_id' => $this->input->post('school_id'),
             'school_name' => $this->input->post('school_name'),
+            'school_level' => $school_level, // Add school_level here
             'height_squared' => $this->input->post('height_squared'),
             'age' => $this->input->post('age'),
             'bmi' => $this->input->post('bmi'),
@@ -153,8 +168,8 @@ public function index()
  /**
  * Bulk store multiple assessments (via AJAX/form submission from localStorage)
  */
-    public function bulk_store()
-    {
+public function bulk_store()
+{
     // Get the raw POST data
     $students_json = $this->input->post('students');
     $assessment_type = $this->input->post('assessment_type', TRUE) ?: 'baseline';
@@ -186,6 +201,20 @@ public function index()
             ]));
     }
 
+    // Get school_level from users table based on current user
+    $current_user_id = $this->session->userdata('user_id');
+    $school_level = '';
+    
+    if ($current_user_id) {
+        $this->db->select('school_level');
+        $this->db->where('id', $current_user_id);
+        $user = $this->db->get('users')->row();
+        
+        if ($user && isset($user->school_level)) {
+            $school_level = $user->school_level;
+        }
+    }
+
     $created_count = 0;
     $updated_count = 0;
     $duplicate_count = 0;
@@ -207,6 +236,7 @@ public function index()
                 'legislative_district' => isset($student['legislative_district']) ? $student['legislative_district'] : '',
                 'school_id' => isset($student['school_id']) ? $student['school_id'] : '',
                 'school_name' => isset($student['school_name']) ? $student['school_name'] : '',
+                'school_level' => $school_level, // Add the school_level here
                 'grade_level' => isset($student['grade']) ? $student['grade'] : '',
                 'section' => isset($student['section']) ? $student['section'] : '',
                 'year' => isset($student['school_year']) ? $student['school_year'] : (isset($student['year']) ? $student['year'] : ''),
