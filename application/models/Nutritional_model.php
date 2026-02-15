@@ -13,24 +13,66 @@ class Nutritional_model extends CI_Model {
 
     /**
      * Return processed nutritional data structured for the table.
-     * Now accepts assessment_type parameter
+     * Now accepts assessment_type, school_name, and school_level parameters
      */
-    public function get_processed_data($assessment_type = null, $school_name = null)
+    public function get_processed_data($assessment_type = null, $school_name = null, $school_level = 'all')
     {
         // Build query with optional assessment_type filter
         if ($assessment_type) {
             $this->db->where('assessment_type', $assessment_type);
         }
 
+        // ADD THIS LINE - Filter out deleted records
+        $this->db->where('is_deleted', 0);
+
         // Optional school filter (filter by school_name in nutritional_assessments)
         if ($school_name) {
             $this->db->where('school_name', $school_name);
         }
 
+        // NEW: Add school level filtering
+        if ($school_level !== 'all') {
+            if ($school_level === 'secondary') {
+                // For secondary, check for High School indicators
+                $this->db->where("(
+                    school_name LIKE '%High%' OR 
+                    school_name LIKE '%National High School%' OR
+                    school_name LIKE '%NHS%' OR
+                    school_name LIKE '%Secondary%' OR
+                    school_name LIKE '%HighSchool%'
+                    AND school_name NOT LIKE '%Integrated%'
+                )");
+            } 
+            elseif ($school_level === 'elementary') {
+                // For elementary, exclude secondary/integrated indicators
+                $this->db->where("(
+                    school_name NOT LIKE '%High%' AND 
+                    school_name NOT LIKE '%Secondary%' AND
+                    school_name NOT LIKE '%Integrated%' AND
+                    school_name NOT LIKE '%NHS%' AND
+                    school_name NOT LIKE '%HighSchool%'
+                )");
+            }
+            elseif ($school_level === 'integrated') {
+                // All grades from integrated schools
+                $this->db->where("school_name LIKE '%Integrated%'");
+            }
+            elseif ($school_level === 'integrated_elementary') {
+                // Only elementary grades (K-6) from integrated schools
+                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
+            }
+            elseif ($school_level === 'integrated_secondary') {
+                // Only secondary grades (7-12) from integrated schools
+                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where_in('grade_level', ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
+            }
+        }
+
         $assessments = $this->db->get($this->table)->result();
 
         $allGrades = ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6',
-                      'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+                    'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 
         // Initialize data structure
         $data = [];
@@ -61,6 +103,11 @@ class Nutritional_model extends CI_Model {
         $processedCount = 0;
 
         foreach ($assessments as $item) {
+            // Extra safety check for deleted records (though already filtered at DB level)
+            if (isset($item->is_deleted) && $item->is_deleted == 1) {
+                continue;
+            }
+            
             $originalGrade = isset($item->grade_level) ? trim($item->grade_level) : null;
             $grade = isset($gradeMapping[$originalGrade]) ? $gradeMapping[$originalGrade] : null;
             if (!$grade) continue;
@@ -168,52 +215,227 @@ class Nutritional_model extends CI_Model {
     }
 
     /**
-     * Get assessment count by type
+     * Get assessment count by type with optional school name and school level filtering
      */
-    public function get_assessment_count_by_type($type)
+    public function get_assessment_count_by_type($type, $school_name = null, $school_level = 'all')
     {
         $this->db->where('assessment_type', $type);
         $this->db->where('is_deleted', 0);
+        
+        // Optional school filter
+        if ($school_name) {
+            $this->db->where('school_name', $school_name);
+        }
+        
+        // NEW: Add school level filtering
+        if ($school_level !== 'all') {
+            if ($school_level === 'secondary') {
+                $this->db->where("(
+                    school_name LIKE '%High%' OR 
+                    school_name LIKE '%National High School%' OR
+                    school_name LIKE '%NHS%' OR
+                    school_name LIKE '%Secondary%' OR
+                    school_name LIKE '%HighSchool%'
+                    AND school_name NOT LIKE '%Integrated%'
+                )");
+            } 
+            elseif ($school_level === 'elementary') {
+                $this->db->where("(
+                    school_name NOT LIKE '%High%' AND 
+                    school_name NOT LIKE '%Secondary%' AND
+                    school_name NOT LIKE '%Integrated%' AND
+                    school_name NOT LIKE '%NHS%' AND
+                    school_name NOT LIKE '%HighSchool%'
+                )");
+            }
+            elseif ($school_level === 'integrated') {
+                $this->db->where("school_name LIKE '%Integrated%'");
+            }
+            elseif ($school_level === 'integrated_elementary') {
+                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
+            }
+            elseif ($school_level === 'integrated_secondary') {
+                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where_in('grade_level', ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
+            }
+        }
+        
         return $this->db->count_all_results('nutritional_assessments');
     }
 
     /**
-     * Check if assessment type has data
+     * Check if assessment type has data with optional filtering
      */
-    public function has_assessment_data($type)
+    public function has_assessment_data($type, $school_name = null, $school_level = 'all')
     {
         $this->db->where('assessment_type', $type);
         $this->db->where('is_deleted', 0);
+        
+        // Optional school filter
+        if ($school_name) {
+            $this->db->where('school_name', $school_name);
+        }
+        
+        // NEW: Add school level filtering
+        if ($school_level !== 'all') {
+            if ($school_level === 'secondary') {
+                $this->db->where("(
+                    school_name LIKE '%High%' OR 
+                    school_name LIKE '%National High School%' OR
+                    school_name LIKE '%NHS%' OR
+                    school_name LIKE '%Secondary%' OR
+                    school_name LIKE '%HighSchool%'
+                    AND school_name NOT LIKE '%Integrated%'
+                )");
+            } 
+            elseif ($school_level === 'elementary') {
+                $this->db->where("(
+                    school_name NOT LIKE '%High%' AND 
+                    school_name NOT LIKE '%Secondary%' AND
+                    school_name NOT LIKE '%Integrated%' AND
+                    school_name NOT LIKE '%NHS%' AND
+                    school_name NOT LIKE '%HighSchool%'
+                )");
+            }
+            elseif ($school_level === 'integrated') {
+                $this->db->where("school_name LIKE '%Integrated%'");
+            }
+            elseif ($school_level === 'integrated_elementary') {
+                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
+            }
+            elseif ($school_level === 'integrated_secondary') {
+                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where_in('grade_level', ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
+            }
+        }
+        
         $count = $this->db->count_all_results('nutritional_assessments');
         return $count > 0;
     }
 
     /**
-     * Get all nutritional assessments
+     * Get all nutritional assessments with optional filtering
      */
-    public function get_all_assessments()
+    public function get_all_assessments($school_name = null, $school_level = 'all')
     {
+        // Optional school filter
+        if ($school_name) {
+            $this->db->where('school_name', $school_name);
+        }
+        
+        // NEW: Add school level filtering
+        if ($school_level !== 'all') {
+            if ($school_level === 'secondary') {
+                $this->db->where("(
+                    school_name LIKE '%High%' OR 
+                    school_name LIKE '%National High School%' OR
+                    school_name LIKE '%NHS%' OR
+                    school_name LIKE '%Secondary%' OR
+                    school_name LIKE '%HighSchool%'
+                    AND school_name NOT LIKE '%Integrated%'
+                )");
+            } 
+            elseif ($school_level === 'elementary') {
+                $this->db->where("(
+                    school_name NOT LIKE '%High%' AND 
+                    school_name NOT LIKE '%Secondary%' AND
+                    school_name NOT LIKE '%Integrated%' AND
+                    school_name NOT LIKE '%NHS%' AND
+                    school_name NOT LIKE '%HighSchool%'
+                )");
+            }
+            elseif ($school_level === 'integrated') {
+                $this->db->where("school_name LIKE '%Integrated%'");
+            }
+        }
+        
         return $this->db->get($this->table)->result();
     }
 
     /**
-     * Get assessments by grade and gender
+     * Get assessments by grade and gender with optional filtering
      */
-    public function get_by_grade_gender($grade, $gender = null)
+    public function get_by_grade_gender($grade, $gender = null, $school_name = null, $school_level = 'all')
     {
         $this->db->where('grade_level', $grade);
         if ($gender) {
             $this->db->where('sex', $gender);
         }
+        
+        // Optional school filter
+        if ($school_name) {
+            $this->db->where('school_name', $school_name);
+        }
+        
+        // NEW: Add school level filtering
+        if ($school_level !== 'all') {
+            if ($school_level === 'secondary') {
+                $this->db->where("(
+                    school_name LIKE '%High%' OR 
+                    school_name LIKE '%National High School%' OR
+                    school_name LIKE '%NHS%' OR
+                    school_name LIKE '%Secondary%' OR
+                    school_name LIKE '%HighSchool%'
+                    AND school_name NOT LIKE '%Integrated%'
+                )");
+            } 
+            elseif ($school_level === 'elementary') {
+                $this->db->where("(
+                    school_name NOT LIKE '%High%' AND 
+                    school_name NOT LIKE '%Secondary%' AND
+                    school_name NOT LIKE '%Integrated%' AND
+                    school_name NOT LIKE '%NHS%' AND
+                    school_name NOT LIKE '%HighSchool%'
+                )");
+            }
+            elseif ($school_level === 'integrated') {
+                $this->db->where("school_name LIKE '%Integrated%'");
+            }
+        }
+        
         return $this->db->get($this->table)->result();
     }
 
     /**
-     * Get nutritional status summary
+     * Get nutritional status summary with optional filtering
      */
-    public function get_nutritional_summary()
+    public function get_nutritional_summary($school_name = null, $school_level = 'all')
     {
         $this->db->select('nutritional_status, COUNT(*) as count');
+        
+        // Optional school filter
+        if ($school_name) {
+            $this->db->where('school_name', $school_name);
+        }
+        
+        // NEW: Add school level filtering
+        if ($school_level !== 'all') {
+            if ($school_level === 'secondary') {
+                $this->db->where("(
+                    school_name LIKE '%High%' OR 
+                    school_name LIKE '%National High School%' OR
+                    school_name LIKE '%NHS%' OR
+                    school_name LIKE '%Secondary%' OR
+                    school_name LIKE '%HighSchool%'
+                    AND school_name NOT LIKE '%Integrated%'
+                )");
+            } 
+            elseif ($school_level === 'elementary') {
+                $this->db->where("(
+                    school_name NOT LIKE '%High%' AND 
+                    school_name NOT LIKE '%Secondary%' AND
+                    school_name NOT LIKE '%Integrated%' AND
+                    school_name NOT LIKE '%NHS%' AND
+                    school_name NOT LIKE '%HighSchool%'
+                )");
+            }
+            elseif ($school_level === 'integrated') {
+                $this->db->where("school_name LIKE '%Integrated%'");
+            }
+        }
+        
         $this->db->group_by('nutritional_status');
         return $this->db->get($this->table)->result();
     }

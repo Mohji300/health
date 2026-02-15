@@ -55,7 +55,7 @@ $secondaryGrades = [
       #wrapper { display: flex; width: 100%; }
       #sidebar-wrapper { min-width: 220px; max-width: 260px; background: #f8f9fa; border-right: 1px solid #e3e6ea; }
       #page-content-wrapper { flex: 1 1 auto; padding: 20px; }
-      @media (max-width: 767px) { #sidebar-wrapper { display: none; } }
+      
 
       .card { border: none; border-radius: 0.5rem; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); }
       .bg-gradient-primary { background: linear-gradient(45deg, #4e73df, #224abe); }
@@ -175,7 +175,7 @@ $secondaryGrades = [
     </style>
   </head>
   <body class="bg-light">
-    <div id="wrapper">
+    <div class="d-flex" id="wrapper">
       <?php $this->load->view('templates/sidebar'); ?>
       <div id="page-content-wrapper">
         <div class="container-fluid py-4">
@@ -295,38 +295,76 @@ $secondaryGrades = [
           
           <!-- Main Content Card -->
           <div class="card shadow">
-            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+          <!-- Replace the button group in card header with this: -->
+          <div class="card-header py-3 d-flex justify-content-between align-items-center">
               <h6 class="m-0 font-weight-bold text-primary">
-                Consolidated Nutritional Assessment Report
-                <span class="badge <?php 
-                    if ($is_baseline) {
-                        echo 'badge-baseline';
-                    } elseif ($is_midline) {
-                        echo 'badge-midline';
-                    } else {
-                        echo 'badge-endline';
-                    }
-                ?> ms-2">
-                    <?php echo ucfirst($assessment_type); ?>
-                </span>
+                  Consolidated Nutritional Assessment Report
+                  <span class="badge <?php 
+                      if ($is_baseline) {
+                          echo 'badge-baseline';
+                      } elseif ($is_midline) {
+                          echo 'badge-midline';
+                      } else {
+                          echo 'badge-endline';
+                      }
+                  ?> ms-2">
+                      <?php echo ucfirst($assessment_type); ?>
+                  </span>
+                  <!-- Show active filter badge -->
+                  <?php if ($school_level !== 'all'): ?>
+                  <span class="badge bg-secondary ms-2">
+                      <i class="fas fa-filter me-1"></i>
+                      <?php 
+                          if ($school_level === 'integrated_elementary') echo 'Integrated (Elementary)';
+                          elseif ($school_level === 'integrated_secondary') echo 'Integrated (Secondary)';
+                          else echo ucfirst($school_level); 
+                      ?>
+                  </span>
+                  <?php endif; ?>
               </h6>
               <div class="no-print">
-                <div class="btn-group me-2" role="group">
-                  <button id="btnElementary" type="button" class="btn btn-outline-primary active">
-                    <i class="fas fa-child me-1"></i> Elementary
+                  <!-- School Level Filter Buttons -->
+                  <div class="btn-group me-2" role="group">
+                      <button id="btnElementary" type="button" 
+                              class="btn btn-outline-primary <?php echo ($school_level === 'all' || $school_level === 'elementary' || $school_level === 'integrated_elementary') ? 'active' : ''; ?>">
+                          <i class="fas fa-child me-1"></i> Elementary
+                          <span class="badge bg-info ms-1">K-6</span>
+                      </button>
+                      <button id="btnSecondary" type="button" 
+                              class="btn btn-outline-primary <?php echo ($school_level === 'secondary' || $school_level === 'integrated_secondary') ? 'active' : ''; ?>">
+                          <i class="fas fa-graduation-cap me-1"></i> Secondary
+                          <span class="badge bg-info ms-1">7-12</span>
+                      </button>
+                      <button id="btnIntegrated" type="button" 
+                              class="btn btn-outline-primary <?php echo (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) ? 'active' : ''; ?>">
+                          <i class="fas fa-university me-1"></i> Integrated
+                          <span class="badge bg-info ms-1">K-12</span>
+                      </button>
+                  </div>
+                  <button id="btnPrint" class="btn btn-success">
+                      <i class="fas fa-print me-1"></i> Print Report
                   </button>
-                  <button id="btnSecondary" type="button" class="btn btn-outline-primary">
-                    <i class="fas fa-graduation-cap me-1"></i> Secondary
-                  </button>
-                </div>
-                <button id="btnPrint" class="btn btn-success">
-                  <i class="fas fa-print me-1"></i> Print Report
-                </button>
               </div>
-            </div>
+          </div>
+
+          <!-- Replace the Integrated Sub-menu with this: -->
+          <div id="integratedSubMenu" class="no-print mb-3 <?php echo (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) ? '' : 'd-none'; ?>">
+              <div class="btn-group" role="group">
+                  <button id="btnIntegratedElementary" type="button" 
+                          class="btn btn-sm <?php echo (in_array($school_level, ['integrated', 'integrated_elementary'])) ? 'btn-primary' : 'btn-outline-primary'; ?>">
+                      <i class="fas fa-child me-1"></i> Integrated Elementary
+                      <span class="badge bg-info ms-1">K-6</span>
+                  </button>
+                  <button id="btnIntegratedSecondary" type="button" 
+                          class="btn btn-sm <?php echo ($school_level === 'integrated_secondary') ? 'btn-primary' : 'btn-outline-primary'; ?>">
+                      <i class="fas fa-graduation-cap me-1"></i> Integrated Secondary
+                      <span class="badge bg-info ms-1">7-12</span>
+                  </button>
+              </div>
+          </div>
+
             <div class="card-body p-0">
               <div id="tableContainer" class="table-responsive p-3">
-                
                 <!-- Elementary Table -->
                 <table id="elementaryTable" class="table table-bordered table-sm table-fixed small-cell mb-0">
                   <thead class="table-light">
@@ -500,50 +538,123 @@ $secondaryGrades = [
         </div>
       </div>
     </div>
-
-    <!-- Help Modal -->
-          <div class="modal-body">
-              <h6><span class="badge badge-baseline me-2">Baseline</span> Assessment</h6>
-              <p>Initial measurements taken at the beginning of the School-Based Feeding Program (SBFP). 
-              Used as a reference point to measure progress.</p>
-              
-              <h6><span class="badge badge-midline me-2">Midline</span> Assessment</h6>
-              <p>Intermediate measurements taken during the School-Based Feeding Program (SBFP). 
-              Used to track progress and make adjustments during the program.</p>
-              
-              <h6><span class="badge badge-endline me-2">Endline</span> Assessment</h6>
-              <p>Final measurements taken at the end of the SBFP. Used to evaluate the program's 
-              effectiveness by comparing with baseline and midline data.</p>
-              
-              <div class="alert alert-info mt-3">
-                  <i class="fas fa-lightbulb me-2"></i>
-                  <strong>Tip:</strong> Switch between baseline, midline, and endline views to compare nutritional 
-                  status changes over time and track program effectiveness.
-              </div>
-          </div>  
-          <div class="modal-footer">
-            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it!</button>
-          </div>
-        </div>
-      </div>
-    </div>
+  </div>
+</div>
+</div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-      $(document).ready(function() {
-        // Switch between Baseline and Endline views
-        $('#switchToBaseline').click(function() {
-          switchAssessmentType('baseline');
-        });
-
-        $('#switchToMidline').click(function() {
-        switchAssessmentType('midline');
+    $(document).ready(function() {
+        // Switch between Baseline, Midline, Endline views
+        $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
+        $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
+        $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
+        
+        // School Level Filtering
+        $('#btnElementary').click(function() { 
+            // First, make sure integrated is not active
+            $('#btnIntegrated').removeClass('active');
+            $('#integratedSubMenu').addClass('d-none');
+            
+            // Enable table switching buttons
+            enableTableSwitching();
+            
+            // Set filter
+            setSchoolLevelFilter('elementary'); 
         });
         
-        $('#switchToEndline').click(function() {
-          switchAssessmentType('endline');
+        $('#btnSecondary').click(function() { 
+            // First, make sure integrated is not active
+            $('#btnIntegrated').removeClass('active');
+            $('#integratedSubMenu').addClass('d-none');
+            
+            // Enable table switching buttons
+            enableTableSwitching();
+            
+            // Set filter
+            setSchoolLevelFilter('secondary'); 
         });
+        
+        // Integrated button shows sub-menu
+        $('#btnIntegrated').click(function(e) {
+            e.preventDefault();
+            
+            // Toggle active state
+            $(this).toggleClass('active');
+            
+            if ($(this).hasClass('active')) {
+                // Integrated is now active - disable table switching
+                disableTableSwitching();
+                
+                // Show sub-menu
+                $('#integratedSubMenu').removeClass('d-none');
+                
+                // Set to integrated (default shows elementary)
+                setSchoolLevelFilter('integrated');
+            } else {
+                // Integrated is now inactive - enable table switching
+                enableTableSwitching();
+                
+                // Hide sub-menu
+                $('#integratedSubMenu').addClass('d-none');
+                
+                // Go back to all schools (elementary view)
+                setSchoolLevelFilter('all');
+            }
+        });
+        
+        // Integrated sub-menu buttons
+        $('#btnIntegratedElementary').click(function() { 
+            setSchoolLevelFilter('integrated_elementary'); 
+        });
+        
+        $('#btnIntegratedSecondary').click(function() { 
+            setSchoolLevelFilter('integrated_secondary'); 
+        });
+        
+        // Initialize based on current filter
+        var currentLevel = '<?php echo $school_level; ?>';
+        if (currentLevel.startsWith('integrated')) {
+            $('#integratedSubMenu').removeClass('d-none');
+            $('#btnIntegrated').addClass('active');
+            disableTableSwitching();
+            
+            // Set active state on integrated sub-menu
+            $('#integratedSubMenu .btn').removeClass('btn-primary').addClass('btn-outline-primary');
+            if (currentLevel === 'integrated' || currentLevel === 'integrated_elementary') {
+                $('#btnIntegratedElementary').removeClass('btn-outline-primary').addClass('btn-primary');
+            } else if (currentLevel === 'integrated_secondary') {
+                $('#btnIntegratedSecondary').removeClass('btn-outline-primary').addClass('btn-primary');
+            }
+        } else {
+            enableTableSwitching();
+        }
+        
+        // Table switching functions
+        function enableTableSwitching() {
+            const btnElem = document.getElementById('btnElementary');
+            const btnSec = document.getElementById('btnSecondary');
+            
+            if (btnElem && btnSec) {
+                btnElem.style.pointerEvents = 'auto';
+                btnElem.style.opacity = '1';
+                btnSec.style.pointerEvents = 'auto';
+                btnSec.style.opacity = '1';
+            }
+        }
+        
+        function disableTableSwitching() {
+            const btnElem = document.getElementById('btnElementary');
+            const btnSec = document.getElementById('btnSecondary');
+            
+            if (btnElem && btnSec) {
+                btnElem.style.pointerEvents = 'none';
+                btnElem.style.opacity = '0.5';
+                btnSec.style.pointerEvents = 'none';
+                btnSec.style.opacity = '0.5';
+            }
+        }
         
         function switchAssessmentType(type) {
             // Show loading state
@@ -572,10 +683,14 @@ $secondaryGrades = [
                 data: { assessment_type: type },
                 dataType: 'json',
                 success: function(response) {
-                    console.log('Switch response:', response);
                     if (response.success) {
-                        // Redirect back to the dashboard; preserve selected school when present
-                        window.location.href = '<?php echo site_url("userdashboard") . (!empty($selected_school) ? "?school_name=" . urlencode($selected_school) : ""); ?>';
+                        // Redirect with current filters
+                        var url = '<?php echo site_url("userdashboard"); ?>';
+                        var schoolLevel = '<?php echo $school_level; ?>';
+                        if (schoolLevel && schoolLevel !== 'all') {
+                            url += '?school_level=' + encodeURIComponent(schoolLevel);
+                        }
+                        window.location.href = url;
                     } else {
                         alert('Error: ' + response.message);
                         activeBtn.html(originalHtml);
@@ -584,7 +699,6 @@ $secondaryGrades = [
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Switch error:', error);
                     alert('Error switching assessment type. Please try again.');
                     activeBtn.html(originalHtml);
                     activeBtn.prop('disabled', false);
@@ -592,55 +706,142 @@ $secondaryGrades = [
                 }
             });
         }
+
+        function setSchoolLevelFilter(level) {
+            // Show loading on all main buttons
+            $('#btnElementary').html('<i class="fas fa-spinner fa-spin"></i>');
+            $('#btnSecondary').html('<i class="fas fa-spinner fa-spin"></i>');
+            $('#btnIntegrated').html('<i class="fas fa-spinner fa-spin"></i>');
+            
+            // Disable all buttons during AJAX call
+            $('#btnElementary').prop('disabled', true);
+            $('#btnSecondary').prop('disabled', true);
+            $('#btnIntegrated').prop('disabled', true);
+            
+            $.ajax({
+                url: '<?php echo site_url("userdashboard/set_school_level"); ?>',
+                method: 'POST',
+                data: { school_level: level },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        // Reload to show filtered data
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + response.message);
+                        resetButtonStates();
+                    }
+                },
+                error: function() {
+                    alert('Error applying filter. Please try again.');
+                    resetButtonStates();
+                }
+            });
+        }
         
-        // Table switching
+        function resetButtonStates() {
+            // Reset button text
+            $('#btnElementary').html('<i class="fas fa-child me-1"></i> Elementary <span class="badge bg-info ms-1">K-6</span>');
+            $('#btnSecondary').html('<i class="fas fa-graduation-cap me-1"></i> Secondary <span class="badge bg-info ms-1">7-12</span>');
+            $('#btnIntegrated').html('<i class="fas fa-university me-1"></i> Integrated <span class="badge bg-info ms-1">K-12</span>');
+            
+            // Re-enable all buttons
+            $('#btnElementary').prop('disabled', false);
+            $('#btnSecondary').prop('disabled', false);
+            $('#btnIntegrated').prop('disabled', false);
+        }
+        
+        // Table switching (Elementary/Secondary table view)
         const btnElem = document.getElementById('btnElementary');
         const btnSec = document.getElementById('btnSecondary');
         const elemTable = document.getElementById('elementaryTable');
         const secTable = document.getElementById('secondaryTable');
         const btnPrint = document.getElementById('btnPrint');
+        
+        // Check current filter
+        var currentLevel = '<?php echo $school_level; ?>';
+        
+        if (btnElem && btnSec) {
+            // Set initial table visibility based on current filter
+            if (currentLevel === 'secondary' || currentLevel === 'integrated_secondary') {
+                // Show secondary table
+                btnSec.classList.add('active');
+                btnElem.classList.remove('active');
+                secTable.classList.remove('d-none');
+                elemTable.classList.add('d-none');
+            } else {
+                // Default to elementary table for: all, elementary, integrated, integrated_elementary
+                btnElem.classList.add('active');
+                btnSec.classList.remove('active');
+                elemTable.classList.remove('d-none');
+                secTable.classList.add('d-none');
+            }
+            
+            // Table switching event listeners
+            btnElem.addEventListener('click', function() {
+                btnElem.classList.add('active');
+                btnSec.classList.remove('active');
+                elemTable.classList.remove('d-none');
+                secTable.classList.add('d-none');
+            });
 
-        btnElem.addEventListener('click', () => {
-          btnElem.classList.add('active');
-          btnSec.classList.remove('active');
-          elemTable.classList.remove('d-none');
-          secTable.classList.add('d-none');
-        });
-
-        btnSec.addEventListener('click', () => {
-          btnSec.classList.add('active');
-          btnElem.classList.remove('active');
-          secTable.classList.remove('d-none');
-          elemTable.classList.add('d-none');
-        });
+            btnSec.addEventListener('click', function() {
+                btnSec.classList.add('active');
+                btnElem.classList.remove('active');
+                secTable.classList.remove('d-none');
+                elemTable.classList.add('d-none');
+            });
+        }
 
         btnPrint.addEventListener('click', () => {
-          // Open a new window and print only the visible table
-          const win = window.open('', '_blank');
-          const isElemVisible = !elemTable.classList.contains('d-none');
-          const tableHtml = (isElemVisible ? elemTable : secTable).outerHTML;
-          
-          // Get current assessment type
-          const assessmentType = '<?php echo ucfirst($assessment_type); ?>';
-          const reportDate = new Date().toLocaleDateString();
+            // Open a new window and print
+            const win = window.open('', '_blank');
+            
+            // Determine which table to print
+            let tableHtml;
+            const isElemVisible = !elemTable.classList.contains('d-none');
+            const isSecVisible = !secTable.classList.contains('d-none');
+            
+            if (isSecVisible) {
+                tableHtml = secTable.outerHTML;
+            } else {
+                tableHtml = elemTable.outerHTML;
+            }
+            
+            // Get current filters
+            const assessmentType = '<?php echo ucfirst($assessment_type); ?>';
+            const schoolLevel = '<?php echo $school_level; ?>';
+            const reportDate = new Date().toLocaleDateString();
+            
+            // Format school level for display
+            let schoolLevelDisplay = 'All Schools (Elementary View)';
+            switch(schoolLevel) {
+                case 'all': schoolLevelDisplay = 'All Schools (Elementary View)'; break;
+                case 'elementary': schoolLevelDisplay = 'Elementary Schools'; break;
+                case 'secondary': schoolLevelDisplay = 'Secondary Schools'; break;
+                case 'integrated': schoolLevelDisplay = 'Integrated Schools (Elementary View)'; break;
+                case 'integrated_elementary': schoolLevelDisplay = 'Integrated Schools (Elementary Only)'; break;
+                case 'integrated_secondary': schoolLevelDisplay = 'Integrated Schools (Secondary Only)'; break;
+                default: schoolLevelDisplay = 'All Schools (Elementary View)';
+            }
+            
+            const printCss = '<style>' +
+                '@page{size:A4 landscape;margin:8mm;} body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:4px;color:#000;font-size:8px;line-height:1.2;} ' +
+                'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px;margin:0;} th,td{border:0.5px solid #dee2e6;padding:2px;word-wrap:break-word;line-height:1.1;} ' +
+                '.no-print{display:none!important;} h3{font-size:10px;margin:0 0 2px 0;font-weight:bold;} p{font-size:7px;margin:0 0 4px 0;} </style>';
 
-          const printCss = '<style>' +
-            '@page{size:A4 landscape;margin:8mm;} body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:4px;color:#000;font-size:8px;line-height:1.2;} ' +
-            'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px;margin:0;} th,td{border:0.5px solid #dee2e6;padding:2px;word-wrap:break-word;line-height:1.1;} ' +
-            '.no-print{display:none!important;} h3{font-size:10px;margin:0 0 2px 0;font-weight:bold;} p{font-size:7px;margin:0 0 4px 0;} </style>';
-
-          win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Print</title>' +
-            '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">' +
-            printCss +
-            '</head><body>');
-          win.document.write('<h3>Nutritional Status Report - ' + assessmentType + ' Assessment</h3>');
-          win.document.write('<p>Report Date: ' + reportDate + '</p>');
-          win.document.write(tableHtml);
-          win.document.write('<script>window.onload=function(){ setTimeout(function(){ window.print(); window.onafterprint=function(){ window.close(); } },200); }<\/script>');
-          win.document.write('</body></html>');
-          win.document.close();
+            win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Print</title>' +
+                '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">' +
+                printCss +
+                '</head><body>');
+            win.document.write('<h3>Nutritional Status Report - ' + assessmentType + ' Assessment</h3>');
+            win.document.write('<p>Report Date: ' + reportDate + ' | School Level: ' + schoolLevelDisplay + '</p>');
+            win.document.write(tableHtml);
+            win.document.write('<script>window.onload=function(){ setTimeout(function(){ window.print(); window.onafterprint=function(){ window.close(); } },200); }<\/script>');
+            win.document.write('</body></html>');
+            win.document.close();
         });
-      });
+    });
     </script>
   </body>
 </html>
