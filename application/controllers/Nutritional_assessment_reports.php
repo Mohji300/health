@@ -255,213 +255,211 @@ class Nutritional_assessment_reports extends CI_Controller {
     /**
      * Export detailed report to Excel with exact template format
      */
-/**
- * Export detailed report to Excel with exact template format
- */
-public function export_detail()
-{
-    $legislative_district = $this->input->get('legislative_district', TRUE);
-    $school_district = $this->input->get('school_district', TRUE);
-    $school_name = $this->input->get('school_name', TRUE);
-    $school_id = $this->input->get('school_id', TRUE);
-    $grade_level = $this->input->get('grade_level', TRUE);
-    $section = $this->input->get('section', TRUE);
-    $assessment_type = $this->input->get('assessment_type', TRUE) ?: 'baseline';
 
-    if (!$legislative_district || !$school_district || !$school_name || !$grade_level || !$section) {
-        show_error('Missing required parameters');
-    }
+    public function export_detail()
+    {
+        $legislative_district = $this->input->get('legislative_district', TRUE);
+        $school_district = $this->input->get('school_district', TRUE);
+        $school_name = $this->input->get('school_name', TRUE);
+        $school_id = $this->input->get('school_id', TRUE);
+        $grade_level = $this->input->get('grade_level', TRUE);
+        $section = $this->input->get('section', TRUE);
+        $assessment_type = $this->input->get('assessment_type', TRUE) ?: 'baseline';
 
-    $assessments = $this->Nutritional_assessment_model->get_by_section(
-        $legislative_district,
-        $school_district,
-        $grade_level,
-        $section,
-        $assessment_type
-    );
-
-    if (empty($assessments)) {
-        show_error('No data found for the specified criteria');
-    }
-
-    // Use PhpSpreadsheet to build a formatted Excel (.xlsx) report from template
-    require_once APPPATH . '../vendor/autoload.php';
-
-    // Load the template file
-    $templatePath = APPPATH . '../assets/templates/Book1.xlsx';
-    
-    if (!file_exists($templatePath)) {
-        show_error('Template file not found at: ' . $templatePath);
-    }
-
-    // Load template
-    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
-    $sheet = $spreadsheet->getActiveSheet();
-
-    // School Year calculation (June to March)
-    $currentYear = date('Y');
-    $currentMonth = date('n');
-    if ($currentMonth >= 6) { // June to December
-        $schoolYear = $currentYear . '-' . ($currentYear + 1);
-    } else { // January to May
-        $schoolYear = ($currentYear - 1) . '-' . $currentYear;
-    }
-
-    // Calculate date of weighing (use earliest date from assessments)
-    $dates = array_filter(array_map(function($a) {
-        return !empty($a->date_of_weighing) ? $a->date_of_weighing : null;
-    }, $assessments));
-    
-    if (!empty($dates)) {
-        sort($dates);
-        $date_of_weighing = date('F d, Y', strtotime($dates[0]));
-    } else {
-        $date_of_weighing = date('F d, Y');
-    }
-
-    // === POPULATE HEADER INFORMATION ===
-    
-    // ROW 2: School Name (centered, bold)
-    // Let's merge cells A2 through N2 and center the school name
-    $sheet->mergeCells('A2:N2');
-    $sheet->setCellValue('A2', $school_name);
-    $sheet->getStyle('A2')->getFont()->setBold(true);
-    $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-    
-    // ROW 3: School District (centered)
-    $sheet->mergeCells('A3:N3');
-    $sheet->setCellValue('A3', $school_district);
-    $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-    
-    // ROW 4: Assessment Type and School Year (centered)
-    $assessmentDisplay = ucfirst($assessment_type);
-    // Merge cells to center the text
-    $sheet->mergeCells('A4:N4');
-    $sheet->setCellValue('A4', $assessmentDisplay . ' Assessment SY ' . $schoolYear);
-    $sheet->getStyle('A4')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-    
-    // COLUMN D6: Date of Weighing
-    $sheet->setCellValue('D6', $date_of_weighing);
-    
-    // COLUMN M6: Grade Level
-    $sheet->setCellValue('M6', 'Grade: ' . $grade_level);
-    
-    // COLUMN N6: Section
-    $sheet->setCellValue('N6', 'Section: ' . $section);
-
-    // === POPULATE STUDENT DETAILS STARTING AT ROW 9 ===
-    
-    $startRow = 9; // Student data starts at row 9 as you specified
-    
-    foreach ($assessments as $index => $student) {
-        $currentRow = $startRow + $index;
-        
-        // A9: Student Number
-        $sheet->setCellValue('A' . $currentRow, $index + 1);
-        
-        // B9: Period (You mentioned this is for period - what data goes here?)
-        // If you have period data, add it. Otherwise leave empty or add placeholder
-        $sheet->setCellValue('B' . $currentRow, ''); // Period placeholder
-        
-        // C9: Student Names
-        $sheet->setCellValue('C' . $currentRow, $student->name ?? '');
-        
-        // D9: Birthday (format: mm/dd/yyyy)
-        if (!empty($student->birthday)) {
-            $birthday = date('m/d/Y', strtotime($student->birthday));
-            $sheet->setCellValue('D' . $currentRow, $birthday);
-        } else {
-            $sheet->setCellValue('D' . $currentRow, '');
+        if (!$legislative_district || !$school_district || !$school_name || !$grade_level || !$section) {
+            show_error('Missing required parameters');
         }
-        
-        // E9: Weight (kg)
-        $sheet->setCellValue('E' . $currentRow, $student->weight ?? '');
-        
-        // F9: Height (meters)
-        $sheet->setCellValue('F' . $currentRow, $student->height ?? '');
-        
-        // G9: Sex (M/F)
-        $sex = strtoupper(substr(trim($student->sex ?? ''), 0, 1));
-        $sheet->setCellValue('G' . $currentRow, $sex);
-        
-        // H9: Height² (m²) - calculate if height exists
-        if (!empty($student->height) && is_numeric($student->height)) {
-            $heightSquared = pow(floatval($student->height), 2);
-            $sheet->setCellValue('H' . $currentRow, round($heightSquared, 4));
-        } else {
-            $sheet->setCellValue('H' . $currentRow, '');
+
+        $assessments = $this->Nutritional_assessment_model->get_by_section(
+            $legislative_district,
+            $school_district,
+            $grade_level,
+            $section,
+            $assessment_type
+        );
+
+        if (empty($assessments)) {
+            show_error('No data found for the specified criteria');
         }
+
+        // Use PhpSpreadsheet to build a formatted Excel (.xlsx) report from template
+        require_once APPPATH . '../vendor/autoload.php';
+
+        // Load the template file
+        $templatePath = APPPATH . '../assets/templates/Book1.xlsx';
         
-        // I9: Age Years
-        // J9: Comma
-        // K9: Age Months
-        if (!empty($student->birthday) && !empty($date_of_weighing)) {
-            $birthDate = new DateTime($student->birthday);
-            $weighingDate = new DateTime($date_of_weighing);
-            $interval = $birthDate->diff($weighingDate);
-            
-            // I9: Years
-            $sheet->setCellValue('I' . $currentRow, $interval->y);
-            
-            // J9: Comma (literal comma)
-            $sheet->setCellValue('J' . $currentRow, ',');
-            
-            // K9: Months
-            $sheet->setCellValue('K' . $currentRow, $interval->m);
-        } else {
-            $sheet->setCellValue('I' . $currentRow, '');
-            $sheet->setCellValue('J' . $currentRow, '');
-            $sheet->setCellValue('K' . $currentRow, '');
+        if (!file_exists($templatePath)) {
+            show_error('Template file not found at: ' . $templatePath);
         }
+
+        // Load template
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // School Year calculation (June to March)
+        $currentYear = date('Y');
+        $currentMonth = date('n');
+        if ($currentMonth >= 6) { // June to December
+            $schoolYear = $currentYear . '-' . ($currentYear + 1);
+        } else { // January to May
+            $schoolYear = ($currentYear - 1) . '-' . $currentYear;
+        }
+
+        // Calculate date of weighing (use earliest date from assessments)
+        $dates = array_filter(array_map(function($a) {
+            return !empty($a->date_of_weighing) ? $a->date_of_weighing : null;
+        }, $assessments));
         
-        // L9: Body Mass Index (BMI)
-        $sheet->setCellValue('L' . $currentRow, $student->bmi ?? '');
+        if (!empty($dates)) {
+            sort($dates);
+            $date_of_weighing = date('F d, Y', strtotime($dates[0]));
+        } else {
+            $date_of_weighing = date('F d, Y');
+        }
+
+        // === POPULATE HEADER INFORMATION ===
         
-        // M9: Nutritional Status
-        $sheet->setCellValue('M' . $currentRow, $student->nutritional_status ?? '');
+        // ROW 2: School Name (centered, bold)
+        // Let's merge cells A2 through N2 and center the school name
+        $sheet->mergeCells('A2:N2');
+        $sheet->setCellValue('A2', $school_name);
+        $sheet->getStyle('A2')->getFont()->setBold(true);
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         
-        // N9: Height-for-Age
-        $sheet->setCellValue('N' . $currentRow, $student->height_for_age ?? '');
+        // ROW 3: School District (centered)
+        $sheet->mergeCells('A3:N3');
+        $sheet->setCellValue('A3', $school_district);
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         
-        // Apply borders to the row if your template has borders
-        $borderStyle = \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN;
-        $sheet->getStyle('A' . $currentRow . ':N' . $currentRow)
-            ->getBorders()
-            ->getAllBorders()
-            ->setBorderStyle($borderStyle);
+        // ROW 4: Assessment Type and School Year (centered)
+        $assessmentDisplay = ucfirst($assessment_type);
+        // Merge cells to center the text
+        $sheet->mergeCells('A4:N4');
+        $sheet->setCellValue('A4', $assessmentDisplay . ' Assessment SY ' . $schoolYear);
+        $sheet->getStyle('A4')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        
+        // COLUMN D6: Date of Weighing
+        $sheet->setCellValue('D6', $date_of_weighing);
+        
+        // COLUMN M6: Grade Level
+        $sheet->setCellValue('M6', 'Grade: ' . $grade_level);
+        
+        // COLUMN N6: Section
+        $sheet->setCellValue('N6', 'Section: ' . $section);
+
+        // === POPULATE STUDENT DETAILS STARTING AT ROW 9 ===
+        
+        $startRow = 9; // Student data starts at row 9 as you specified
+        
+        foreach ($assessments as $index => $student) {
+            $currentRow = $startRow + $index;
+            
+            // A9: Student Number
+            $sheet->setCellValue('A' . $currentRow, $index + 1);
+            
+            // B9: Period (You mentioned this is for period - what data goes here?)
+            // If you have period data, add it. Otherwise leave empty or add placeholder
+            $sheet->setCellValue('B' . $currentRow, ''); // Period placeholder
+            
+            // C9: Student Names
+            $sheet->setCellValue('C' . $currentRow, $student->name ?? '');
+            
+            // D9: Birthday (format: mm/dd/yyyy)
+            if (!empty($student->birthday)) {
+                $birthday = date('m/d/Y', strtotime($student->birthday));
+                $sheet->setCellValue('D' . $currentRow, $birthday);
+            } else {
+                $sheet->setCellValue('D' . $currentRow, '');
+            }
+            
+            // E9: Weight (kg)
+            $sheet->setCellValue('E' . $currentRow, $student->weight ?? '');
+            
+            // F9: Height (meters)
+            $sheet->setCellValue('F' . $currentRow, $student->height ?? '');
+            
+            // G9: Sex (M/F)
+            $sex = strtoupper(substr(trim($student->sex ?? ''), 0, 1));
+            $sheet->setCellValue('G' . $currentRow, $sex);
+            
+            // H9: Height² (m²) - calculate if height exists
+            if (!empty($student->height) && is_numeric($student->height)) {
+                $heightSquared = pow(floatval($student->height), 2);
+                $sheet->setCellValue('H' . $currentRow, round($heightSquared, 4));
+            } else {
+                $sheet->setCellValue('H' . $currentRow, '');
+            }
+            
+            // I9: Age Years
+            // J9: Comma
+            // K9: Age Months
+            if (!empty($student->birthday) && !empty($date_of_weighing)) {
+                $birthDate = new DateTime($student->birthday);
+                $weighingDate = new DateTime($date_of_weighing);
+                $interval = $birthDate->diff($weighingDate);
+                
+                // I9: Years
+                $sheet->setCellValue('I' . $currentRow, $interval->y);
+                
+                // J9: Comma (literal comma)
+                $sheet->setCellValue('J' . $currentRow, ',');
+                
+                // K9: Months
+                $sheet->setCellValue('K' . $currentRow, $interval->m);
+            } else {
+                $sheet->setCellValue('I' . $currentRow, '');
+                $sheet->setCellValue('J' . $currentRow, '');
+                $sheet->setCellValue('K' . $currentRow, '');
+            }
+            
+            // L9: Body Mass Index (BMI)
+            $sheet->setCellValue('L' . $currentRow, $student->bmi ?? '');
+            
+            // M9: Nutritional Status
+            $sheet->setCellValue('M' . $currentRow, $student->nutritional_status ?? '');
+            
+            // N9: Height-for-Age
+            $sheet->setCellValue('N' . $currentRow, $student->height_for_age ?? '');
+            
+            // Apply borders to the row if your template has borders
+            $borderStyle = \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN;
+            $sheet->getStyle('A' . $currentRow . ':N' . $currentRow)
+                ->getBorders()
+                ->getAllBorders()
+                ->setBorderStyle($borderStyle);
+        }
+
+        // === SET PAGE LAYOUT ===
+        
+        $sheet->getPageSetup()
+            ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE)
+            ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4)
+            ->setFitToWidth(1)
+            ->setFitToHeight(0);
+
+        $sheet->getPageMargins()
+            ->setTop(0.5)
+            ->setRight(0.25)
+            ->setLeft(0.25)
+            ->setBottom(0.5);
+
+        // === SAVE AND DOWNLOAD ===
+        
+        $filename = preg_replace('/[^A-Za-z0-9_\-]/', '_', $school_name) 
+            . '_Grade' . $grade_level 
+            . '_Section' . $section 
+            . '_' . $assessment_type 
+            . '_' . date('Y-m-d') . '.xlsx';
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        header('Pragma: no-cache');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
-
-    // === SET PAGE LAYOUT ===
-    
-    $sheet->getPageSetup()
-        ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE)
-        ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4)
-        ->setFitToWidth(1)
-        ->setFitToHeight(0);
-
-    $sheet->getPageMargins()
-        ->setTop(0.5)
-        ->setRight(0.25)
-        ->setLeft(0.25)
-        ->setBottom(0.5);
-
-    // === SAVE AND DOWNLOAD ===
-    
-    $filename = preg_replace('/[^A-Za-z0-9_\-]/', '_', $school_name) 
-        . '_Grade' . $grade_level 
-        . '_Section' . $section 
-        . '_' . $assessment_type 
-        . '_' . date('Y-m-d') . '.xlsx';
-
-    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Cache-Control: max-age=0');
-    header('Pragma: no-cache');
-
-    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-    $writer->save('php://output');
-    exit;
-}
 
     /**
      * Get nutritional statistics summary - UPDATED VERSION

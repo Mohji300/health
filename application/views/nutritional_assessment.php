@@ -151,7 +151,7 @@
           </div>
           <?php endif; ?>
 
-          <!-- Excel Upload Section -->
+          <!-- Excel Upload Section (simplified) -->
           <div class="bg-purple-light p-4 rounded mb-4 no-print">
             <h2 class="h4 text-dark mb-3"><i class="fas fa-file-excel"></i> Extract Data from Nutritional Status Report</h2>
             <form id="uploadForm" enctype="multipart/form-data" class="d-flex flex-column align-items-center">
@@ -333,14 +333,15 @@
     </div> <!-- /#wrapper -->
 
     <!-- Loading Modal -->
-    <div class="modal fade" id="loadingModal" tabindex="-1" backdrop="static" keyboard="false">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-body text-center">
-            <div class="spinner-border text-primary mb-3" role="status">
+    <div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 bg-transparent shadow-none">
+          <div class="modal-body text-center p-4">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
               <span class="visually-hidden">Loading...</span>
             </div>
-            <p>Submitting records...</p>
+            <div class="mt-3 text-dark fs-5 fw-semibold">Submitting records...</div>
+            <div class="text-muted mt-2">Please wait while we save your data.</div>
           </div>
         </div>
       </div>
@@ -362,480 +363,538 @@
       </div>
     </div>
 
-    <!-- Upload Loading Spinner -->
-    <div id="uploadLoadingSpinner" class="text-center d-none no-print">
-      <div class="spinner-border text-purple" role="status">
-        <span class="visually-hidden">Loading...</span>
+    <!-- Upload Loading Modal -->
+    <div class="modal fade" id="uploadLoadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0">
+          <div class="modal-body text-center p-5">
+            <div class="spinner-border text-purple mb-3" style="width: 3rem; height: 3rem;" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5 class="text-dark mb-2">Extracting Data</h5>
+            <p class="text-muted mb-0">Processing Excel file. This may take a moment...</p>
+          </div>
+        </div>
       </div>
-      <p class="mt-2">Extracting data from Excel file...</p>
+    </div>
+
+    <!-- Clear All Confirmation Modal -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirmTitle">Confirmation</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body" id="confirmBody">Are you sure?</div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmYesBtn">Yes, Clear All</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit Report Confirmation Modal -->
+    <div class="modal fade" id="submitConfirmModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="submitConfirmTitle">Submit Report Confirmation</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body" id="submitConfirmBody">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle"></i> 
+              <strong>Important:</strong> Once submitted, all student records will be permanently saved to the database and cleared from this page.
+            </div>
+            <p id="submitConfirmText"></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" id="submitConfirmYesBtn">
+              <i class="fas fa-paper-plane"></i> Yes, Submit Report
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  // Keep all your existing JavaScript code exactly as it is
-  const STORAGE_PREFIX = 'nutritional_assessment_';
-  let students = [];
-  let alertModal = null;
-  let loadingModal = null;
 
-  // Initialize
-  document.addEventListener('DOMContentLoaded', () => {
-    alertModal = new bootstrap.Modal(document.getElementById('alertModal'));
-    loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'), { keyboard: false, backdrop: 'static' });
-    
-    // Set today's date
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date').value = today;
+  <script>
+    const STORAGE_PREFIX = 'nutritional_assessment_';
+    let students = [];
+    let alertModal = null;
+    let loadingModal = null;
+    let uploadLoadingModal = null;
+    let confirmModal = null;
+    let submitConfirmModal = null; // Add this for submit confirmation
 
-    // Load from localStorage
-    loadStudents();
-    updateUI();
-
-    // Event listeners
-    document.getElementById('assessmentForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      addStudent();
-    });
-
-    document.getElementById('clearFormBtn').addEventListener('click', clearForm);
-    document.getElementById('clearAllBtn').addEventListener('click', clearAllStudents);
-    document.getElementById('submitBtn').addEventListener('click', submitReport);
-    
-    // Excel upload event listeners
-    document.getElementById('chooseFileBtn').addEventListener('click', function() {
-      document.getElementById('excelFile').click();
-    });
-
-    document.getElementById('excelFile').addEventListener('change', function(event) {
-      if (event.target.files.length > 0) {
-        extractFromExcel();
-      }
-    });
-    
-    // Assessment switcher
-    document.getElementById('switchToBaseline').addEventListener('click', function() {
-      switchAssessmentType('baseline');
-    });
-    
-    document.getElementById('switchToEndline').addEventListener('click', function() {
-      switchAssessmentType('endline');
-    });
-  });
-
-  function switchAssessmentType(type) {
-    // Get current URL
-    const currentUrl = window.location.href;
-    const url = new URL(currentUrl);
-    
-    // Update assessment_type parameter
-    url.searchParams.set('assessment_type', type);
-    
-    // Reload page with new assessment type
-    window.location.href = url.toString();
-  }
-
-  // Excel Upload Functions
-  function extractFromExcel() {
-    const file = document.getElementById('excelFile').files[0];
-    if (!file) return;
-
-    const fileExtension = file.name.split('.').pop().toLowerCase();
-    if (!['xlsx', 'xls', 'csv'].includes(fileExtension)) {
-      showAlert('Invalid File', 'Please select an Excel file (.xlsx, .xls) or CSV file');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) { // 5MB
-      showAlert('File Too Large', 'Please select a file smaller than 5MB');
-      return;
-    }
-
-    document.getElementById('uploadLoadingSpinner').classList.remove('d-none');
-    document.getElementById('chooseFileBtn').disabled = true;
-
-    const formData = new FormData();
-    formData.append('excel_file', file);
-
-    fetch('<?php echo site_url("nutritional_upload/process_excel"); ?>', {
-      method: 'POST',
-      body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-      document.getElementById('uploadLoadingSpinner').classList.add('d-none');
-      document.getElementById('chooseFileBtn').disabled = false;
-      document.getElementById('excelFile').value = '';
-
-      if (data.success) {
-        const extractedStudents = data.students || [];
-        addExtractedStudentsDirectly(extractedStudents, data.message);
-      } else {
-        showAlert('Processing Error', data.message);
-      }
-    })
-    .catch(error => {
-      document.getElementById('uploadLoadingSpinner').classList.add('d-none');
-      document.getElementById('chooseFileBtn').disabled = false;
-      document.getElementById('excelFile').value = '';
-      showAlert('Error', 'An error occurred while processing the file: ' + error.message);
-    });
-  }
-
-  function addExtractedStudentsDirectly(extractedStudents, message) {
-    if (extractedStudents.length === 0) {
-      showAlert('No Students', 'No valid student data found in the file.');
-      return;
-    }
-
-    let addedCount = 0;
-    let skippedCount = 0;
-    
-    extractedStudents.forEach((extractedStudent, index) => {
-      // Calculate age from birthday
-      const birthday = extractedStudent.birthday;
-      let ageYears = 0, ageMonths = 0;
-      let ageDisplay = '0|0';
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize all modals
+      alertModal = new bootstrap.Modal(document.getElementById('alertModal'));
+      loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'), { 
+        keyboard: false, 
+        backdrop: 'static' 
+      });
       
-      if (birthday) {
-        const bdate = new Date(birthday);
-        const today = new Date();
-        ageYears = today.getFullYear() - bdate.getFullYear();
-        ageMonths = today.getMonth() - bdate.getMonth();
-        if (ageMonths < 0) {
-          ageYears--;
-          ageMonths += 12;
+      uploadLoadingModal = new bootstrap.Modal(document.getElementById('uploadLoadingModal'), { 
+        keyboard: false, 
+        backdrop: 'static' 
+      });
+      
+      confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+      submitConfirmModal = new bootstrap.Modal(document.getElementById('submitConfirmModal')); // Initialize submit confirmation modal
+      
+      // Set today's date
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('date').value = today;
+
+      // Load from localStorage
+      loadStudents();
+      updateUI();
+
+      // Event listeners
+      document.getElementById('assessmentForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        addStudent();
+      });
+
+      document.getElementById('clearFormBtn').addEventListener('click', clearForm);
+      document.getElementById('clearAllBtn').addEventListener('click', clearAllStudents);
+      document.getElementById('submitBtn').addEventListener('click', showSubmitConfirmation); // Updated to show confirmation modal
+      
+      // Excel upload event listeners
+      document.getElementById('chooseFileBtn').addEventListener('click', function() {
+        document.getElementById('excelFile').click();
+      });
+
+      document.getElementById('excelFile').addEventListener('change', function(event) {
+        if (event.target.files.length > 0) {
+          extractFromExcel();
         }
-        ageDisplay = ageYears + '|' + ageMonths;
+      });
+      
+      // Confirmation modal button event listeners
+      document.getElementById('confirmYesBtn').addEventListener('click', function() {
+        confirmModal.hide();
+        performClearAll();
+      });
+      
+      // Submit confirmation modal button event listener
+      document.getElementById('submitConfirmYesBtn').addEventListener('click', function() {
+        submitConfirmModal.hide();
+        submitReport();
+      });
+      
+      // Assessment switcher - Check if elements exist first
+      const switchToBaseline = document.getElementById('switchToBaseline');
+      const switchToEndline = document.getElementById('switchToEndline');
+      
+      if (switchToBaseline) {
+        switchToBaseline.addEventListener('click', function() {
+          switchAssessmentType('baseline');
+        });
       }
       
-      // Validate required fields
-      if (!extractedStudent.name || !extractedStudent.birthday || !extractedStudent.weight || !extractedStudent.height || !extractedStudent.sex) {
-        skippedCount++;
+      if (switchToEndline) {
+        switchToEndline.addEventListener('click', function() {
+          switchAssessmentType('endline');
+        });
+      }
+    });
+
+    function showSubmitConfirmation() {
+      if (students.length === 0) {
+        showAlert('No Records', 'Add students before submitting.');
         return;
       }
       
-      // Map snake_case to camelCase for the UI
-      const student = {
-        name: extractedStudent.name,
-        birthday: extractedStudent.birthday,
-        weight: extractedStudent.weight,
-        height: extractedStudent.height,
-        sex: extractedStudent.sex,
-        grade: document.getElementById('grade').value,
-        section: document.getElementById('section').value,
-        school_year: document.getElementById('school_year').value,
-        date: document.getElementById('date').value,
-        legislative_district: document.getElementById('legislative_district').value,
-        school_district: document.getElementById('school_district').value,
-        school_id: document.getElementById('school_id').value,
-        school_name: document.getElementById('school_name').value,
-        heightSquared: extractedStudent.height_squared || (extractedStudent.height ? (extractedStudent.height * extractedStudent.height).toFixed(4) : null),
-        age: ageDisplay,
-        ageYears: ageYears,
-        ageMonths: ageMonths,
-        ageDisplay: ageDisplay,
-        bmi: extractedStudent.bmi,
-        nutritionalStatus: extractedStudent.nutritional_status || 'Not Specified',
-        heightForAge: extractedStudent.height_for_age || 'Not Specified',
-        sbfpBeneficiary: extractedStudent.sbfp_beneficiary || ((extractedStudent.nutritional_status === 'Severely Wasted' || extractedStudent.nutritional_status === 'Wasted') ? 'Yes' : 'No')
-      };
+      // Get assessment type from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      let assessmentType = urlParams.get('assessment_type') || 'baseline';
       
-      students.push(student);
-      addedCount++;
-    });
-
-    saveStudents();
-    updateUI();
-    
-    // Show success message
-    let successMessage = `Successfully added ${addedCount} student(s) to the list.`;
-    if (skippedCount > 0) {
-      successMessage += ` ${skippedCount} record(s) were skipped due to missing data.`;
+      // Update modal content
+      document.getElementById('submitConfirmText').textContent = 
+        `Are you sure you want to submit ${students.length} student record(s) for ${assessmentType} assessment?`;
+      
+      // Show the confirmation modal
+      submitConfirmModal.show();
     }
-    showAlert('Excel Import Complete', successMessage);
-  }
 
-  // Existing Functions (keep all your existing functions the same)
-  function getStorageKey() {
-      const ld = document.getElementById('legislative_district').value || 'na';
-      const sd = document.getElementById('school_district').value || 'na';
-      const gr = document.getElementById('grade').value || 'na';
-      const sc = document.getElementById('section').value || 'na';
-      const sy = document.getElementById('school_year').value || 'na';
-      const si = document.getElementById('school_id').value || 'na';
-      const sn = document.getElementById('school_name').value || 'na';
-      return STORAGE_PREFIX + [ld, sd, gr, sc, sy, sn].join('_');
-  }
+    function performClearAll() {
+      students = [];
+      saveStudents();
+      updateUI();
+      showAlert('Success', 'All student records have been cleared.');
+    }
 
-  function loadStudents() {
-    const key = getStorageKey();
-    const stored = localStorage.getItem(key);
-    if (stored) {
-      try {
-        students = JSON.parse(stored);
-        // Update the current session count in the stats card (guarded)
-        const curEl = document.getElementById('currentSessionCount');
-        if (curEl) {
-          curEl.textContent = students.length;
-        } else {
-          console.warn('Element #currentSessionCount not found when loading students');
-        }
-      } catch (e) {
-        console.error('Error loading students:', e);
-        students = [];
+    function switchAssessmentType(type) {
+      const currentUrl = window.location.href;
+      const url = new URL(currentUrl);
+      url.searchParams.set('assessment_type', type);
+      window.location.href = url.toString();
+    }
+
+    // Excel Upload Functions
+    function extractFromExcel() {
+      const file = document.getElementById('excelFile').files[0];
+      if (!file) return;
+
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      if (!['xlsx', 'xls', 'csv'].includes(fileExtension)) {
+        showAlert('Invalid File', 'Please select an Excel file (.xlsx, .xls) or CSV file');
+        return;
       }
+
+      if (file.size > 5 * 1024 * 1024) {
+        showAlert('File Too Large', 'Please select a file smaller than 5MB');
+        return;
+      }
+
+      uploadLoadingModal.show();
+      document.getElementById('chooseFileBtn').disabled = true;
+
+      const formData = new FormData();
+      formData.append('excel_file', file);
+
+      fetch('<?php echo site_url("nutritional_upload/process_excel"); ?>', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        uploadLoadingModal.hide();
+        document.getElementById('chooseFileBtn').disabled = false;
+        document.getElementById('excelFile').value = '';
+
+        if (data.success) {
+          const extractedStudents = data.students || [];
+          addExtractedStudentsDirectly(extractedStudents, data.message);
+        } else {
+          showAlert('Processing Error', data.message);
+        }
+      })
+      .catch(error => {
+        uploadLoadingModal.hide();
+        document.getElementById('chooseFileBtn').disabled = false;
+        document.getElementById('excelFile').value = '';
+        showAlert('Error', 'An error occurred while processing the file: ' + error.message);
+      });
     }
-  }
 
-  function saveStudents() {
-    const key = getStorageKey();
-    localStorage.setItem(key, JSON.stringify(students));
-    // Update the current session count
-    const curEl = document.getElementById('currentSessionCount');
-    if (curEl) curEl.textContent = students.length;
-  }
+    function addExtractedStudentsDirectly(extractedStudents, message) {
+      if (extractedStudents.length === 0) {
+        showAlert('No Students', 'No valid student data found in the file.');
+        return;
+      }
 
-  function clearStoredStudents() {
-    const key = getStorageKey();
-    localStorage.removeItem(key);
-    const curEl = document.getElementById('currentSessionCount');
-    if (curEl) curEl.textContent = '0';
-  }
-
-  function calculateStudentData(name, birthday, weight, height, sex) {
-      let ageYears = 0, ageMonths = 0;
-      if (birthday) {
+      let addedCount = 0;
+      let skippedCount = 0;
+      
+      extractedStudents.forEach((extractedStudent) => {
+        const birthday = extractedStudent.birthday;
+        let ageYears = 0, ageMonths = 0;
+        let ageDisplay = '0|0';
+        
+        if (birthday) {
           const bdate = new Date(birthday);
           const today = new Date();
           ageYears = today.getFullYear() - bdate.getFullYear();
           ageMonths = today.getMonth() - bdate.getMonth();
           if (ageMonths < 0) {
-              ageYears--;
-              ageMonths += 12;
+            ageYears--;
+            ageMonths += 12;
           }
-      }
-
-      const heightSq = (height * height).toFixed(4);
-      const bmi = (weight / (height * height)).toFixed(2);
-
-      let nutritionalStatus = 'Normal';
-      if (bmi < 16) nutritionalStatus = 'Severely Wasted';
-      else if (bmi < 18.5) nutritionalStatus = 'Wasted';
-      else if (bmi < 25) nutritionalStatus = 'Normal';
-      else if (bmi < 30) nutritionalStatus = 'Overweight';
-      else nutritionalStatus = 'Obese';
-
-      const sbfpBeneficiary = (nutritionalStatus === 'Severely Wasted' || nutritionalStatus === 'Wasted') ? 'Yes' : 'No';
-
-      return {
-          name: name.trim(),
-          birthday: birthday,
-          weight: parseFloat(weight),
-          height: parseFloat(height),
-          sex: sex,
+          ageDisplay = ageYears + '|' + ageMonths;
+        }
+        
+        if (!extractedStudent.name || !extractedStudent.birthday || !extractedStudent.weight || !extractedStudent.height || !extractedStudent.sex) {
+          skippedCount++;
+          return;
+        }
+        
+        const student = {
+          name: extractedStudent.name,
+          birthday: extractedStudent.birthday,
+          weight: extractedStudent.weight,
+          height: extractedStudent.height,
+          sex: extractedStudent.sex,
           grade: document.getElementById('grade').value,
           section: document.getElementById('section').value,
-          school_year: document.getElementById('school_year').value, // Add this line
+          school_year: document.getElementById('school_year').value,
           date: document.getElementById('date').value,
           legislative_district: document.getElementById('legislative_district').value,
           school_district: document.getElementById('school_district').value,
           school_id: document.getElementById('school_id').value,
           school_name: document.getElementById('school_name').value,
-          heightSquared: parseFloat(heightSq),
-          age: ageYears + '|' + ageMonths,
+          heightSquared: extractedStudent.height_squared || (extractedStudent.height ? (extractedStudent.height * extractedStudent.height).toFixed(4) : null),
+          age: ageDisplay,
           ageYears: ageYears,
           ageMonths: ageMonths,
-          ageDisplay: ageYears + '|' + ageMonths,
-          bmi: parseFloat(bmi),
-          nutritionalStatus: nutritionalStatus,
-          heightForAge: 'Normal',
-          sbfpBeneficiary: sbfpBeneficiary
-      };
-  }
+          ageDisplay: ageDisplay,
+          bmi: extractedStudent.bmi,
+          nutritionalStatus: extractedStudent.nutritional_status || 'Not Specified',
+          heightForAge: extractedStudent.height_for_age || 'Not Specified',
+          sbfpBeneficiary: extractedStudent.sbfp_beneficiary || ((extractedStudent.nutritional_status === 'Severely Wasted' || extractedStudent.nutritional_status === 'Wasted') ? 'Yes' : 'No')
+        };
+        
+        students.push(student);
+        addedCount++;
+      });
 
-  function addStudent() {
-    const form = document.getElementById('assessmentForm');
-    if (!form.checkValidity()) {
-      form.classList.add('was-validated');
-      return;
-    }
-
-    const name = document.getElementById('name').value;
-    const birthday = document.getElementById('birthday').value;
-    const weight = document.getElementById('weight').value;
-    const height = document.getElementById('height').value;
-    const sex = document.getElementById('sex').value;
-
-    const student = calculateStudentData(name, birthday, weight, height, sex);
-    students.push(student);
-    saveStudents();
-    clearForm();
-    updateUI();
-    showAlert('Success', 'Student added to the list!');
-  }
-
-  function removeStudent(idx) {
-    if (confirm('Remove this student?')) {
-      students.splice(idx, 1);
       saveStudents();
       updateUI();
-    }
-  }
-
-  function clearForm() {
-    document.getElementById('name').value = '';
-    document.getElementById('birthday').value = '';
-    document.getElementById('weight').value = '';
-    document.getElementById('height').value = '';
-    document.getElementById('sex').value = '';
-    document.getElementById('assessmentForm').classList.remove('was-validated');
-  }
-
-  function clearAllStudents() {
-    if (!confirm('Clear all student records?')) return;
-    students = [];
-    saveStudents();
-    updateUI();
-    showAlert('Success', 'All records cleared.');
-  }
-
-  function updateUI() {
-    const tbody = document.getElementById('studentTableBody');
-    const count = document.getElementById('studentCount');
-    const clearBtn = document.getElementById('clearAllBtn');
-    const submitBtn = document.getElementById('submitBtn');
-
-    if (count) {
-      count.textContent = students.length + ' Student' + (students.length !== 1 ? 's' : '');
-    } else {
-      console.warn('Element #studentCount not found');
+      
+      let successMessage = `Successfully added ${addedCount} student(s) to the list.`;
+      if (skippedCount > 0) {
+        successMessage += ` ${skippedCount} record(s) were skipped due to missing data.`;
+      }
+      showAlert('Excel Import Complete', successMessage);
     }
 
-    if (clearBtn) clearBtn.disabled = students.length === 0;
-    if (submitBtn) submitBtn.disabled = students.length === 0;
-
-    const curEl = document.getElementById('currentSessionCount');
-    if (curEl) curEl.textContent = students.length;
-
-    if (!tbody) {
-      console.warn('Element #studentTableBody not found; skipping table render');
-      return;
+    function getStorageKey() {
+        const ld = document.getElementById('legislative_district').value || 'na';
+        const sd = document.getElementById('school_district').value || 'na';
+        const gr = document.getElementById('grade').value || 'na';
+        const sc = document.getElementById('section').value || 'na';
+        const sy = document.getElementById('school_year').value || 'na';
+        const si = document.getElementById('school_id').value || 'na';
+        const sn = document.getElementById('school_name').value || 'na';
+        return STORAGE_PREFIX + [ld, sd, gr, sc, sy, sn].join('_');
     }
 
-    if (students.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted">No student records yet. Add some students above.</td></tr>';
-      return;
+    function loadStudents() {
+      const key = getStorageKey();
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        try {
+          students = JSON.parse(stored);
+        } catch (e) {
+          console.error('Error loading students:', e);
+          students = [];
+        }
+      }
     }
 
-    tbody.innerHTML = students.map((s, idx) => `
-      <tr class="${getRowClass(s.nutritionalStatus)}">
-          <td>${s.name}</td>
-          <td>${s.birthday}</td>
-          <td>${s.grade}</td>
-          <td>${s.school_year || s.year || 'N/A'}</td> <!-- Added School Year -->
-          <td>${s.weight}</td>
-          <td>${s.height}</td>
-          <td>${s.sex}</td>
-          <td>${s.heightSquared}</td>
-          <td>${s.ageDisplay}</td>
-          <td>${s.bmi}</td>
-          <td>${s.nutritionalStatus}</td>
-          <td>${s.heightForAge}</td>
-          <td>${s.sbfpBeneficiary}</td>
-          <td><button type="button" class="btn btn-sm btn-danger" onclick="removeStudent(${idx})"><i class="fas fa-trash"></i></button></td>
-      </tr>
-    `).join('');
-  }
-
-  function getRowClass(status) {
-    switch (status) {
-      case 'Severely Wasted': return 'status-severely-wasted';
-      case 'Wasted': return 'status-wasted';
-      case 'Overweight': return 'status-overweight';
-      case 'Obese': return 'status-obese';
-      default: return '';
+    function saveStudents() {
+      const key = getStorageKey();
+      localStorage.setItem(key, JSON.stringify(students));
     }
-  }
 
-async function submitReport() {
-    if (students.length === 0) {
-        showAlert('No Records', 'Add students before submitting.');
+    function clearStoredStudents() {
+      const key = getStorageKey();
+      localStorage.removeItem(key);
+    }
+
+    function calculateStudentData(name, birthday, weight, height, sex) {
+        let ageYears = 0, ageMonths = 0;
+        if (birthday) {
+            const bdate = new Date(birthday);
+            const today = new Date();
+            ageYears = today.getFullYear() - bdate.getFullYear();
+            ageMonths = today.getMonth() - bdate.getMonth();
+            if (ageMonths < 0) {
+                ageYears--;
+                ageMonths += 12;
+            }
+        }
+
+        const heightSq = (height * height).toFixed(4);
+        const bmi = (weight / (height * height)).toFixed(2);
+
+        let nutritionalStatus = 'Normal';
+        if (bmi < 16) nutritionalStatus = 'Severely Wasted';
+        else if (bmi < 18.5) nutritionalStatus = 'Wasted';
+        else if (bmi < 25) nutritionalStatus = 'Normal';
+        else if (bmi < 30) nutritionalStatus = 'Overweight';
+        else nutritionalStatus = 'Obese';
+
+        const sbfpBeneficiary = (nutritionalStatus === 'Severely Wasted' || nutritionalStatus === 'Wasted') ? 'Yes' : 'No';
+
+        return {
+            name: name.trim(),
+            birthday: birthday,
+            weight: parseFloat(weight),
+            height: parseFloat(height),
+            sex: sex,
+            grade: document.getElementById('grade').value,
+            section: document.getElementById('section').value,
+            school_year: document.getElementById('school_year').value,
+            date: document.getElementById('date').value,
+            legislative_district: document.getElementById('legislative_district').value,
+            school_district: document.getElementById('school_district').value,
+            school_id: document.getElementById('school_id').value,
+            school_name: document.getElementById('school_name').value,
+            heightSquared: parseFloat(heightSq),
+            age: ageYears + '|' + ageMonths,
+            ageYears: ageYears,
+            ageMonths: ageMonths,
+            ageDisplay: ageYears + '|' + ageMonths,
+            bmi: parseFloat(bmi),
+            nutritionalStatus: nutritionalStatus,
+            heightForAge: 'Normal',
+            sbfpBeneficiary: sbfpBeneficiary
+        };
+    }
+
+    function addStudent() {
+      const form = document.getElementById('assessmentForm');
+      if (!form.checkValidity()) {
+        form.classList.add('was-validated');
         return;
+      }
+
+      const name = document.getElementById('name').value;
+      const birthday = document.getElementById('birthday').value;
+      const weight = document.getElementById('weight').value;
+      const height = document.getElementById('height').value;
+      const sex = document.getElementById('sex').value;
+
+      const student = calculateStudentData(name, birthday, weight, height, sex);
+      students.push(student);
+      saveStudents();
+      clearForm();
+      updateUI();
+      showAlert('Success', 'Student added to the list!');
     }
 
-    if (!confirm('Submit ' + students.length + ' student record(s)?')) return;
-
-    loadingModal.show();
-
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        let assessmentType = urlParams.get('assessment_type') || 'baseline';
-        
-        // Validate assessment type
-        const validTypes = ['baseline', 'midline', 'endline'];
-        if (!validTypes.includes(assessmentType)) {
-            assessmentType = 'baseline';
-        }
-        
-        console.log("Submitting with assessment_type:", assessmentType);
-        
-        const response = await fetch('<?= site_url('nutritionalassessment/bulk_store') ?>', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: 'students=' + encodeURIComponent(JSON.stringify(students)) + 
-                  '&assessment_type=' + encodeURIComponent(assessmentType)
-        });
-
-        const result = await response.json();
-        console.log("Server response:", result);
-
-        if (result.success) {
-            students = [];
-            saveStudents();
-            clearStoredStudents();
-            updateUI();
-            loadingModal.hide();
-            showAlert('Success', result.message || 'Records submitted successfully!');
-            setTimeout(() => window.location.href = '<?= site_url('sbfpdashboard') ?>', 1500);
-        } else {
-            loadingModal.hide();
-            showAlert('Error', result.message || 'Error submitting records. Check console for details.');
-            console.error("Submission errors:", result.errors);
-        }
-    } catch (e) {
-        loadingModal.hide();
-        console.error("Network error:", e);
-        showAlert('Network Error', 'Error communicating with server: ' + e.message);
+    function removeStudent(idx) {
+      if (confirm('Remove this student?')) {
+        students.splice(idx, 1);
+        saveStudents();
+        updateUI();
+      }
     }
-}
 
-  function showAlert(title, message) {
-    const tEl = document.getElementById('alertTitle');
-    const bEl = document.getElementById('alertBody');
-    if (tEl) tEl.textContent = title;
-    if (bEl) bEl.textContent = message;
-    if (typeof alertModal !== 'undefined' && alertModal) {
-      alertModal.show();
-    } else {
-      // Fallback: use built-in alert
-      console.warn('alertModal not initialized; falling back to window.alert');
-      window.alert(title + '\n\n' + message);
+    function clearForm() {
+      document.getElementById('name').value = '';
+      document.getElementById('birthday').value = '';
+      document.getElementById('weight').value = '';
+      document.getElementById('height').value = '';
+      document.getElementById('sex').value = '';
+      document.getElementById('assessmentForm').classList.remove('was-validated');
     }
-  }
 
-  function escapeHtml(unsafe) {
-    if (unsafe === null || unsafe === undefined) return '';
-    return unsafe
-      .toString()
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-</script>
+    function clearAllStudents() {
+      if (students.length === 0) {
+        showAlert('No Records', 'There are no student records to clear.');
+        return;
+      }
+      
+      // Show confirmation modal
+      document.getElementById('confirmBody').textContent = 
+        `Clear all ${students.length} student record(s)? This action cannot be undone.`;
+      confirmModal.show();
+    }
+
+    function updateUI() {
+      const tbody = document.getElementById('studentTableBody');
+      const count = document.getElementById('studentCount');
+      const clearBtn = document.getElementById('clearAllBtn');
+      const submitBtn = document.getElementById('submitBtn');
+
+      if (count) {
+        count.textContent = students.length + ' Student' + (students.length !== 1 ? 's' : '');
+      }
+
+      if (clearBtn) clearBtn.disabled = students.length === 0;
+      if (submitBtn) submitBtn.disabled = students.length === 0;
+
+      if (!tbody) return;
+
+      if (students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted">No student records yet. Add some students above.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = students.map((s, idx) => `
+        <tr class="${getRowClass(s.nutritionalStatus)}">
+            <td>${s.name}</td>
+            <td>${s.birthday}</td>
+            <td>${s.grade}</td>
+            <td>${s.school_year || s.year || 'N/A'}</td>
+            <td>${s.weight}</td>
+            <td>${s.height}</td>
+            <td>${s.sex}</td>
+            <td>${s.heightSquared}</td>
+            <td>${s.ageDisplay}</td>
+            <td>${s.bmi}</td>
+            <td>${s.nutritionalStatus}</td>
+            <td>${s.heightForAge}</td>
+            <td>${s.sbfpBeneficiary}</td>
+            <td><button type="button" class="btn btn-sm btn-danger" onclick="removeStudent(${idx})"><i class="fas fa-trash"></i></button></td>
+        </tr>
+      `).join('');
+    }
+
+    function getRowClass(status) {
+      switch (status) {
+        case 'Severely Wasted': return 'status-severely-wasted';
+        case 'Wasted': return 'status-wasted';
+        case 'Overweight': return 'status-overweight';
+        case 'Obese': return 'status-obese';
+        default: return '';
+      }
+    }
+
+    async function submitReport() {
+      loadingModal.show();
+
+      try {
+          const urlParams = new URLSearchParams(window.location.search);
+          let assessmentType = urlParams.get('assessment_type') || 'baseline';
+          
+          const validTypes = ['baseline', 'midline', 'endline'];
+          if (!validTypes.includes(assessmentType)) {
+              assessmentType = 'baseline';
+          }
+          
+          const response = await fetch('<?= site_url('nutritionalassessment/bulk_store') ?>', {
+              method: 'POST',
+              headers: { 
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  'X-Requested-With': 'XMLHttpRequest'
+              },
+              body: 'students=' + encodeURIComponent(JSON.stringify(students)) + 
+                    '&assessment_type=' + encodeURIComponent(assessmentType)
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+              students = [];
+              saveStudents();
+              clearStoredStudents();
+              updateUI();
+              loadingModal.hide();
+              showAlert('Success', result.message || 'Records submitted successfully!');
+              setTimeout(() => window.location.href = '<?= site_url('sbfpdashboard') ?>', 1500);
+          } else {
+              loadingModal.hide();
+              showAlert('Error', result.message || 'Error submitting records. Check console for details.');
+              console.error("Submission errors:", result.errors);
+          }
+      } catch (e) {
+          loadingModal.hide();
+          console.error("Network error:", e);
+          showAlert('Network Error', 'Error communicating with server: ' + e.message);
+      }
+    }
+
+    function showAlert(title, message) {
+      const tEl = document.getElementById('alertTitle');
+      const bEl = document.getElementById('alertBody');
+      if (tEl) tEl.textContent = title;
+      if (bEl) bEl.textContent = message;
+      if (alertModal) {
+        alertModal.show();
+      } else {
+        window.alert(title + '\n\n' + message);
+      }
+    }
+  </script>
   </body>
 </html>
