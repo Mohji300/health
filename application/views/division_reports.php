@@ -25,24 +25,22 @@
       .text-gray-800 { color: #5a5c69 !important; }
       .text-gray-300 { color: #dddfeb !important; }
       
-      /* Table styling from SBFP Dashboard */
       .table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
       .table-bordered th, .table-bordered td { border: 1px solid #e3e6f0; }
       
       .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
-      
-      /* Badge styling for assessment types */
+
       .badge-baseline { background: linear-gradient(45deg, #4e73df, #224abe); }
       .badge-endline { background: linear-gradient(45deg, #1cc88a, #13855c); }
     </style>
   </head>
   <body class="bg-light">
-    <div id="wrapper">
+    <div class="d-flex" id="wrapper">
       <?php $this->load->view('templates/sidebar'); ?>
-      <div id="page-content-wrapper">
+      <div id="page-content-wrapper" class="w-100">
         <div class="container-fluid py-4">
 
-          <!-- Reports Header - Enhanced from SBFP Dashboard -->
+          <!-- Reports Header -->
           <div class="card bg-gradient-primary text-white mb-4">
             <div class="card-body">
               <h1 class="h2 font-weight-bold mb-2">Nutritional Assessment Reports</h1>
@@ -50,7 +48,7 @@
             </div>
           </div>
 
-          <!-- Statistics Cards - Enhanced with SBFP Dashboard styling -->
+          <!-- Statistics Cards -->
           <div class="row mb-4">
             <div class="col-xl-3 col-md-6 mb-4">
               <div class="card border-left-primary shadow h-100 py-2">
@@ -137,7 +135,7 @@
             </div>
           </div>
 
-          <!-- Filters Card - Enhanced with SBFP Dashboard styling -->
+          <!-- Filters Card -->
           <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
               <h6 class="m-0 font-weight-bold text-primary">
@@ -251,7 +249,7 @@
             </div>
           </div>
 
-<!-- Reports Table - Enhanced with SBFP Dashboard styling -->
+<!-- Reports Table -->
 <div class="card shadow">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h6 class="m-0 font-weight-bold text-primary">
@@ -270,10 +268,7 @@
                    class="btn btn-info btn-sm">
                     <i class="fas fa-chart-pie me-1"></i> View Statistics
                 </a>
-                <a href="<?php echo site_url('division/reports/comparison_report'); ?>" 
-                   class="btn btn-warning btn-sm ms-2">
-                    <i class="fas fa-exchange-alt me-1"></i> Comparison Report
-                </a>
+                
             </div>
         </div>
     </div>

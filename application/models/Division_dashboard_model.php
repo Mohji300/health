@@ -238,7 +238,7 @@ class Division_dashboard_model extends CI_Model {
     /**
      * ENHANCED: Get schools by district name with submission status
      */
-    public function get_schools_by_district($district_name) {
+    public function get_schools_by_district($district_name, $assessment_type = null) {
         // Get district ID
         $district = $this->db->select('id')
                             ->from('school_districts')
@@ -261,11 +261,14 @@ class Division_dashboard_model extends CI_Model {
         $schools = array();
         if ($schools_query->num_rows() > 0) {
             foreach ($schools_query->result() as $row) {
-                // Check if school has assessments for ANY assessment type
-                $has_submitted = $this->db->from('nutritional_assessments')
-                                         ->where('school_name', $row->name)
-                                         ->where('is_deleted', 0)
-                                         ->count_all_results() > 0;
+                // Check if school has assessments for the requested assessment type (if provided)
+                $this->db->from('nutritional_assessments')
+                         ->where('school_name', $row->name)
+                         ->where('is_deleted', 0);
+                if (!empty($assessment_type)) {
+                    $this->db->where('assessment_type', $assessment_type);
+                }
+                $has_submitted = $this->db->count_all_results() > 0;
                 
                 $schools[] = array(
                     'name' => $row->name,

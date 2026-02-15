@@ -7,13 +7,11 @@ $flash = isset($flash) ? $flash : [];
 $school_data = isset($school_data) ? $school_data : [];
 $related_schools = isset($related_schools) ? $related_schools : [];
 
-// Get current assessment type from session or default to baseline
 $assessment_type = $this->session->userdata('assessment_type') ?: 'baseline';
 $is_baseline = ($assessment_type == 'baseline');
 $is_midline = ($assessment_type == 'midline');
 $is_endline = ($assessment_type == 'endline');
 
-// Helper to check submitted assessments for current type
 $submitted_lookup = [];
 foreach ($submitted as $s) {
     if (($s->assessment_type ?? 'baseline') == $assessment_type) {
@@ -66,7 +64,6 @@ foreach ($submitted as $s) {
       .school-card { transition: transform 0.2s; }
       .school-card:hover { transform: translateY(-2px); }
       
-      /* Badge gradients to match other dashboards */
       .legislative-badge { background: linear-gradient(45deg, #4e73df, #224abe); }
       .district-badge { background: linear-gradient(45deg, #1cc88a, #13855c); }
       .school-badge { background: linear-gradient(45deg, #36b9cc, #258391); }
@@ -74,14 +71,12 @@ foreach ($submitted as $s) {
       
       .text-gray-800 { color: #5a5c69 !important; }
       .text-gray-300 { color: #dddfeb !important; }
-      
-      /* Table styling */
+
       .table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
       .table-bordered th, .table-bordered td { border: 1px solid #e3e6f0; }
       
       .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
-      
-      /* Assessment type switcher */
+
       .assessment-switcher {
         background: #ffffff;
         border: 1px solid #ffffff;
@@ -104,33 +99,28 @@ foreach ($submitted as $s) {
         background: transparent;
         border-color: transparent;
       }
-      
-      /* Delete button animation */
+
       .btn-delete:hover {
         transform: scale(1.05);
         transition: transform 0.2s;
       }
 
-      /* Fix switcher visibility */
       .assessment-switcher .btn {
         font-weight: 600;
       }
 
-      /* Baseline button colors */
       .assessment-switcher .btn.btn-primary {
-        color: #0d6efd; /* Bootstrap primary blue */
+        color: #0d6efd; 
       }
 
       .assessment-switcher .btn.btn-info {
-      color: #0dcaf0; /* Bootstrap info cyan */
+      color: #0dcaf0; 
       }
 
-      /* Endline button colors */
       .assessment-switcher .btn.btn-success {
-        color: #198754; /* Bootstrap success green */
+        color: #198754; 
       }
 
-      /* Active state keeps white text */
       .assessment-switcher .btn.active.btn-primary,
       .assessment-switcher .btn.active.btn-info,
       .assessment-switcher .btn.active.btn-success {
@@ -138,16 +128,15 @@ foreach ($submitted as $s) {
       }
 
       
-      /* Modal styling */
       .modal-backdrop { opacity: 0.5; }
     </style>
   </head>
   <body class="bg-light">
-    <div id="wrapper">
-        <?php // Load the global sidebar (templates/sidebar.php)
+    <div class="d-flex" id="wrapper">
+        <?php 
         if (isset($this)) { $this->load->view('templates/sidebar'); } ?>
 
-        <div id="page-content-wrapper">
+        <div id="page-content-wrapper" class="w-100">
           <div class="container-fluid py-4">
 
             <!-- Header Card -->
@@ -454,19 +443,6 @@ foreach ($submitted as $s) {
                                         <i class="fas fa-trash me-1"></i> Remove
                                     </button>
                                 <?php else: ?>
-                                    <!-- Edit Assessment Button -->
-                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
-                                      class="btn btn-outline-<?php 
-                                            if ($is_baseline) {
-                                                echo 'primary';
-                                            } elseif ($is_midline) {
-                                                echo 'info';
-                                            } else {
-                                                echo 'success';
-                                            }
-                                      ?> btn-sm">
-                                        <i class="fas fa-edit me-1"></i> Edit
-                                    </a>
                                     
                                     <!-- Lock Button -->
                                     <button class="btn btn-warning btn-sm toggle-lock"
@@ -561,9 +537,7 @@ foreach ($submitted as $s) {
                                 <i class="fas fa-users me-1"></i> <?php echo $s->total_students ?? 0; ?> students
                               </small>
                               <div class="btn-group btn-group-sm">
-                                <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($s->grade) . '&section=' . urlencode($s->section) . '&school_year=' . urlencode($s->school_year ?? '') . '&assessment_type=' . urlencode($assessment_type)); ?>" 
-                                   class="btn btn-outline-info btn-sm">
-                                  <i class="fas fa-eye"></i>
+                                <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($s->grade) . '&section=' . urlencode($s->section) . '&school_year=' . urlencode($s->school_year ?? '') . '&assessment_type=' . urlencode($assessment_type)); ?>" >
                                 </a>
                                 <button class="btn btn-outline-danger btn-sm delete-assessment-list" 
                                         data-grade="<?php echo htmlspecialchars($s->grade); ?>"
@@ -629,8 +603,8 @@ foreach ($submitted as $s) {
             </div>
 
           </div>
-        </div> <!-- /#page-content-wrapper -->
-    </div> <!-- /#wrapper -->
+        </div> 
+    </div> 
 
 <!-- Delete Assessment Modal -->
 <div class="modal fade" id="deleteAssessmentModal" tabindex="-1">
@@ -698,11 +672,9 @@ foreach ($submitted as $s) {
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Debug info
     console.log('Dashboard loaded');
     console.log('Current assessment type:', '<?php echo $assessment_type; ?>');
-    
-    // Switch between Baseline and Endline views
+
     $('#switchToBaseline').click(function() {
         console.log('Switching to baseline...');
         switchAssessmentType('baseline');
@@ -727,7 +699,6 @@ $(document).ready(function() {
             success: function(response) {
                 console.log('Switch response:', response);
                 if (response.success) {
-                    // Reload the page to show the switched view
                     location.reload();
                 } else {
                     alert('Error: ' + response.message);
@@ -740,8 +711,7 @@ $(document).ready(function() {
             }
         });
     }
-    
-    // Handle assessment deletion button clicks
+
     $('.delete-assessment, .delete-assessment-list').click(function() {
         var grade = $(this).data('grade');
         var section = $(this).data('section');
@@ -753,14 +723,12 @@ $(document).ready(function() {
         $('#deleteGrade').text(grade);
         $('#deleteSection').text(section);
         $('#deleteSchoolYear').text(school_year);
-        
-        // Store data for deletion
+
         $('#deleteAssessmentModal').data('grade', grade);
         $('#deleteAssessmentModal').data('section', section);
         $('#deleteAssessmentModal').data('school_year', school_year);
         $('#deleteAssessmentModal').data('type', type);
-        
-        // Show the modal
+
         var deleteModal = new bootstrap.Modal(document.getElementById('deleteAssessmentModal'));
         deleteModal.show();
     });
@@ -773,14 +741,12 @@ $(document).ready(function() {
         var schoolYear = $(this).data('school_year');
         
         console.log('Remove section clicked:', sectionId, grade, section, schoolYear);
-        
-        // Set modal content
+
         $('#removeGrade').text(grade);
         $('#removeSection').text(section);
         $('#removeSchoolYear').text(schoolYear);
         $('#removeSectionId').val(sectionId);
-        
-        // Show the modal
+
         var removeModal = new bootstrap.Modal(document.getElementById('removeSectionModal'));
         removeModal.show();
     });
@@ -799,7 +765,6 @@ $(document).ready(function() {
         }
         
         if (confirm('Are you absolutely sure? This will permanently delete the assessment data.')) {
-            // Show loading
             var button = $(this);
             var originalText = button.html();
             button.html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
@@ -818,7 +783,6 @@ $(document).ready(function() {
                 success: function(response) {
                     console.log('Delete response:', response);
                     if (response.success) {
-                        // Close modal and reload page
                         var deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteAssessmentModal'));
                         deleteModal.hide();
                         location.reload();
@@ -867,7 +831,6 @@ $(document).ready(function() {
             success: function(response) {
                 console.log('Lock response:', response);
                 if (response.success) {
-                    // Toggle lock icon
                     if (button.find('i').hasClass('fa-lock')) {
                         button.html('<i class="fas fa-unlock"></i>');
                         button.removeClass('btn-warning').addClass('btn-success');

@@ -1,17 +1,14 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed'); 
 
-// Get current assessment type from session or default to baseline
 $assessment_type = isset($assessment_type) ? $assessment_type : 'baseline';
 $is_baseline = ($assessment_type == 'baseline');
 $is_midline = ($assessment_type == 'midline');
 $is_endline = ($assessment_type == 'endline');
 
-// Get counts
 $baseline_count = isset($baseline_count) ? $baseline_count : 0;
 $midline_count = isset($midline_count) ? $midline_count : 0;
 $endline_count = isset($endline_count) ? $endline_count : 0;
 
-// Helper functions and variable definitions must be at the TOP
 function gdata($data, $key, $field) {
     if (!isset($data[$key])) return 0;
     return isset($data[$key][$field]) ? (int)$data[$key][$field] : 0;
@@ -22,7 +19,6 @@ function pct($num, $den) {
     return round(($num / $den) * 100) . '%';
 }
 
-// Define grade arrays
 $elementaryGrades = [
   'Kinder_m' => 'Kinder (M)', 'Kinder_f' => 'Kinder (F)', 'Kinder_total' => 'Kinder (Total)',
   'Grade 1_m' => 'Grade 1 (M)', 'Grade 1_f' => 'Grade 1 (F)', 'Grade 1_total' => 'Grade 1 (Total)',
@@ -62,12 +58,13 @@ $secondaryGrades = [
       .bg-gradient-success { background: linear-gradient(45deg, #1cc88a, #13855c); }
       .bg-gradient-info { background: linear-gradient(45deg, #36b9cc, #258391); }
       .bg-gradient-warning { background: linear-gradient(45deg, #f6c23e, #dda20a); }
-      
-      /* Enhanced table styling to match reports */
+
       .table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
       .table-bordered th, .table-bordered td { border: 1px solid #000000; }
-      
-      /* Statistics card borders */
+      .th-orange { background: linear-gradient(45deg,#ff9f43,#ff7a00); color: #ffffff; }
+      .th-red { background: linear-gradient(45deg,#e74a3b,#d32f2f); color: #ffffff; }
+      .th-green { background: linear-gradient(45deg,#1cc88a,#13855c); color: #ffffff; }
+
       .border-left-primary { border-left: 0.25rem solid #4e73df !important; }
       .border-left-success { border-left: 0.25rem solid #1cc88a !important; }
       .border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
@@ -75,7 +72,6 @@ $secondaryGrades = [
       .text-gray-800 { color: #5a5c69 !important; }
       .text-gray-300 { color: #dddfeb !important; }
       
-      /* Assessment switcher styling */
       .assessment-switcher {
         background: #f8f9fa;
         border: 1px solid #dee2e6;
@@ -103,33 +99,28 @@ $secondaryGrades = [
         background: rgba(0,0,0,0.05);
       }
 
-      /* Fix switcher visibility */
       .assessment-switcher .btn {
         font-weight: 600;
       }
 
-      /* Baseline button colors */
       .assessment-switcher .btn.btn-primary {
-        color: #0d6efd; /* Bootstrap primary blue */
+        color: #0d6efd; 
       }
 
       .assessment-switcher .btn.btn-info {
-      color: #0dcaf0; /* Bootstrap info cyan */
+      color: #0dcaf0; 
       }
 
-      /* Endline button colors */
       .assessment-switcher .btn.btn-success {
-        color: #198754; /* Bootstrap success green */
+        color: #198754; 
       }
 
-      /* Active state keeps white text */
       .assessment-switcher .btn.active.btn-primary,
       .assessment-switcher .btn.active.btn-info,
       .assessment-switcher .btn.active.btn-success {
         color: #ffffff !important;
       }
-      
-      /* Assessment type badge */
+
       .assessment-badge {
         font-size: 0.8rem;
         padding: 3px 10px;
@@ -142,7 +133,6 @@ $secondaryGrades = [
         color: white;
       }
 
-      /* Add midline badge style */
       .badge-midline {
           background: linear-gradient(45deg, #5ae1f6, #11c2dd);
           color: white;
@@ -153,7 +143,7 @@ $secondaryGrades = [
         color: white;
       }
       
-      /* Print layout for A4 (bond) - single page landscape */
+      /* Print layout for A4 */
       @page { size: A4 landscape; margin: 8mm; }
       @media print {
         html, body { background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: Arial, Helvetica, sans-serif; font-size: 8px; margin: 0; padding: 0; line-height: 1.2; }
@@ -161,13 +151,11 @@ $secondaryGrades = [
         #wrapper { display: block !important; }
         #page-content-wrapper { padding: 4px !important; }
         .card { box-shadow: none !important; border: none !important; padding: 0 !important; }
-        /* Aggressive compression for single-page fit */
         table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; font-size: 8px !important; margin: 0 !important; }
         th, td { padding: 2px !important; border: 0.5px solid #dee2e6 !important; word-wrap: break-word; white-space: normal; line-height: 1.1; }
         .small-cell td, .small-cell th { padding: 1.5px !important; }
         .table thead { background: #f8f9fc !important; -webkit-print-color-adjust: exact; }
         .table-primary { background-color: #f1f5f9 !important; }
-        /* Minimize header/footer */
         h3 { font-size: 10px; margin: 0 0 2px 0; font-weight: bold; }
         p { font-size: 7px; margin: 0 0 4px 0; }
       }
@@ -176,8 +164,8 @@ $secondaryGrades = [
   </head>
   <body class="bg-light">
     <div class="d-flex" id="wrapper">
-      <?php $this->load->view('templates/sidebar'); ?>
-      <div id="page-content-wrapper">
+    <?php $this->load->view('templates/sidebar'); ?>
+    <div id="page-content-wrapper" class="w-100">
         <div class="container-fluid py-4">
 
           <!-- Header Card -->
@@ -185,7 +173,7 @@ $secondaryGrades = [
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-center">
                 <div>
-                  <h1 class="h2 font-weight-bold mb-2">Nutritional Status Dashboard<?php echo !empty($selected_school) ? ' — ' . htmlspecialchars($selected_school) : ''; ?></h1>
+                  <h1 class="h2 font-weight-bold mb-2">Nutritional Status Dashboard</h1>
                   <p class="mb-0 opacity-8"><?php if (!empty($selected_school)) { echo 'Showing nutritional data for ' . htmlspecialchars($selected_school); } else { echo 'Comprehensive overview of student nutritional assessments and health metrics'; } ?></p>
                 </div>
                 <div class="d-flex align-items-center">
@@ -208,7 +196,6 @@ $secondaryGrades = [
             </div>
           </div>
 
-          <!-- Add this in your view, after the Assessment Info Card -->
           <?php if (!$has_data): ?>
           <div class="alert alert-warning mb-4">
               <div class="d-flex align-items-center">
@@ -295,7 +282,6 @@ $secondaryGrades = [
           
           <!-- Main Content Card -->
           <div class="card shadow">
-          <!-- Replace the button group in card header with this: -->
           <div class="card-header py-3 d-flex justify-content-between align-items-center">
               <h6 class="m-0 font-weight-bold text-primary">
                   Consolidated Nutritional Assessment Report
@@ -310,7 +296,6 @@ $secondaryGrades = [
                   ?> ms-2">
                       <?php echo ucfirst($assessment_type); ?>
                   </span>
-                  <!-- Show active filter badge -->
                   <?php if ($school_level !== 'all'): ?>
                   <span class="badge bg-secondary ms-2">
                       <i class="fas fa-filter me-1"></i>
@@ -347,7 +332,6 @@ $secondaryGrades = [
               </div>
           </div>
 
-          <!-- Replace the Integrated Sub-menu with this: -->
           <div id="integratedSubMenu" class="no-print mb-3 <?php echo (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) ? '' : 'd-none'; ?>">
               <div class="btn-group" role="group">
                   <button id="btnIntegratedElementary" type="button" 
@@ -376,17 +360,17 @@ $secondaryGrades = [
                       <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
                     </tr>
                     <tr class="table-secondary">
-                      <th colspan="2" class="text-center">Severely Wasted</th>
-                      <th colspan="2" class="text-center">Wasted</th>
-                      <th colspan="2" class="text-center">Normal BMI</th>
-                      <th colspan="2" class="text-center">Overweight</th>
-                      <th colspan="2" class="text-center">Obese</th>
+                      <th colspan="2" class="text-center th-red">Severely Wasted</th>
+                      <th colspan="2" class="text-center th-orange">Wasted</th>
+                      <th colspan="2" class="text-center th-green">Normal BMI</th>
+                      <th colspan="2" class="text-center th-orange">Overweight</th>
+                      <th colspan="2" class="text-center th-red">Obese</th>
 
-                      <th colspan="2" class="text-center">Severely Stunted</th>
-                      <th colspan="2" class="text-center">Stunted</th>
-                      <th colspan="2" class="text-center">Normal HFA</th>
-                      <th colspan="2" class="text-center">Tall</th>
-                      <th colspan="2" class="text-center">Pupils Height</th>
+                      <th colspan="2" class="text-center th-red">Severely Stunted</th>
+                      <th colspan="2" class="text-center th-orange">Stunted</th>
+                      <th colspan="2" class="text-center th-green">Normal HFA</th>
+                      <th colspan="2" class="text-center th-green">Tall</th>
+                      <th colspan="2" class="text-center ">Pupils Height</th>
                     </tr>
                     <tr class="table-secondary">
                       <!-- For each category: count and % -->
@@ -463,16 +447,16 @@ $secondaryGrades = [
                       <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
                     </tr>
                     <tr class="table-secondary">
-                      <th colspan="2" class="text-center">Severely Wasted</th>
-                      <th colspan="2" class="text-center">Wasted</th>
-                      <th colspan="2" class="text-center">Normal BMI</th>
-                      <th colspan="2" class="text-center">Overweight</th>
-                      <th colspan="2" class="text-center">Obese</th>
+                      <th colspan="2" class="text-center th-red">Severely Wasted</th>
+                      <th colspan="2" class="text-center th-orange">Wasted</th>
+                      <th colspan="2" class="text-center th-green">Normal BMI</th>
+                      <th colspan="2" class="text-center th-orange">Overweight</th>
+                      <th colspan="2" class="text-center th-red">Obese</th>
 
-                      <th colspan="2" class="text-center">Severely Stunted</th>
-                      <th colspan="2" class="text-center">Stunted</th>
-                      <th colspan="2" class="text-center">Normal HFA</th>
-                      <th colspan="2" class="text-center">Tall</th>
+                      <th colspan="2" class="text-center th-red">Severely Stunted</th>
+                      <th colspan="2" class="text-center th-orange">Stunted</th>
+                      <th colspan="2" class="text-center th-green">Normal HFA</th>
+                      <th colspan="2" class="text-center th-green">Tall</th>
                       <th colspan="2" class="text-center">Pupils Height</th>
                     </tr>
                     <tr class="table-secondary">
@@ -546,33 +530,26 @@ $secondaryGrades = [
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
     $(document).ready(function() {
-        // Switch between Baseline, Midline, Endline views
         $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
         $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
         $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
         
         // School Level Filtering
         $('#btnElementary').click(function() { 
-            // First, make sure integrated is not active
             $('#btnIntegrated').removeClass('active');
             $('#integratedSubMenu').addClass('d-none');
             
-            // Enable table switching buttons
             enableTableSwitching();
             
-            // Set filter
             setSchoolLevelFilter('elementary'); 
         });
         
         $('#btnSecondary').click(function() { 
-            // First, make sure integrated is not active
             $('#btnIntegrated').removeClass('active');
             $('#integratedSubMenu').addClass('d-none');
             
-            // Enable table switching buttons
             enableTableSwitching();
-            
-            // Set filter
+
             setSchoolLevelFilter('secondary'); 
         });
         
@@ -580,26 +557,19 @@ $secondaryGrades = [
         $('#btnIntegrated').click(function(e) {
             e.preventDefault();
             
-            // Toggle active state
             $(this).toggleClass('active');
             
             if ($(this).hasClass('active')) {
-                // Integrated is now active - disable table switching
                 disableTableSwitching();
-                
-                // Show sub-menu
+
                 $('#integratedSubMenu').removeClass('d-none');
-                
-                // Set to integrated (default shows elementary)
+
                 setSchoolLevelFilter('integrated');
             } else {
-                // Integrated is now inactive - enable table switching
                 enableTableSwitching();
                 
-                // Hide sub-menu
                 $('#integratedSubMenu').addClass('d-none');
                 
-                // Go back to all schools (elementary view)
                 setSchoolLevelFilter('all');
             }
         });
@@ -613,14 +583,12 @@ $secondaryGrades = [
             setSchoolLevelFilter('integrated_secondary'); 
         });
         
-        // Initialize based on current filter
         var currentLevel = '<?php echo $school_level; ?>';
         if (currentLevel.startsWith('integrated')) {
             $('#integratedSubMenu').removeClass('d-none');
             $('#btnIntegrated').addClass('active');
             disableTableSwitching();
-            
-            // Set active state on integrated sub-menu
+
             $('#integratedSubMenu .btn').removeClass('btn-primary').addClass('btn-outline-primary');
             if (currentLevel === 'integrated' || currentLevel === 'integrated_elementary') {
                 $('#btnIntegratedElementary').removeClass('btn-outline-primary').addClass('btn-primary');
@@ -684,7 +652,6 @@ $secondaryGrades = [
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        // Redirect with current filters
                         var url = '<?php echo site_url("userdashboard"); ?>';
                         var schoolLevel = '<?php echo $school_level; ?>';
                         if (schoolLevel && schoolLevel !== 'all') {
@@ -708,12 +675,10 @@ $secondaryGrades = [
         }
 
         function setSchoolLevelFilter(level) {
-            // Show loading on all main buttons
             $('#btnElementary').html('<i class="fas fa-spinner fa-spin"></i>');
             $('#btnSecondary').html('<i class="fas fa-spinner fa-spin"></i>');
             $('#btnIntegrated').html('<i class="fas fa-spinner fa-spin"></i>');
-            
-            // Disable all buttons during AJAX call
+
             $('#btnElementary').prop('disabled', true);
             $('#btnSecondary').prop('disabled', true);
             $('#btnIntegrated').prop('disabled', true);
@@ -725,7 +690,6 @@ $secondaryGrades = [
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        // Reload to show filtered data
                         window.location.reload();
                     } else {
                         alert('Error: ' + response.message);
@@ -758,7 +722,6 @@ $secondaryGrades = [
         const secTable = document.getElementById('secondaryTable');
         const btnPrint = document.getElementById('btnPrint');
         
-        // Check current filter
         var currentLevel = '<?php echo $school_level; ?>';
         
         if (btnElem && btnSec) {

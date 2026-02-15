@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Division Dashboard - SBFP</title>
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <!-- Bootstrap 5.3.2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Layout to work with templates/sidebar (fixed #mainSidebar + #sidebarSpacer) */
+        /* Layout to work with templates/sidebar */
         #wrapper { display: flex; width: 100%; }
         #page-content-wrapper { flex: 1 1 auto; padding: 20px; }
         @media (max-width: 767.98px) { #mainSidebar { transform: translateX(-100%); } }
@@ -27,11 +25,13 @@
         .submission-submitted { background-color: #d1fae5; color: #065f46; }
         .district-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); transition: all 0.3s ease; }
         
-        /* Enhanced table styling to match reports */
         .table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
-        .table-bordered th, .table-bordered td { border: 1px solid #e3e6f0; }
-        
-        /* Assessment switcher styling */
+        .table-bordered th, .table-bordered td { border: 1px solid #000000; }
+
+        .th-orange { background: linear-gradient(45deg,#ff9f43,#ff7a00); color: #ffffff; }
+        .th-red { background: linear-gradient(45deg,#e74a3b,#d32f2f); color: #ffffff; }
+        .th-green { background: linear-gradient(45deg,#1cc88a,#13855c); color: #ffffff; }
+
         .assessment-switcher {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -59,34 +59,28 @@
             background: rgba(0,0,0,0.05);
         }
 
-        /* Fix switcher visibility */
         .assessment-switcher .btn {
             font-weight: 600;
         }
 
-        /* Baseline button colors */
         .assessment-switcher .btn.btn-primary {
             color: #0d6efd;
         }
 
-        /* Midline button colors - NEW */
         .assessment-switcher .btn.btn-info {
             color: #0dcaf0;
         }
 
-        /* Endline button colors */
         .assessment-switcher .btn.btn-success {
             color: #198754;
         }
 
-        /* Active state keeps white text */
         .assessment-switcher .btn.active.btn-primary,
         .assessment-switcher .btn.active.btn-info,
         .assessment-switcher .btn.active.btn-success {
             color: #ffffff !important;
         }
 
-        /* Style for active outline buttons */
         .btn-outline-primary.active,
         .btn-outline-primary:active {
             background: #0d6efd !important;
@@ -94,7 +88,6 @@
             border-color: #0d6efd !important;
         }
         
-        /* Assessment type badge */
         .assessment-badge {
             font-size: 0.75rem;
             padding: 3px 8px;
@@ -117,14 +110,13 @@
 
         .assessment-badge,
         .school-level-badge {
-            font-size: 0.85rem;        /* match size */
-            padding: 6px 12px;         /* equal padding */
-            border-radius: 20px;       /* pill style */
+            font-size: 0.85rem;       
+            padding: 6px 12px;         
+            border-radius: 20px;       
             font-weight: 500;
             vertical-align: middle;
         }
-        
-        /* Table switcher buttons - now also used for filtering */
+
         .table-switcher .btn.active {
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
@@ -132,8 +124,7 @@
             background: transparent;
             border-color: #dee2e6;
         }
-        
-        /* Welcome message with toggle */
+
         .welcome-toggle-container {
             display: flex;
             justify-content: space-between;
@@ -142,13 +133,12 @@
             gap: 15px;
         }
 
-        /* Integrated Sub-menu styling */
         .integrated-submenu {
             margin-top: 10px;
             padding-left: 20px;
         }
 
-        /* Print layout for A4 (bond) - single page landscape */
+        /* Print layout for A4 (bond) */
         @page { size: A4 landscape; margin: 8mm; }
         @media print {
             html, body { background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: Arial, Helvetica, sans-serif; font-size: 8px; margin: 0; padding: 0; line-height: 1.2; }
@@ -169,40 +159,42 @@
     </style>
 </head>
 <body class="bg-light">
-    <div id="wrapper">
+    <div class="d-flex" id="wrapper">
         <?php $this->load->view('templates/sidebar'); ?>
-        <div id="page-content-wrapper">
+        <div id="page-content-wrapper" class="w-100">
             <div class="container-fluid py-4">
     
-                <!-- Welcome Message with Toggle Switch -->
-                <div class="alert alert-info mb-4">
-                    <div class="welcome-toggle-container">
-                        <div>
-                            <h4 class="alert-heading mb-1">Welcome, <?php echo htmlspecialchars($user_district); ?></h4>
-                            <p class="mb-0">Viewing all school districts and their reports | 
-                                <span class="badge <?php 
-                                    if ($assessment_type == 'baseline') echo 'badge-baseline';
-                                    elseif ($assessment_type == 'midline') echo 'badge-midline';
-                                    else echo 'badge-endline';
-                                ?>">
-                                    <?php echo ucfirst($assessment_type); ?> Assessment
-                                </span>     
-                            </p>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <div class="assessment-switcher">
-                                <button class="btn btn-primary btn-sm <?php echo ($assessment_type == 'baseline') ? 'active' : ''; ?>" 
-                                        id="switchToBaseline">
-                                    <i class="fas fa-flag me-1"></i> Baseline
-                                </button>
-                                <button class="btn btn-info btn-sm <?php echo ($assessment_type == 'midline') ? 'active' : ''; ?>" 
-                                        id="switchToMidline">
-                                    <i class="fas fa-flag me-1"></i> Midline
-                                </button>
-                                <button class="btn btn-success btn-sm <?php echo ($assessment_type == 'endline') ? 'active' : ''; ?>" 
-                                        id="switchToEndline">
-                                    <i class="fas fa-flag-checkered me-1"></i> Endline
-                                </button>
+                <!-- Header Card -->
+                <div class="card bg-gradient-primary text-white mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h1 class="h2 font-weight-bold mb-2">Division Dashboard</h1>
+                                <p class="mb-0">Welcome, <?php echo htmlspecialchars($user_name); ?> &middot; 
+                                    <span class="badge <?php 
+                                        if ($assessment_type == 'baseline') echo 'badge-baseline';
+                                        elseif ($assessment_type == 'midline') echo 'badge-midline';
+                                        else echo 'badge-endline';
+                                    ?> assessment-badge">
+                                        <?php echo ucfirst($assessment_type); ?> Assessment
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="assessment-switcher">
+                                    <button class="btn btn-primary btn-sm <?php echo ($assessment_type == 'baseline') ? 'active' : ''; ?>" 
+                                            id="switchToBaseline">
+                                        <i class="fas fa-flag me-1"></i> Baseline
+                                    </button>
+                                    <button class="btn btn-info btn-sm <?php echo ($assessment_type == 'midline') ? 'active' : ''; ?>" 
+                                            id="switchToMidline">
+                                        <i class="fas fa-flag me-1"></i> Midline
+                                    </button>
+                                    <button class="btn btn-success btn-sm <?php echo ($assessment_type == 'endline') ? 'active' : ''; ?>" 
+                                            id="switchToEndline">
+                                        <i class="fas fa-flag-checkered me-1"></i> Endline
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -222,14 +214,24 @@
                                 <div class="text-white-50">Reports Submitted</div>
                             </div>
                             <div class="col-md-4 text-center">
-                                <div class="display-4 fw-bold"><?php echo $overall_stats['overall_completion']; ?>%</div>
+                                <?php
+                                    $total_schools = isset($overall_stats['total_schools']) ? (int)$overall_stats['total_schools'] : 0;
+                                    $total_submitted = isset($overall_stats['total_submitted']) ? (int)$overall_stats['total_submitted'] : 0;
+                                    if ($total_schools > 0) {
+                                        $completion_rate_raw = ($total_submitted / $total_schools) * 100;
+                                        $completion_display = number_format($completion_rate_raw, 2) . '%';
+                                    } else {
+                                        $completion_display = '0%';
+                                    }
+                                ?>
+                                <div class="display-4 fw-bold"><?php echo $completion_display; ?></div>
                                 <div class="text-white-50">Completion Rate</div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Schools/Districts Box (Initially Hidden) -->
+                <!-- Schools/Districts Box -->
                 <div class="card mb-4 d-none" id="schoolsBox">
                     <div class="card-header bg-white">
                         <div class="d-flex justify-content-between align-items-center">
@@ -442,15 +444,15 @@
                                         <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
                                     </tr>
                                     <tr class="table-secondary">
-                                        <th colspan="2" class="text-center">Severely Wasted</th>
-                                        <th colspan="2" class="text-center">Wasted</th>
-                                        <th colspan="2" class="text-center">Normal BMI</th>
-                                        <th colspan="2" class="text-center">Overweight</th>
-                                        <th colspan="2" class="text-center">Obese</th>
-                                        <th colspan="2" class="text-center">Severely Stunted</th>
-                                        <th colspan="2" class="text-center">Stunted</th>
-                                        <th colspan="2" class="text-center">Normal HFA</th>
-                                        <th colspan="2" class="text-center">Tall</th>
+                                        <th colspan="2" class="text-center th-red">Severely Wasted</th>
+                                        <th colspan="2" class="text-center th-orange">Wasted</th>
+                                        <th colspan="2" class="text-center th-green">Normal BMI</th>
+                                        <th colspan="2" class="text-center th-orange">Overweight</th>
+                                        <th colspan="2" class="text-center th-red">Obese</th>
+                                        <th colspan="2" class="text-center th-red">Severely Stunted</th>
+                                        <th colspan="2" class="text-center th-orange">Stunted</th>
+                                        <th colspan="2" class="text-center th-green">Normal HFA</th>
+                                        <th colspan="2" class="text-center th-green">Tall</th>
                                         <th colspan="2" class="text-center">Pupils Height</th>
                                     </tr>
                                     <tr class="table-secondary">
@@ -574,7 +576,7 @@
                                 </tbody>
                             </table>
 
-                            <!-- Secondary Table (hidden by default) -->
+                            <!-- Secondary Table -->
                             <table id="secondaryTable" class="table table-bordered table-sm mb-0 d-none">
                                 <thead class="table-light">
                                     <tr>
@@ -585,15 +587,15 @@
                                         <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
                                     </tr>
                                     <tr class="table-secondary">
-                                        <th colspan="2" class="text-center">Severely Wasted</th>
-                                        <th colspan="2" class="text-center">Wasted</th>
-                                        <th colspan="2" class="text-center">Normal BMI</th>
-                                        <th colspan="2" class="text-center">Overweight</th>
-                                        <th colspan="2" class="text-center">Obese</th>
-                                        <th colspan="2" class="text-center">Severely Stunted</th>
-                                        <th colspan="2" class="text-center">Stunted</th>
-                                        <th colspan="2" class="text-center">Normal HFA</th>
-                                        <th colspan="2" class="text-center">Tall</th>
+                                        <th colspan="2" class="text-center th-red">Severely Wasted</th>
+                                        <th colspan="2" class="text-center th-orange">Wasted</th>
+                                        <th colspan="2" class="text-center th-green">Normal BMI</th>
+                                        <th colspan="2" class="text-center th-orange">Overweight</th>
+                                        <th colspan="2" class="text-center th-red">Obese</th>
+                                        <th colspan="2" class="text-center th-red">Severely Stunted</th>
+                                        <th colspan="2" class="text-center th-orange">Stunted</th>
+                                        <th colspan="2" class="text-center th-green">Normal HFA</th>
+                                        <th colspan="2" class="text-center th-green">Tall</th>
                                         <th colspan="2" class="text-center">Pupils Height</th>
                                     </tr>
                                     <tr class="table-secondary">
@@ -688,10 +690,8 @@
             </div>
         </div>
     </div>
-    
-    <!-- Bootstrap 5.3.2 JS Bundle with Popper -->
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- jQuery (for easier AJAX) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     
     <script>
@@ -703,7 +703,6 @@
         // Store all schools data from PHP
         const allSchoolsData = <?php echo json_encode($all_schools_by_district); ?>;
         
-        // ============ ASSESSMENT TYPE SWITCHING (AJAX) ============
         $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
         $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
         $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
@@ -747,7 +746,6 @@
             });
         }
         
-        // ============ SCHOOL LEVEL FILTERING USING TABLE BUTTONS ============
         // Filter buttons in table header
         $('#btnElementaryFilter').click(function() { 
             $('#btnIntegratedFilter').removeClass('active');
@@ -825,7 +823,7 @@
             }
         }
         
-        // ============ TABLE VISIBILITY (Elementary/Secondary table view) ============
+        // TABLE VISIBILITY (Elementary/Secondary table view) 
         // Note: These are separate from the filter buttons
         const elemTable = document.getElementById('elementaryTable');
         const secTable = document.getElementById('secondaryTable');
@@ -842,7 +840,7 @@
             }
         }
 
-        // ============ PRINT FUNCTIONALITY ============
+        // PRINT FUNCTIONALITY
         if (btnPrint) {
             btnPrint.addEventListener('click', () => {
                 // Open a new window and print only the visible table
@@ -877,7 +875,7 @@
             });
         }
         
-        // ============ DISTRICT/SCHOOLS BOX FUNCTIONALITY ============
+        // DISTRICT/SCHOOLS BOX FUNCTIONALITY 
         // Toggle schools box
         $('#overallSummaryCard').click(function() {
             $('#schoolsBox').toggleClass('d-none');

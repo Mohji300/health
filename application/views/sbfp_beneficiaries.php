@@ -1,17 +1,14 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed'); 
 
-// Get current assessment type from session or default to baseline
 $assessment_type = isset($assessment_type) ? $assessment_type : 'baseline';
 $is_baseline = ($assessment_type == 'baseline');
 $is_midline = ($assessment_type == 'midline');
 $is_endline = ($assessment_type == 'endline');
 
-// Get counts
 $baseline_count = isset($baseline_count) ? $baseline_count : 0;
 $midline_count = isset($midline_count) ? $midline_count : 0;
 $endline_count = isset($endline_count) ? $endline_count : 0;
 
-// Get school filter
 $school_level = isset($school_level) ? $school_level : 'all';
 ?>
 <!doctype html>
@@ -35,20 +32,17 @@ $school_level = isset($school_level) ? $school_level : 'all';
       .bg-gradient-success { background: linear-gradient(45deg, #1cc88a, #13855c); }
       .bg-gradient-info { background: linear-gradient(45deg, #36b9cc, #258391); }
       .bg-gradient-warning { background: linear-gradient(45deg, #f6c23e, #dda20a); }
-      
-      /* Enhanced table styling to match reports */
+
       .table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
       .table-bordered th, .table-bordered td { border: 1px solid #000000; }
-      
-      /* Statistics card borders */
+
       .border-left-primary { border-left: 0.25rem solid #4e73df !important; }
       .border-left-success { border-left: 0.25rem solid #1cc88a !important; }
       .border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
       .border-left-info { border-left: 0.25rem solid #36b9cc !important; }
       .text-gray-800 { color: #5a5c69 !important; }
       .text-gray-300 { color: #dddfeb !important; }
-      
-      /* Assessment switcher styling */
+
       .assessment-switcher {
         background: #f8f9fa;
         border: 1px solid #dee2e6;
@@ -76,12 +70,10 @@ $school_level = isset($school_level) ? $school_level : 'all';
         background: rgba(0,0,0,0.05);
       }
 
-      /* Fix switcher visibility */
       .assessment-switcher .btn {
         font-weight: 600;
       }
 
-      /* Baseline button colors */
       .assessment-switcher .btn.btn-primary {
         color: #0d6efd;
       }
@@ -90,19 +82,16 @@ $school_level = isset($school_level) ? $school_level : 'all';
       color: #0dcaf0;
       }
 
-      /* Endline button colors */
       .assessment-switcher .btn.btn-success {
         color: #198754;
       }
 
-      /* Active state keeps white text */
       .assessment-switcher .btn.active.btn-primary,
       .assessment-switcher .btn.active.btn-info,
       .assessment-switcher .btn.active.btn-success {
         color: #ffffff !important;
       }
-      
-      /* Assessment type badge */
+
       .assessment-badge {
         font-size: 0.8rem;
         padding: 3px 10px;
@@ -115,7 +104,6 @@ $school_level = isset($school_level) ? $school_level : 'all';
         color: white;
       }
 
-      /* Add midline badge style */
       .badge-midline {
           background: linear-gradient(45deg, #5ae1f6, #11c2dd);
           color: white;
@@ -125,8 +113,7 @@ $school_level = isset($school_level) ? $school_level : 'all';
         background: linear-gradient(45deg, #1cc88a, #13855c);
         color: white;
       }
-      
-      /* Status badges */
+
       .badge-severely-wasted { background-color: #dc3545; color: white; }
       .badge-wasted { background-color: #fd7e14; color: white; }
       .badge-normal { background-color: #198754; color: white; }
@@ -149,21 +136,18 @@ $school_level = isset($school_level) ? $school_level : 'all';
         p { font-size: 7px; margin: 0 0 4px 0; }
       }
 
-      /* DataTable custom styles */
       .dataTables_wrapper .dataTables_length,
       .dataTables_wrapper .dataTables_filter,
       .dataTables_wrapper .dataTables_info,
       .dataTables_wrapper .dataTables_paginate {
         padding: 10px;
       }
-      
-      /* Compact table view */
+
       .compact-table td, .compact-table th {
         padding: 4px 8px;
         font-size: 0.85rem;
       }
-      
-      /* Column specific widths */
+
       .col-no { width: 50px; }
       .col-name { width: 200px; }
       .col-sex { width: 60px; }
@@ -182,9 +166,9 @@ $school_level = isset($school_level) ? $school_level : 'all';
     </style>
   </head>
   <body class="bg-light">
-    <div id="wrapper">
+    <div class="d-flex" id="wrapper">
       <?php $this->load->view('templates/sidebar'); ?>
-      <div id="page-content-wrapper">
+      <div id="page-content-wrapper" class="w-100">
         <div class="container-fluid py-4">
 
           <!-- Header Card -->
@@ -478,7 +462,6 @@ $school_level = isset($school_level) ? $school_level : 'all';
                     <?php endforeach; ?>
                     
                     <?php else: ?>
-                    <!-- Empty state with correct number of columns (15) -->
                     <tr>
                       <td colspan="15" class="text-center text-muted py-4">
                         <i class="fas fa-database fa-2x mb-3 d-block"></i>
@@ -558,11 +541,9 @@ $school_level = isset($school_level) ? $school_level : 'all';
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script>
       $(document).ready(function() {
-          // Check if table has data
           var hasData = <?php echo !empty($beneficiaries) ? 'true' : 'false'; ?>;
           
           if (hasData) {
-              // Initialize DataTable only if there's data
               $('#beneficiariesTable').DataTable({
                   "pageLength": 25,
                   "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],

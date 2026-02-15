@@ -96,7 +96,7 @@ class Division_dashboard_controller extends CI_Controller {
         
         foreach ($all_districts as $district) {
             $district_name = $district['name'];
-            $schools = $this->division_dashboard_model->get_schools_by_district($district_name);
+            $schools = $this->division_dashboard_model->get_schools_by_district($district_name, $assessment_type);
             
             $data['all_schools_by_district'][$district_name] = $schools;
             
@@ -126,6 +126,16 @@ class Division_dashboard_controller extends CI_Controller {
             ];
         }
         
+        // If totals are zero (unexpected), fall back to model counts to ensure accuracy
+        if ($total_schools == 0) {
+            $total_schools = $this->division_dashboard_model->count_total_schools($school_level);
+        }
+
+        if ($submitted_schools == 0) {
+            // submitted_map was built earlier
+            $submitted_schools = isset($submitted_map) && is_array($submitted_map) ? count($submitted_map) : $submitted_schools;
+        }
+
         // Calculate overall completion rate
         $overall_completion = $total_schools > 0 ? round(($submitted_schools / $total_schools) * 100) : 0;
         
@@ -141,6 +151,20 @@ class Division_dashboard_controller extends CI_Controller {
         $data['user_schools'] = $this->division_dashboard_model->get_user_schools($user_id, $user_type, $user_district);
         $data['is_division_account'] = strpos(strtolower($user_district), 'division') !== false;
         $data['parsed_user_district'] = $parsed_district;
+        // Load display name from users table `name` column using current user id
+        $display_name = '';
+        if (!empty($user_id)) {
+            $query = $this->db->select('name')
+                              ->from('users')
+                              ->where('id', $user_id)
+                              ->limit(1)
+                              ->get();
+            if ($query && $query->num_rows() > 0) {
+                $row = $query->row();
+                $display_name = !empty($row->name) ? $row->name : '';
+            }
+        }
+        $data['user_name'] = $display_name;
         
         // Get district reports for compatibility (optional)
         $data['district_reports'] = $this->division_dashboard_model->get_district_reports();

@@ -1,7 +1,6 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-// ============ CRITICAL: Helper functions must be defined at the TOP ============
 function gdata($data, $key, $field) {
     if (!isset($data[$key])) return 0;
     return isset($data[$key][$field]) ? (int)$data[$key][$field] : 0;
@@ -11,7 +10,6 @@ function pct($num, $den) {
     if (!$den || $den == 0) return '0%';
     return round(($num / $den) * 100) . '%';
 }
-// ============================================================================
 
 // Get current assessment type from session or default to baseline
 $assessment_type = isset($assessment_type) ? $assessment_type : 'baseline';
@@ -57,9 +55,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>District Dashboard - SBFP</title>
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <!-- Bootstrap 5.3.2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Layout for fixed sidebar */
@@ -79,8 +75,10 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
         /* Enhanced table styling from user dashboard */
         .table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
         .table-bordered th, .table-bordered td { border: 1px solid #000000; }
-        .table-fixed { table-layout: fixed; }
-        .small-cell { font-size: 0.85rem; }
+        /* Header color variants */
+        .th-orange { background: linear-gradient(45deg,#ff9f43,#ff7a00); color: #ffffff; }
+        .th-red { background: linear-gradient(45deg,#e74a3b,#d32f2f); color: #ffffff; }
+        .th-green { background: linear-gradient(45deg,#1cc88a,#13855c); color: #ffffff; }
         
         /* Assessment switcher styling */
         .assessment-switcher {
@@ -194,37 +192,49 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
     </style>
 </head>
 <body class="bg-light">
-    <div id="wrapper">
+    <div class="d-flex" id="wrapper">
         <?php $this->load->view('templates/sidebar'); ?>
-        <div id="page-content-wrapper">
+        <div id="page-content-wrapper" class="w-100">
             <div class="container-fluid py-4">
                 <div class="print-debug">PRINT CSS ACTIVE — visible in print preview</div>
                 
-                <!-- Welcome Message with Assessment Switcher (UPDATED with Midline) -->
-                <div class="alert alert-info">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="alert-heading mb-1">Welcome, <?php echo htmlspecialchars($user_district); ?></h4>
-                            <p class="mb-0">Viewing reports for <?php echo htmlspecialchars($parsed_user_district); ?> district</p>
-                        </div>
-                        <div class="assessment-switcher">
-                            <button class="btn btn-primary btn-sm <?php echo ($assessment_type ?? 'baseline') == 'baseline' ? 'active' : ''; ?>" 
-                                    id="switchToBaseline">
-                                <i class="fas fa-flag me-1"></i> Baseline
-                            </button>
-                            <button class="btn btn-info btn-sm <?php echo ($assessment_type ?? 'baseline') == 'midline' ? 'active' : ''; ?>" 
-                                    id="switchToMidline">
-                                <i class="fas fa-flag me-1"></i> Midline
-                            </button>
-                            <button class="btn btn-success btn-sm <?php echo ($assessment_type ?? 'baseline') == 'endline' ? 'active' : ''; ?>" 
-                                    id="switchToEndline">
-                                <i class="fas fa-flag-checkered me-1"></i> Endline
-                            </button>
+                <!-- Header Card -->
+                <div class="card bg-gradient-primary text-white mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h1 class="h2 font-weight-bold mb-2">District Dashboard</h1>
+                                <p class="mb-0">Viewing reports for <?php echo htmlspecialchars($parsed_user_district); ?> district &middot;
+                                    <span class="badge <?php 
+                                        if (($assessment_type ?? 'baseline') == 'baseline') echo 'badge-baseline';
+                                        elseif (($assessment_type ?? 'baseline') == 'midline') echo 'badge-midline';
+                                        else echo 'badge-endline';
+                                    ?> assessment-badge">
+                                        <?php echo ucfirst($assessment_type ?? 'baseline'); ?> Assessment
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="assessment-switcher">
+                                    <button class="btn btn-primary btn-sm <?php echo ($assessment_type ?? 'baseline') == 'baseline' ? 'active' : ''; ?>" 
+                                            id="switchToBaseline">
+                                        <i class="fas fa-flag me-1"></i> Baseline
+                                    </button>
+                                    <button class="btn btn-info btn-sm <?php echo ($assessment_type ?? 'baseline') == 'midline' ? 'active' : ''; ?>" 
+                                            id="switchToMidline">
+                                        <i class="fas fa-flag me-1"></i> Midline
+                                    </button>
+                                    <button class="btn btn-success btn-sm <?php echo ($assessment_type ?? 'baseline') == 'endline' ? 'active' : ''; ?>" 
+                                            id="switchToEndline">
+                                        <i class="fas fa-flag-checkered me-1"></i> Endline
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- No Data Alert (UPDATED with Midline) -->
+                <!-- No Data Alert -->
                 <?php if (!$has_data): ?>
                 <div class="alert alert-warning mb-4">
                     <div class="d-flex align-items-center">
@@ -293,7 +303,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
                     </div>
                 </div>
                 
-                <!-- Schools Box (Initially Hidden) -->
+                <!-- Schools Box -->
                 <div class="card mb-4 d-none no-print" id="schoolsBox">
                     <div class="card-header bg-white">
                         <div class="d-flex justify-content-between align-items-center">
@@ -365,7 +375,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
                     </div>
                 </div>
                 
-                <!-- Main Nutritional Assessment Card (UPDATED with School Level Filtering) -->
+                <!-- Main Nutritional Assessment Card -->
                 <?php if (!empty($nutritional_data)): ?>
                 <div class="card shadow">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center flex-wrap">
@@ -391,7 +401,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
                             <?php endif; ?>
                         </h6>
                         <div class="no-print d-flex flex-wrap align-items-center">
-                            <!-- School Level Filter Buttons (using the District Nutritional Assessment Report table buttons) -->
+                            <!-- School Level Filter Buttons -->
                             <div class="btn-group me-2 mb-2 mb-sm-0" role="group">
                                 <button id="btnElementary" type="button" 
                                         class="btn btn-outline-primary <?php echo ($school_level === 'all' || $school_level === 'elementary' || $school_level === 'integrated_elementary') ? 'active' : ''; ?>">
@@ -415,7 +425,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
                         </div>
                     </div>
                     
-                    <!-- Integrated Sub-Menu (UPDATED) -->
+                    <!-- Integrated Sub-Menu -->
                     <div id="integratedSubMenu" class="no-print <?php echo (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) ? '' : 'd-none'; ?>">
                         <div class="btn-group" role="group">
                             <button id="btnIntegratedElementary" type="button" 
@@ -434,7 +444,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
                     <div class="card-body p-0">
                         <div id="tableContainer" class="table-responsive p-3">
                             
-                            <!-- Elementary Table (UPDATED with proper gdata usage) -->
+                            <!-- Elementary Table -->
                             <table id="elementaryTable" class="table table-bordered table-sm table-fixed small-cell mb-0 <?php echo ($school_level === 'secondary' || $school_level === 'integrated_secondary') ? 'd-none' : ''; ?>">
                                 <thead class="table-light">
                                     <tr>
@@ -445,15 +455,15 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
                                         <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
                                     </tr>
                                     <tr class="table-secondary">
-                                        <th colspan="2" class="text-center">Severely Wasted</th>
-                                        <th colspan="2" class="text-center">Wasted</th>
-                                        <th colspan="2" class="text-center">Normal BMI</th>
-                                        <th colspan="2" class="text-center">Overweight</th>
-                                        <th colspan="2" class="text-center">Obese</th>
-                                        <th colspan="2" class="text-center">Severely Stunted</th>
-                                        <th colspan="2" class="text-center">Stunted</th>
-                                        <th colspan="2" class="text-center">Normal HFA</th>
-                                        <th colspan="2" class="text-center">Tall</th>
+                                        <th colspan="2" class="text-center th-red">Severely Wasted</th>
+                                        <th colspan="2" class="text-center th-orange">Wasted</th>
+                                        <th colspan="2" class="text-center th-green">Normal BMI</th>
+                                        <th colspan="2" class="text-center th-orange">Overweight</th>
+                                        <th colspan="2" class="text-center th-red">Obese</th>
+                                        <th colspan="2" class="text-center th-red">Severely Stunted</th>
+                                        <th colspan="2" class="text-center th-orange">Stunted</th>
+                                        <th colspan="2" class="text-center th-green">Normal HFA</th>
+                                        <th colspan="2" class="text-center th-green">Tall</th>
                                         <th colspan="2" class="text-center">Pupils Height</th>
                                     </tr>
                                     <tr class="table-secondary">
@@ -522,7 +532,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
                                 </tbody>
                             </table>
 
-                            <!-- Secondary Table (UPDATED with proper gdata usage) -->
+                            <!-- Secondary Table -->
                             <table id="secondaryTable" class="table table-bordered table-sm table-fixed small-cell mb-0 <?php echo ($school_level === 'secondary' || $school_level === 'integrated_secondary') ? '' : 'd-none'; ?>">
                                 <thead class="table-light">
                                     <tr>
@@ -533,15 +543,15 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
                                         <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
                                     </tr>
                                     <tr class="table-secondary">
-                                        <th colspan="2" class="text-center">Severely Wasted</th>
-                                        <th colspan="2" class="text-center">Wasted</th>
-                                        <th colspan="2" class="text-center">Normal BMI</th>
-                                        <th colspan="2" class="text-center">Overweight</th>
-                                        <th colspan="2" class="text-center">Obese</th>
-                                        <th colspan="2" class="text-center">Severely Stunted</th>
-                                        <th colspan="2" class="text-center">Stunted</th>
-                                        <th colspan="2" class="text-center">Normal HFA</th>
-                                        <th colspan="2" class="text-center">Tall</th>
+                                        <th colspan="2" class="text-center th-red">Severely Wasted</th>
+                                        <th colspan="2" class="text-center th-orange">Wasted</th>
+                                        <th colspan="2" class="text-center th-green">Normal BMI</th>
+                                        <th colspan="2" class="text-center th-orange">Overweight</th>
+                                        <th colspan="2" class="text-center th-red">Obese</th>
+                                        <th colspan="2" class="text-center th-red">Severely Stunted</th>
+                                        <th colspan="2" class="text-center th-orange">Stunted</th>
+                                        <th colspan="2" class="text-center th-green">Normal HFA</th>
+                                        <th colspan="2" class="text-center th-green">Tall</th>
                                         <th colspan="2" class="text-center">Pupils Height</th>
                                     </tr>
                                     <tr class="table-secondary">
@@ -631,16 +641,15 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
         </div>
     </div>
     
-    <!-- Bootstrap 5.3.2 JS Bundle with Popper -->
+   
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     
     <script>
     $(document).ready(function() {
         console.log('Document ready - JavaScript loaded');
         
-        // ============ ASSESSMENT TYPE SWITCHING (with Midline) ============
+        // ASSESSMENT TYPE SWITCHING BUTTONS 
         $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
         $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
         $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
@@ -666,7 +675,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
             window.location.href = url;
         }
         
-        // ============ SCHOOL LEVEL FILTERING (using the District Nutritional Assessment Report table buttons) ============
+        // SCHOOL LEVEL FILTERING 
         $('#btnElementary').click(function() { 
             $('#btnIntegrated').removeClass('active');
             $('#integratedSubMenu').addClass('d-none');
@@ -755,7 +764,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
             $('#btnElementary, #btnSecondary, #btnIntegrated').prop('disabled', false);
         }
         
-        // ============ TABLE SWITCHING (Elementary/Secondary) ============
+        // TABLE SWITCHING 
         const btnElem = document.getElementById('btnElementary');
         const btnSec = document.getElementById('btnSecondary');
         const elemTable = document.getElementById('elementaryTable');
@@ -777,7 +786,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
             });
         }
         
-        // ============ PRINT FUNCTIONALITY ============
+        // PRINT FUNCTIONALITY
         const btnPrint = document.getElementById('btnPrint');
         if (btnPrint) {
             btnPrint.addEventListener('click', function() {
@@ -822,7 +831,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
             });
         }
         
-        // ============ SCHOOLS BOX TOGGLE ============
+        // SCHOOLS BOX TOGGLE
         $('#overallSummaryCard').click(function(e) {
             e.stopPropagation();
             $('#schoolsBox').toggleClass('d-none');
@@ -846,7 +855,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
             $('#overallSummaryCard').find('.small').html('<i class="fas fa-chevron-up me-1"></i> Click to view schools');
         });
         
-        // ============ SCHOOL DETAILS MODAL ============
+        // SCHOOL DETAILS MODAL
         $(document).on('click', '.school-item', function(e) {
             e.preventDefault();
             const schoolName = $(this).data('school');
@@ -919,7 +928,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
             });
         }
         
-        // ============ SCHOOLS SEARCH ============
+        // SCHOOLS SEARCH 
         $('#schoolSearch').on('keyup', function() {
             const term = $(this).val().toLowerCase().trim();
             let visible = 0;
@@ -947,7 +956,7 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
             $('.school-item').show();
         });
         
-        // ============ INITIALIZE BASED ON CURRENT FILTER ============
+        // INITIALIZE BASED ON CURRENT FILTER 
         var currentLevel = '<?php echo $school_level ?? 'all'; ?>';
         if (currentLevel.startsWith('integrated')) {
             $('#integratedSubMenu').removeClass('d-none');

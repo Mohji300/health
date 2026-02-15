@@ -12,55 +12,17 @@
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
     <style>
       body { background-color: #f8f9fa; overflow-x: hidden; }
-      
-      /* Main layout with fixed sidebar */
-      #page-wrapper {
-        display: flex;
-        min-height: 100vh;
-      }
-      
-      #sidebar-wrapper {
-        width: 250px;
-        min-width: 250px;
-        max-width: 250px;
-        position: fixed;
-        left: 0;
-        top: 0;
-        height: 100vh;
-        z-index: 1000;
-        overflow-y: auto;
-        background: #1e293b;
-        transition: all 0.3s;
-      }
-      
-      #content-wrapper {
-        flex: 1;
-        margin-left: 250px;
-        padding: 20px;
-        min-width: 0; /* Prevents overflow */
-        width: calc(100% - 250px);
-      }
-      
-      @media (max-width: 768px) {
-        #sidebar-wrapper {
-          margin-left: -250px;
-        }
-        #content-wrapper {
-          margin-left: 0;
-          width: 100%;
-        }
-        #sidebar-wrapper.active {
-          margin-left: 0;
-        }
-      }
 
-      /* Card and table styling */
+      #wrapper { display: flex; width: 100%; min-height: 100vh; }
+      #page-content-wrapper { flex: 1 1 auto; padding: 20px; min-width: 0; }
+      @media (max-width: 768px) { #mainSidebar { transform: translateX(-100%); } }
+
       .card { 
         border: none; 
         border-radius: 0.5rem; 
         box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); 
         margin-bottom: 1.5rem;
-        overflow: hidden; /* Prevents content overflow */
+        overflow: hidden; 
       }
       
       .bg-gradient-primary { background: linear-gradient(45deg, #4e73df, #224abe); }
@@ -69,15 +31,14 @@
       .bg-gradient-warning { background: linear-gradient(45deg, #f6c23e, #dda20a); }
       .bg-gradient-danger { background: linear-gradient(45deg, #e74a3b, #be2617); }
       
-      /* Responsive tables */
+
       .table-responsive {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         margin: 0 -1px;
         padding: 0 1px;
       }
-      
-      /* Ensure tables don't overflow */
+
       .table {
         min-width: 100%;
         width: 100% !important;
@@ -103,24 +64,20 @@
         max-width: 200px;
       }
       
-      /* Badge styling */
       .badge-severely-wasted { background: linear-gradient(45deg, #dc3545, #a71d2a); color: white; }
       .badge-wasted { background: linear-gradient(45deg, #ffc107, #d39e00); color: black; }
       .badge-normal { background: linear-gradient(45deg, #28a745, #1e7e34); color: white; }
       .badge-overweight { background: linear-gradient(45deg, #17a2b8, #117a8b); color: white; }
       .badge-obese { background: linear-gradient(45deg, #6f42c1, #52378f); color: white; }
-      
-      /* Progress bar styling */
+
       .progress { height: 0.75rem; }
-      
-      /* Table row colors */
+
       .table-danger { background-color: rgba(220, 53, 69, 0.1) !important; }
       .table-warning { background-color: rgba(255, 193, 7, 0.1) !important; }
       .table-success { background-color: rgba(40, 167, 69, 0.1) !important; }
       .table-info { background-color: rgba(23, 162, 184, 0.1) !important; }
       .table-primary { background-color: rgba(13, 110, 253, 0.1) !important; }
-      
-      /* Mobile sidebar toggle */
+
       .sidebar-toggle {
         display: none;
         position: fixed;
@@ -140,14 +97,12 @@
           font-size: 0.875rem;
         }
       }
-      
-      /* Filter form responsive */
+
       .filter-form .col-md-4, 
       .filter-form .col-md-3 {
         margin-bottom: 1rem;
       }
-      
-      /* DataTable overrides */
+
       .dataTables_wrapper {
         width: 100% !important;
         overflow-x: hidden !important;
@@ -159,20 +114,11 @@
       }
     </style>
   </head>
-  <body>
-    <!-- Mobile Sidebar Toggle -->
-    <button class="btn btn-primary sidebar-toggle d-md-none">
-      <i class="fas fa-bars"></i>
-    </button>
-    
-    <div id="page-wrapper">
-      <!-- Sidebar -->
-      <div id="sidebar-wrapper">
-        <?php $this->load->view('templates/sidebar'); ?>
-      </div>
-      
-      <!-- Main Content -->
-      <div id="content-wrapper">
+  <body class="bg-light">
+    <div class="d-flex" id="wrapper">
+      <?php $this->load->view('templates/sidebar'); ?>
+
+      <div id="page-content-wrapper" class="w-100">
         <div class="container-fluid py-3">
           
           <!-- Reports Header -->
@@ -601,56 +547,40 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
     <script>
-    $(document).ready(function() {
-      // Toggle sidebar on mobile
-      $('.sidebar-toggle').click(function() {
-        $('#sidebar-wrapper').toggleClass('active');
-      });
-      
-      // Close sidebar when clicking outside on mobile
-      $(document).click(function(e) {
-        if ($(window).width() <= 768) {
-          if (!$(e.target).closest('#sidebar-wrapper').length && 
-              !$(e.target).closest('.sidebar-toggle').length &&
-              $('#sidebar-wrapper').hasClass('active')) {
-            $('#sidebar-wrapper').removeClass('active');
-          }
-        }
-      });
-      
-      // Initialize DataTable with responsive settings
-      $('#nutritionalStatusTable').DataTable({
-        "pageLength": 25,
-        "ordering": true,
-        "order": [[0, 'asc']],
-        "responsive": true,
-        "scrollX": true,
-        "scrollCollapse": true,
-        "language": {
-          "emptyTable": "No students found with current filters",
-          "info": "Showing _START_ to _END_ of _TOTAL_ students",
-          "infoEmpty": "Showing 0 to 0 of 0 students",
-          "infoFiltered": "(filtered from _MAX_ total students)",
-          "lengthMenu": "Show _MENU_ students",
-          "search": "Search:",
-          "zeroRecords": "No matching students found"
-        },
-        "columnDefs": [
-          { "targets": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], "orderable": true }
-        ]
-      });
-      
-      // Add loading state to filter button
-      $('form').on('submit', function() {
-        var btn = $(this).find('button[type="submit"]');
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Applying...');
+    document.addEventListener('DOMContentLoaded', function() {
+      var tableEl = document.getElementById('nutritionalStatusTable');
+      if (tableEl && window.jQuery && $.fn.DataTable) {
+        $(tableEl).DataTable({
+          pageLength: 25,
+          ordering: true,
+          order: [[0, 'asc']],
+          responsive: true,
+          scrollX: true,
+          scrollCollapse: true,
+          language: {
+            emptyTable: 'No students found with current filters',
+            info: 'Showing _START_ to _END_ of _TOTAL_ students',
+            infoEmpty: 'Showing 0 to 0 of 0 students',
+            infoFiltered: '(filtered from _MAX_ total students)',
+            lengthMenu: 'Show _MENU_ students',
+            search: 'Search:',
+            zeroRecords: 'No matching students found'
+          },
+          columnDefs: [ { targets: Array.from({length:14}, (_,i)=>i), orderable: true } ]
+        });
+      }
+
+      document.querySelectorAll('form').forEach(function(f){
+        f.addEventListener('submit', function(){
+          var btn = f.querySelector('button[type="submit"]');
+          if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Applying...'; }
+        });
       });
     });
     </script>
