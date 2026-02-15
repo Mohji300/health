@@ -66,18 +66,32 @@
 
         /* Baseline button colors */
         .assessment-switcher .btn.btn-primary {
-            color: #0d6efd; /* Bootstrap primary blue */
+            color: #0d6efd;
+        }
+
+        /* Midline button colors - NEW */
+        .assessment-switcher .btn.btn-info {
+            color: #0dcaf0;
         }
 
         /* Endline button colors */
         .assessment-switcher .btn.btn-success {
-            color: #198754; /* Bootstrap success green */
+            color: #198754;
         }
 
         /* Active state keeps white text */
         .assessment-switcher .btn.active.btn-primary,
+        .assessment-switcher .btn.active.btn-info,
         .assessment-switcher .btn.active.btn-success {
             color: #ffffff !important;
+        }
+
+        /* Style for active outline buttons */
+        .btn-outline-primary.active,
+        .btn-outline-primary:active {
+            background: #0d6efd !important;
+            color: white !important;
+            border-color: #0d6efd !important;
         }
         
         /* Assessment type badge */
@@ -92,12 +106,25 @@
             background: linear-gradient(45deg, #4e73df, #224abe);
             color: white;
         }
+        .badge-midline {
+            background: linear-gradient(45deg, #5ae1f6, #11c2dd);
+            color: white;
+        }
         .badge-endline {
             background: linear-gradient(45deg, #1cc88a, #13855c);
             color: white;
         }
+
+        .assessment-badge,
+        .school-level-badge {
+            font-size: 0.85rem;        /* match size */
+            padding: 6px 12px;         /* equal padding */
+            border-radius: 20px;       /* pill style */
+            font-weight: 500;
+            vertical-align: middle;
+        }
         
-        /* Table switcher buttons */
+        /* Table switcher buttons - now also used for filtering */
         .table-switcher .btn.active {
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
@@ -106,7 +133,6 @@
             border-color: #dee2e6;
         }
         
-        
         /* Welcome message with toggle */
         .welcome-toggle-container {
             display: flex;
@@ -114,24 +140,31 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 15px;
+        }
 
-                  /* Print layout for A4 (bond) - single page landscape */
-      @page { size: A4 landscape; margin: 8mm; }
-      @media print {
-        html, body { background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: Arial, Helvetica, sans-serif; font-size: 8px; margin: 0; padding: 0; line-height: 1.2; }
-        .no-print, .btn, .assessment-switcher, .modal, #sidebar-wrapper, .btn-group { display: none !important; }
-        #wrapper { display: block !important; }
-        #page-content-wrapper { padding: 4px !important; }
-        .card { box-shadow: none !important; border: none !important; padding: 0 !important; }
-        /* Aggressive compression for single-page fit */
-        table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; font-size: 8px !important; margin: 0 !important; }
-        th, td { padding: 2px !important; border: 0.5px solid #dee2e6 !important; word-wrap: break-word; white-space: normal; line-height: 1.1; }
-        .small-cell td, .small-cell th { padding: 1.5px !important; }
-        .table thead { background: #f8f9fc !important; -webkit-print-color-adjust: exact; }
-        .table-primary { background-color: #f1f5f9 !important; }
-        /* Minimize header/footer */
-        h3 { font-size: 10px; margin: 0 0 2px 0; font-weight: bold; }
-        p { font-size: 7px; margin: 0 0 4px 0; }
+        /* Integrated Sub-menu styling */
+        .integrated-submenu {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+
+        /* Print layout for A4 (bond) - single page landscape */
+        @page { size: A4 landscape; margin: 8mm; }
+        @media print {
+            html, body { background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: Arial, Helvetica, sans-serif; font-size: 8px; margin: 0; padding: 0; line-height: 1.2; }
+            .no-print, .btn, .assessment-switcher, .modal, #sidebar-wrapper, .btn-group, .table-switcher, .cursor-pointer { display: none !important; }
+            #wrapper { display: block !important; }
+            #page-content-wrapper { padding: 4px !important; }
+            .card { box-shadow: none !important; border: none !important; padding: 0 !important; }
+            /* Aggressive compression for single-page fit */
+            table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; font-size: 8px !important; margin: 0 !important; }
+            th, td { padding: 2px !important; border: 0.5px solid #dee2e6 !important; word-wrap: break-word; white-space: normal; line-height: 1.1; }
+            .small-cell td, .small-cell th { padding: 1.5px !important; }
+            .table thead { background: #f8f9fc !important; -webkit-print-color-adjust: exact; }
+            .table-primary { background-color: #f1f5f9 !important; }
+            /* Minimize header/footer */
+            h3 { font-size: 10px; margin: 0 0 2px 0; font-weight: bold; }
+            p { font-size: 7px; margin: 0 0 4px 0; }
         }
     </style>
 </head>
@@ -147,48 +180,54 @@
                         <div>
                             <h4 class="alert-heading mb-1">Welcome, <?php echo htmlspecialchars($user_district); ?></h4>
                             <p class="mb-0">Viewing all school districts and their reports | 
-                                <span class="badge <?php echo ($assessment_type == 'baseline') ? 'badge-baseline' : 'badge-endline'; ?>">
+                                <span class="badge <?php 
+                                    if ($assessment_type == 'baseline') echo 'badge-baseline';
+                                    elseif ($assessment_type == 'midline') echo 'badge-midline';
+                                    else echo 'badge-endline';
+                                ?>">
                                     <?php echo ucfirst($assessment_type); ?> Assessment
-                                </span>
+                                </span>     
                             </p>
                         </div>
                         <div class="d-flex align-items-center">
                             <div class="assessment-switcher">
-                                <a href="<?php echo site_url('division_dashboard_controller?assessment_type=baseline'); ?>" 
-                                   class="btn btn-primary btn-sm <?php echo ($assessment_type == 'baseline') ? 'active' : ''; ?>">
+                                <button class="btn btn-primary btn-sm <?php echo ($assessment_type == 'baseline') ? 'active' : ''; ?>" 
+                                        id="switchToBaseline">
                                     <i class="fas fa-flag me-1"></i> Baseline
-
-                                </a>
-                                <a href="<?php echo site_url('division_dashboard_controller?assessment_type=endline'); ?>" 
-                                   class="btn btn-success btn-sm <?php echo ($assessment_type == 'endline') ? 'active' : ''; ?>">
+                                </button>
+                                <button class="btn btn-info btn-sm <?php echo ($assessment_type == 'midline') ? 'active' : ''; ?>" 
+                                        id="switchToMidline">
+                                    <i class="fas fa-flag me-1"></i> Midline
+                                </button>
+                                <button class="btn btn-success btn-sm <?php echo ($assessment_type == 'endline') ? 'active' : ''; ?>" 
+                                        id="switchToEndline">
                                     <i class="fas fa-flag-checkered me-1"></i> Endline
-
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-<!-- Overall Summary Card -->
-<div class="card bg-primary text-white mb-4 cursor-pointer" id="overallSummaryCard">
-    <div class="card-body">
-        <h2 class="card-title h4">Division Report Status</h2>
-        <div class="row mt-3">
-            <div class="col-md-4 text-center mb-3 mb-md-0">
-                <div class="display-4 fw-bold"><?php echo $overall_stats['total_schools']; ?></div>
-                <div class="text-white-50">Total Schools</div>
-            </div>
-            <div class="col-md-4 text-center mb-3 mb-md-0">
-                <div class="display-4 fw-bold"><?php echo $overall_stats['total_submitted']; ?></div>
-                <div class="text-white-50">Reports Submitted</div>
-            </div>
-            <div class="col-md-4 text-center">
-                <div class="display-4 fw-bold"><?php echo $overall_stats['overall_completion']; ?>%</div>  <!-- HERE -->
-                <div class="text-white-50">Completion Rate</div>
-            </div>
-        </div>
-    </div>
-</div>
+                <!-- Overall Summary Card -->
+                <div class="card bg-primary text-white mb-4 cursor-pointer" id="overallSummaryCard">
+                    <div class="card-body">
+                        <h2 class="card-title h4">Division Report Status</h2>
+                        <div class="row mt-3">
+                            <div class="col-md-4 text-center mb-3 mb-md-0">
+                                <div class="display-4 fw-bold"><?php echo $overall_stats['total_schools']; ?></div>
+                                <div class="text-white-50">Total Schools</div>
+                            </div>
+                            <div class="col-md-4 text-center mb-3 mb-md-0">
+                                <div class="display-4 fw-bold"><?php echo $overall_stats['total_submitted']; ?></div>
+                                <div class="text-white-50">Reports Submitted</div>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="display-4 fw-bold"><?php echo $overall_stats['overall_completion']; ?>%</div>
+                                <div class="text-white-50">Completion Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Schools/Districts Box (Initially Hidden) -->
                 <div class="card mb-4 d-none" id="schoolsBox">
@@ -301,21 +340,47 @@
                 </div>
                 
                 <!-- Comprehensive Nutritional Status Table -->
-                <div class="card mt-4">
+                <div class="card mt-2">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center">
                         <h4 class="card-title mb-0">
                             Division Nutritional Assessment Report
-                            <span class="badge <?php echo ($assessment_type == 'baseline') ? 'badge-baseline' : 'badge-endline'; ?> assessment-badge">
+                            <span class="badge <?php 
+                                if ($assessment_type == 'baseline') echo 'badge-baseline';
+                                elseif ($assessment_type == 'midline') echo 'badge-midline';
+                                else echo 'badge-endline';
+                            ?> assessment-badge">
                                 <?php echo ucfirst($assessment_type); ?>
                             </span>
+                                <?php if ($school_level !== 'all'): ?>
+                                <span class="badge bg-secondary ms-2 school-level-badge">
+                                    <i class="fas fa-filter me-1"></i>
+                                    <?php 
+                                        if ($school_level === 'elementary') echo 'Elementary Only';
+                                        elseif ($school_level === 'secondary') echo 'Secondary Only';
+                                        elseif ($school_level === 'integrated') echo 'Integrated (All)';
+                                        elseif ($school_level === 'integrated_elementary') echo 'Integrated (Elementary)';
+                                        elseif ($school_level === 'integrated_secondary') echo 'Integrated (Secondary)';
+                                        else echo ucfirst($school_level);
+                                    ?>
+                                </span>
+                                <?php endif; ?>
                         </h4>
-                        <div class="no-print">
-                            <div class="btn-group table-switcher me-2" role="group">
-                                <button id="btnElementary" type="button" class="btn btn-outline-primary active">
+                        <div class="no-print d-flex align-items-center">
+                            <div class="btn-group me-2" role="group">
+                                <button id="btnElementaryFilter" type="button" 
+                                        class="btn btn-sm btn-outline-primary <?php echo (in_array($school_level, ['all', 'elementary', 'integrated', 'integrated_elementary'])) ? 'active' : ''; ?>">
                                     <i class="fas fa-child me-1"></i> Elementary
+                                    <span class="badge bg-info ms-1">K-6</span>
                                 </button>
-                                <button id="btnSecondary" type="button" class="btn btn-outline-primary">
+                                <button id="btnSecondaryFilter" type="button" 
+                                        class="btn btn-sm btn-outline-primary <?php echo (in_array($school_level, ['secondary', 'integrated_secondary'])) ? 'active' : ''; ?>">
                                     <i class="fas fa-graduation-cap me-1"></i> Secondary
+                                    <span class="badge bg-info ms-1">7-12</span>
+                                </button>
+                                <button id="btnIntegratedFilter" type="button" 
+                                        class="btn btn-sm btn-outline-primary <?php echo (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) ? 'active' : ''; ?>">
+                                    <i class="fas fa-university me-1"></i> Integrated
+                                    <span class="badge bg-info ms-1">K-12</span>
                                 </button>
                             </div>
                             <button id="btnPrint" class="btn btn-success">
@@ -323,6 +388,23 @@
                             </button>
                         </div>
                     </div>
+                    
+                    <!-- Replace the Integrated Sub-menu with this: -->
+                    <div id="integratedSubMenu" class="no-print mb-3 <?php echo (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) ? '' : 'd-none'; ?>">
+                        <div class="btn-group" role="group">
+                            <button id="btnIntegratedElementary" type="button" 
+                                    class="btn btn-sm <?php echo (in_array($school_level, ['integrated', 'integrated_elementary'])) ? 'btn-primary' : 'btn-outline-primary'; ?>">
+                                <i class="fas fa-child me-1"></i> Integrated Elementary
+                                <span class="badge bg-info ms-1">K-6</span>
+                            </button>
+                            <button id="btnIntegratedSecondary" type="button" 
+                                    class="btn btn-sm <?php echo ($school_level === 'integrated_secondary') ? 'btn-primary' : 'btn-outline-primary'; ?>">
+                                <i class="fas fa-graduation-cap me-1"></i> Integrated Secondary
+                                <span class="badge bg-info ms-1">7-12</span>
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="card-body p-0">
                         <!-- No Data Alert -->
                         <?php if (!isset($has_data) || !$has_data): ?>
@@ -333,8 +415,10 @@
                                     <h5 class="alert-heading mb-1">No <?php echo ucfirst($assessment_type); ?> Data Available</h5>
                                     <p class="mb-0">
                                         No <?php echo strtolower($assessment_type); ?> assessment data has been submitted yet. 
-                                        The table below shows all zeros. 
-                                        <?php if ($assessment_type == 'endline'): ?>
+                                        The table below shows all zeros.
+                                        <?php if ($assessment_type == 'midline'): ?>
+                                            Schools need to create midline assessments first to see data here.
+                                        <?php elseif ($assessment_type == 'endline'): ?>
                                             Schools need to create endline assessments first to see data here.
                                         <?php else: ?>
                                             Schools need to create baseline assessments first to see data here.
@@ -363,7 +447,6 @@
                                         <th colspan="2" class="text-center">Normal BMI</th>
                                         <th colspan="2" class="text-center">Overweight</th>
                                         <th colspan="2" class="text-center">Obese</th>
-
                                         <th colspan="2" class="text-center">Severely Stunted</th>
                                         <th colspan="2" class="text-center">Stunted</th>
                                         <th colspan="2" class="text-center">Normal HFA</th>
@@ -380,6 +463,17 @@
                                 </thead>
                                 <tbody>
                                     <?php 
+                                    // Helper functions defined inline
+                                    function gdata_division($data, $key, $field) {
+                                        if (!isset($data[$key])) return 0;
+                                        return isset($data[$key][$field]) ? (int)$data[$key][$field] : 0;
+                                    }
+                                    
+                                    function pct_division($num, $den) {
+                                        if (!$den || $den == 0) return '0%';
+                                        return round(($num / $den) * 100) . '%';
+                                    }
+                                    
                                     // Define grade arrays
                                     $elementaryGrades = [
                                         'Kinder_m' => 'Kinder (M)', 'Kinder_f' => 'Kinder (F)', 'Kinder_total' => 'Kinder (Total)',
@@ -400,17 +494,6 @@
                                         'Grade 12_m' => 'Grade 12 (M)', 'Grade 12_f' => 'Grade 12 (F)', 'Grade 12_total' => 'Grade 12 (Total)'
                                     ];
                                     
-                                    // Helper functions
-                                    function gdata($data, $key, $field) {
-                                        if (!isset($data[$key])) return 0;
-                                        return isset($data[$key][$field]) ? (int)$data[$key][$field] : 0;
-                                    }
-                                    
-                                    function pct($num, $den) {
-                                        if (!$den || $den == 0) return '0%';
-                                        return round(($num / $den) * 100) . '%';
-                                    }
-                                    
                                     // Define BMI and HFA fields
                                     $bmiFields = ['severely_wasted','wasted','normal_bmi','overweight','obese'];
                                     $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
@@ -420,19 +503,19 @@
                                     ?>
                                     
                                     <?php foreach ($elementaryGrades as $gkey => $glabel): ?>
-                                        <?php $enrol = $has_nutritional_data ? gdata($nutritional_data, $gkey, 'enrolment') : 0; ?>
+                                        <?php $enrol = $has_nutritional_data ? gdata_division($nutritional_data, $gkey, 'enrolment') : 0; ?>
                                         <tr>
                                             <td class="fw-bold"><?= htmlspecialchars($glabel) ?></td>
                                             <td class="text-center"><?= $enrol ?></td>
-                                            <td class="text-center"><?= $has_nutritional_data ? gdata($nutritional_data, $gkey, 'pupils_weighed') : 0 ?></td>
+                                            <td class="text-center"><?= $has_nutritional_data ? gdata_division($nutritional_data, $gkey, 'pupils_weighed') : 0 ?></td>
 
                                             <!-- BMI columns (severely_wasted, wasted, normal_bmi, overweight, obese) each with count and % -->
                                             <?php
                                             if ($has_nutritional_data) {
                                                 foreach ($bmiFields as $bf) {
-                                                    $val = gdata($nutritional_data, $gkey, $bf);
+                                                    $val = gdata_division($nutritional_data, $gkey, $bf);
                                                     echo '<td class="text-center">' . $val . '</td>';
-                                                    echo '<td class="text-center">' . pct($val, $enrol) . '</td>';
+                                                    echo '<td class="text-center">' . pct_division($val, $enrol) . '</td>';
                                                 }
                                             } else {
                                                 // Display zeros if no data
@@ -446,9 +529,9 @@
                                             <?php
                                             if ($has_nutritional_data) {
                                                 foreach ($hfaFields as $hf) {
-                                                    $val = gdata($nutritional_data, $gkey, $hf);
+                                                    $val = gdata_division($nutritional_data, $gkey, $hf);
                                                     echo '<td class="text-center">' . $val . '</td>';
-                                                    echo '<td class="text-center">' . pct($val, $enrol) . '</td>';
+                                                    echo '<td class="text-center">' . pct_division($val, $enrol) . '</td>';
                                                 }
                                             } else {
                                                 // Display zeros if no data
@@ -469,10 +552,10 @@
                                             $grandCounts = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
                                             foreach ($elementaryGrades as $gkey => $glabel) {
                                                 if (substr($gkey, -6) === '_total') {
-                                                    $totalEnrol += gdata($nutritional_data, $gkey, 'enrolment');
-                                                    $totalWeighed += gdata($nutritional_data, $gkey, 'pupils_weighed');
+                                                    $totalEnrol += gdata_division($nutritional_data, $gkey, 'enrolment');
+                                                    $totalWeighed += gdata_division($nutritional_data, $gkey, 'pupils_weighed');
                                                     foreach ($grandCounts as $k => &$v) {
-                                                        $v += gdata($nutritional_data, $gkey, $k);
+                                                        $v += gdata_division($nutritional_data, $gkey, $k);
                                                     }
                                                     unset($v);
                                                 }
@@ -485,8 +568,8 @@
                                         ?>
                                         <td class="text-center fw-bold"><?= $totalEnrol ?></td>
                                         <td class="text-center fw-bold"><?= $totalWeighed ?></td>
-                                        <?php foreach ($bmiFields as $bf): $val = $grandCounts[$bf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct($val, $totalEnrol) ?></td><?php endforeach; ?>
-                                        <?php foreach ($hfaFields as $hf): $val = $grandCounts[$hf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct($val, $totalEnrol) ?></td><?php endforeach; ?>
+                                        <?php foreach ($bmiFields as $bf): $val = $grandCounts[$bf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $totalEnrol) ?></td><?php endforeach; ?>
+                                        <?php foreach ($hfaFields as $hf): $val = $grandCounts[$hf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $totalEnrol) ?></td><?php endforeach; ?>
                                     </tr>
                                 </tbody>
                             </table>
@@ -507,7 +590,6 @@
                                         <th colspan="2" class="text-center">Normal BMI</th>
                                         <th colspan="2" class="text-center">Overweight</th>
                                         <th colspan="2" class="text-center">Obese</th>
-
                                         <th colspan="2" class="text-center">Severely Stunted</th>
                                         <th colspan="2" class="text-center">Stunted</th>
                                         <th colspan="2" class="text-center">Normal HFA</th>
@@ -523,23 +605,23 @@
                                 </thead>
                                 <tbody>
                                     <?php foreach ($secondaryGrades as $gkey => $glabel): ?>
-                                        <?php $enrol = $has_nutritional_data ? gdata($nutritional_data, $gkey, 'enrolment') : 0; ?>
+                                        <?php $enrol = $has_nutritional_data ? gdata_division($nutritional_data, $gkey, 'enrolment') : 0; ?>
                                         <tr>
                                             <td class="fw-bold"><?= htmlspecialchars($glabel) ?></td>
                                             <td class="text-center"><?= $enrol ?></td>
-                                            <td class="text-center"><?= $has_nutritional_data ? gdata($nutritional_data, $gkey, 'pupils_weighed') : 0 ?></td>
+                                            <td class="text-center"><?= $has_nutritional_data ? gdata_division($nutritional_data, $gkey, 'pupils_weighed') : 0 ?></td>
 
                                             <?php
                                             if ($has_nutritional_data) {
                                                 foreach ($bmiFields as $bf) {
-                                                    $val = gdata($nutritional_data, $gkey, $bf);
+                                                    $val = gdata_division($nutritional_data, $gkey, $bf);
                                                     echo '<td class="text-center">' . $val . '</td>';
-                                                    echo '<td class="text-center">' . pct($val, $enrol) . '</td>';
+                                                    echo '<td class="text-center">' . pct_division($val, $enrol) . '</td>';
                                                 }
                                                 foreach ($hfaFields as $hf) {
-                                                    $val = gdata($nutritional_data, $gkey, $hf);
+                                                    $val = gdata_division($nutritional_data, $gkey, $hf);
                                                     echo '<td class="text-center">' . $val . '</td>';
-                                                    echo '<td class="text-center">' . pct($val, $enrol) . '</td>';
+                                                    echo '<td class="text-center">' . pct_division($val, $enrol) . '</td>';
                                                 }
                                             } else {
                                                 // Display zeros if no data
@@ -560,10 +642,10 @@
                                             $grandCounts2 = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
                                             foreach ($secondaryGrades as $gkey => $glabel) {
                                                 if (substr($gkey, -6) === '_total') {
-                                                    $totalEnrol2 += gdata($nutritional_data, $gkey, 'enrolment');
-                                                    $totalWeighed2 += gdata($nutritional_data, $gkey, 'pupils_weighed');
+                                                    $totalEnrol2 += gdata_division($nutritional_data, $gkey, 'enrolment');
+                                                    $totalWeighed2 += gdata_division($nutritional_data, $gkey, 'pupils_weighed');
                                                     foreach ($grandCounts2 as $k => &$v) {
-                                                        $v += gdata($nutritional_data, $gkey, $k);
+                                                        $v += gdata_division($nutritional_data, $gkey, $k);
                                                     }
                                                     unset($v);
                                                 }
@@ -576,8 +658,8 @@
                                         ?>
                                         <td class="text-center fw-bold"><?= $totalEnrol2 ?></td>
                                         <td class="text-center fw-bold"><?= $totalWeighed2 ?></td>
-                                        <?php foreach ($bmiFields as $bf): $val = $grandCounts2[$bf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct($val, $totalEnrol2) ?></td><?php endforeach; ?>
-                                        <?php foreach ($hfaFields as $hf): $val = $grandCounts2[$hf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct($val, $totalEnrol2) ?></td><?php endforeach; ?>
+                                        <?php foreach ($bmiFields as $bf): $val = $grandCounts2[$bf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $totalEnrol2) ?></td><?php endforeach; ?>
+                                        <?php foreach ($hfaFields as $hf): $val = $grandCounts2[$hf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $totalEnrol2) ?></td><?php endforeach; ?>
                                     </tr>
                                 </tbody>
                             </table>
@@ -589,7 +671,7 @@
         </div>
     </div>
 
-        <!-- School Details Modal -->
+    <!-- School Details Modal -->
     <div class="modal fade" id="schoolModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-md">
             <div class="modal-content">
@@ -621,36 +703,146 @@
         // Store all schools data from PHP
         const allSchoolsData = <?php echo json_encode($all_schools_by_district); ?>;
         
-        // Assessment type switching - changed to links instead of AJAX
-        $('#switchToBaseline, #switchToEndline').on('click', function(e) {
-            e.preventDefault();
-            const type = $(this).hasClass('btn-primary') ? 'baseline' : 'endline';
-            window.location.href = '<?php echo site_url("division_dashboard_controller"); ?>?assessment_type=' + type;
+        // ============ ASSESSMENT TYPE SWITCHING (AJAX) ============
+        $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
+        $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
+        $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
+        
+        function switchAssessmentType(type) {
+            // Show loading state
+            var activeBtn = $('#switchTo' + type.charAt(0).toUpperCase() + type.slice(1));
+            var originalHtml = activeBtn.html();
+            
+            // Disable all switcher buttons
+            $('.assessment-switcher .btn').prop('disabled', true);
+            activeBtn.html('<i class="fas fa-spinner fa-spin"></i> Switching...');
+            
+            $.ajax({
+                url: '<?php echo site_url("division_dashboard_controller/set_assessment_type"); ?>',
+                method: 'POST',
+                data: { assessment_type: type },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        // Redirect with current school level filter
+                        var url = '<?php echo site_url("division_dashboard_controller"); ?>';
+                        var schoolLevel = '<?php echo isset($school_level) ? $school_level : 'all'; ?>';
+                        if (schoolLevel && schoolLevel !== 'all') {
+                            url += '?assessment_type=' + encodeURIComponent(type) + '&school_level=' + encodeURIComponent(schoolLevel);
+                        } else {
+                            url += '?assessment_type=' + encodeURIComponent(type);
+                        }
+                        window.location.href = url;
+                    } else {
+                        alert('Error: ' + response.message);
+                        activeBtn.html(originalHtml);
+                        $('.assessment-switcher .btn').prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('Error switching assessment type. Please try again.');
+                    activeBtn.html(originalHtml);
+                    $('.assessment-switcher .btn').prop('disabled', false);
+                }
+            });
+        }
+        
+        // ============ SCHOOL LEVEL FILTERING USING TABLE BUTTONS ============
+        // Filter buttons in table header
+        $('#btnElementaryFilter').click(function() { 
+            $('#btnIntegratedFilter').removeClass('active');
+            $('#integratedSubMenu').addClass('d-none');
+            setSchoolLevelFilter('elementary'); 
         });
         
-        // Table switching functionality
-        const btnElem = document.getElementById('btnElementary');
-        const btnSec = document.getElementById('btnSecondary');
+        $('#btnSecondaryFilter').click(function() { 
+            $('#btnIntegratedFilter').removeClass('active');
+            $('#integratedSubMenu').addClass('d-none');
+            setSchoolLevelFilter('secondary'); 
+        });
+        
+        // Integrated button shows sub-menu
+        $('#btnIntegratedFilter').click(function(e) {
+            e.preventDefault();
+            $(this).toggleClass('active');
+            
+            if ($(this).hasClass('active')) {
+                $('#integratedSubMenu').removeClass('d-none');
+                setSchoolLevelFilter('integrated');
+            } else {
+                $('#integratedSubMenu').addClass('d-none');
+                setSchoolLevelFilter('all');
+            }
+        });
+        
+        // Integrated sub-menu buttons
+        $('#btnIntegratedElementary').click(function() { 
+            setSchoolLevelFilter('integrated_elementary'); 
+        });
+        
+        $('#btnIntegratedSecondary').click(function() { 
+            setSchoolLevelFilter('integrated_secondary'); 
+        });
+        
+        function setSchoolLevelFilter(level) {
+            // Show loading on filter buttons
+            $('.table-switcher .btn, #integratedSubMenu .btn').prop('disabled', true);
+            
+            $.ajax({
+                url: '<?php echo site_url("division_dashboard_controller/set_school_level"); ?>',
+                method: 'POST',
+                data: { school_level: level },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        // Reload to show filtered data
+                        var url = '<?php echo site_url("division_dashboard_controller"); ?>';
+                        var assessmentType = '<?php echo $assessment_type; ?>';
+                        url += '?assessment_type=' + encodeURIComponent(assessmentType) + '&school_level=' + encodeURIComponent(level);
+                        window.location.href = url;
+                    } else {
+                        alert('Error: ' + response.message);
+                        $('.table-switcher .btn, #integratedSubMenu .btn').prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    alert('Error applying filter. Please try again.');
+                    $('.table-switcher .btn, #integratedSubMenu .btn').prop('disabled', false);
+                }
+            });
+        }
+        
+        // Initialize integrated sub-menu state based on current filter
+        var currentLevel = '<?php echo isset($school_level) ? $school_level : 'all'; ?>';
+        if (currentLevel.startsWith('integrated')) {
+            $('#integratedSubMenu').removeClass('d-none');
+            $('#btnIntegratedFilter').addClass('active');
+            
+            if (currentLevel === 'integrated' || currentLevel === 'integrated_elementary') {
+                $('#btnIntegratedElementary').addClass('active');
+            } else if (currentLevel === 'integrated_secondary') {
+                $('#btnIntegratedSecondary').addClass('active');
+            }
+        }
+        
+        // ============ TABLE VISIBILITY (Elementary/Secondary table view) ============
+        // Note: These are separate from the filter buttons
         const elemTable = document.getElementById('elementaryTable');
         const secTable = document.getElementById('secondaryTable');
         const btnPrint = document.getElementById('btnPrint');
 
-        if (btnElem && btnSec) {
-            btnElem.addEventListener('click', () => {
-                btnElem.classList.add('active');
-                btnSec.classList.remove('active');
-                elemTable.classList.remove('d-none');
-                secTable.classList.add('d-none');
-            });
-
-            btnSec.addEventListener('click', () => {
-                btnSec.classList.add('active');
-                btnElem.classList.remove('active');
+        // Set initial table visibility based on current filter
+        if (elemTable && secTable) {
+            if (currentLevel === 'secondary' || currentLevel === 'integrated_secondary') {
                 secTable.classList.remove('d-none');
                 elemTable.classList.add('d-none');
-            });
+            } else {
+                elemTable.classList.remove('d-none');
+                secTable.classList.add('d-none');
+            }
         }
 
+        // ============ PRINT FUNCTIONALITY ============
         if (btnPrint) {
             btnPrint.addEventListener('click', () => {
                 // Open a new window and print only the visible table
@@ -658,16 +850,26 @@
                 const isElemVisible = !elemTable.classList.contains('d-none');
                 const tableHtml = (isElemVisible ? elemTable : secTable).outerHTML;
                 
-                // Get current assessment type
+                // Get current assessment type and filters
                 const assessmentType = '<?php echo ucfirst($assessment_type); ?>';
+                const schoolLevelDisplay = '<?php 
+                    $level = isset($school_level) ? $school_level : 'all';
+                    if ($level == 'all') echo 'All Schools';
+                    elseif ($level == 'elementary') echo 'Elementary Schools';
+                    elseif ($level == 'secondary') echo 'Secondary Schools';
+                    elseif ($level == 'integrated') echo 'Integrated Schools';
+                    elseif ($level == 'integrated_elementary') echo 'Integrated Schools (Elementary)';
+                    elseif ($level == 'integrated_secondary') echo 'Integrated Schools (Secondary)';
+                    else echo ucfirst($level);
+                ?>';
                 const reportDate = new Date().toLocaleDateString();
 
                 win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Print</title>' +
                     '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">' +
                     '<style>body{padding:20px;} table{width:100%; border-collapse:collapse;} th, td{border:1px solid #dee2e6;}</style>' +
                     '</head><body>');
-                win.document.write('<h3>Nutritional Status Report - Division Level</h3>');
-                win.document.write('<p>Assessment Type: ' + assessmentType + ' | Report Date: ' + reportDate + '</p>');
+                win.document.write('<h3>Division Nutritional Status Report - ' + assessmentType + ' Assessment</h3>');
+                win.document.write('<p>School Level: ' + schoolLevelDisplay + ' | Report Date: ' + reportDate + '</p>');
                 win.document.write(tableHtml);
                 win.document.write('<script>window.onload=function(){ window.print(); window.onafterprint=function(){ window.close(); } }<\/script>');
                 win.document.write('</body></html>');
@@ -675,26 +877,14 @@
             });
         }
         
+        // ============ DISTRICT/SCHOOLS BOX FUNCTIONALITY ============
         // Toggle schools box
         $('#overallSummaryCard').click(function() {
             $('#schoolsBox').toggleClass('d-none');
-            const icon = $(this).find('.fa-chevron-up');
-            const text = $(this).find('.small');
-            
-            if ($('#schoolsBox').hasClass('d-none')) {
-                icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
-                text.html('<i class="fas fa-chevron-up me-1"></i> Click to view all districts');
-            } else {
-                icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
-                text.html('<i class="fas fa-chevron-down me-1"></i> Hide districts');
-                // No need to load districts - they're already loaded in PHP
-            }
         });
         
         $('#closeSchoolsBox').click(function() {
             $('#schoolsBox').addClass('d-none');
-            $('#overallSummaryCard').find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
-            $('#overallSummaryCard').find('.small').html('<i class="fas fa-chevron-up me-1"></i> Click to view all districts');
         });
         
         // Add click event to district cards (loaded from PHP)
@@ -712,7 +902,7 @@
             $('#schoolsView').removeClass('d-none');
             $('#districtSchoolsTitle').text('Schools in ' + districtName);
             
-            // Get schools from PHP data (no AJAX needed)
+            // Get schools from PHP data
             if (allSchoolsData && allSchoolsData[districtName]) {
                 allSchools = allSchoolsData[districtName];
                 displaySchools(allSchools);
@@ -825,10 +1015,10 @@
             $('#boxTitle').text('All Districts');
             $('#schoolsView').addClass('d-none');
             $('#districtsView').removeClass('d-none');
-            $('#schoolSearch').val(''); // Clear search
+            $('#schoolSearch').val('');
         });
         
-        // Show school details (still uses AJAX for school details)
+        // Show school details
         function showSchoolDetails(schoolName) {
             $('#schoolModalBody').html(`
                 <div class="text-center py-4">
@@ -853,15 +1043,11 @@
                             <div class="row">
                                 <div class="col-12 mb-3">
                                     <label class="form-label fw-bold">School Name</label>
-                                    <div class="form-control bg-light">${details.school_name || 'N/A'}</div>
+                                    <div class="form-control bg-light">${details.school_name || details.name || 'N/A'}</div>
                                 </div>
                                 <div class="col-12 mb-3">
                                     <label class="form-label fw-bold">School Address</label>
-                                    <div class="form-control bg-light">${details.school_address || 'N/A'}</div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-bold">Legislative District</label>
-                                    <div class="form-control bg-light">${details.legislative_district || 'N/A'}</div>
+                                    <div class="form-control bg-light">${details.address || 'N/A'}</div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold">School District</label>
@@ -877,7 +1063,7 @@
                                 </div>
                                 <div class="col-12 mb-3">
                                     <label class="form-label fw-bold">Email Address</label>
-                                    <div class="form-control bg-light">${details.email_address || 'N/A'}</div>
+                                    <div class="form-control bg-light">${details.email || details.email_address || 'N/A'}</div>
                                 </div>
                             </div>
                         `);
