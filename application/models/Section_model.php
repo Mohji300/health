@@ -101,4 +101,41 @@ class Section_model extends CI_Model {
         $this->db->order_by('section', 'ASC');
         return $this->db->get($this->table)->result();
     }
+
+    // Checks for deleted assessments and removes sections accordingly
+    public function check_and_remove_sections_with_deleted_assessments($user_id)
+    {
+        // Get user info
+        $this->load->model('User_model');
+        $user = $this->User_model->get_user_by_id($user_id);
+        
+        if (!$user) {
+            return false;
+        }
+        
+        // Get all sections for this user
+        $sections = $this->get_by_user($user_id);
+        
+        $removed_count = 0;
+        
+        foreach ($sections as $section) {
+            // Check if there's a deleted assessment for this section
+            $this->db->where('legislative_district', $user->legislative_district);
+            $this->db->where('school_district', $user->school_district);
+            $this->db->where('grade_level', $section->grade);
+            $this->db->where('section', $section->section);
+            $this->db->where('is_deleted', 1); // Check for deleted assessments
+            
+            $deleted_assessment = $this->db->get('nutritional_assessments')->row();
+            
+            // If a deleted assessment exists for this section, remove the section
+            if ($deleted_assessment) {
+                $this->delete_section($section->id);
+                $removed_count++;
+            }
+        }
+        
+        return $removed_count;
+    }
+
 }
