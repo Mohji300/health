@@ -65,7 +65,7 @@
                                     <label for="password" class="font-weight-bold text-primary">Password *</label>
                                     <input type="password" class="form-control <?php echo form_error('password') ? 'is-invalid' : ''; ?>" 
                                            id="password" name="password" placeholder="Enter password" required>
-                                    <small class="form-text text-muted">Password must be at least 8 characters long.</small>
+                                    <small class="form-text text-muted">Password must be School ID.</small>
                                     <?php if (form_error('password')): ?>
                                         <div class="invalid-feedback"><?php echo form_error('password'); ?></div>
                                     <?php endif; ?>

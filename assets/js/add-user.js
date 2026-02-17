@@ -147,10 +147,10 @@
         if (password.length === 0) return;
 
         // Check length
-        if (password.length >= 8) {
+        if (password.length >= 6) {
             strength += 25;
         } else {
-            feedback.push('At least 8 characters');
+            feedback.push('At least 6 characters');
         }
 
         // Check for uppercase
