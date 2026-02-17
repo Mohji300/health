@@ -6,43 +6,7 @@
     <title><?php echo $title; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
-            min-height: 100vh;
-        }
-        .form-container {
-            max-width: 500px;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-        .school-icon {
-            color: #4f46e5;
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
-        }
-        .is-invalid {
-            border-color: #dc3545 !important;
-        }
-        .btn-primary {
-            background-color: #4f46e5;
-            border-color: #4f46e5;
-        }
-        .btn-primary:hover {
-            background-color: #4338ca;
-            border-color: #4338ca;
-        }
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-    </style>
+    <link rel="stylesheet" href="<?php echo base_url('assets/css/school-info.css'); ?>">
 </head>
 <body class="gradient-bg">
     <div class="container py-5">
@@ -63,8 +27,6 @@
                         echo 'Complete Division Office Profile';
                     } elseif ($user_role == 'district') {
                         echo 'Complete District Office Profile';
-                    } elseif ($user_role == 'admin' || $user_role == 'super_admin') {
-                        echo 'Complete Admin Profile';
                     } else {
                         echo 'Complete School Profile';
                     }
@@ -76,8 +38,6 @@
                         echo 'Please provide your division office details to continue';
                     } elseif ($user_role == 'district') {
                         echo 'Please provide your district office details to continue';
-                    } elseif ($user_role == 'admin' || $user_role == 'super_admin') {
-                        echo 'Please provide your information to continue';
                     } else {
                         echo 'Please provide your school details to continue using the platform';
                     }
@@ -105,14 +65,12 @@
                     <!-- Name Field (Dynamic based on role) -->
                     <div class="mb-3">
                         <label for="name" class="form-label">
-                            <i class="fas fa-<?php echo $user_role == 'division' ? 'landmark' : ($user_role == 'district' ? 'building' : ($user_role == 'admin' || $user_role == 'super_admin' ? 'user-cog' : 'school')); ?> text-primary me-1"></i>
+                            <i class="fas fa-<?php echo $user_role == 'division' ? 'landmark' : ($user_role == 'district' ? 'building' : 'school'); ?> text-primary me-1"></i>
                             <?php 
                             if ($user_role == 'division') {
                                 echo 'Division Office Name';
                             } elseif ($user_role == 'district') {
                                 echo 'District Office Name';
-                            } elseif ($user_role == 'admin' || $user_role == 'super_admin') {
-                                echo 'Admin Name';
                             } else {
                                 echo 'School Name';
                             }
@@ -128,8 +86,6 @@
                                    echo 'Enter division office name';
                                } elseif ($user_role == 'district') {
                                    echo 'Enter district office name';
-                               } elseif ($user_role == 'admin' || $user_role == 'super_admin') {
-                                   echo 'Enter your name';
                                } else {
                                    echo 'Enter school name';
                                }
@@ -140,10 +96,7 @@
                         <?php endif; ?>
                     </div>
 
-                    <!-- ID field removed per request -->
-
-                    <!-- Address Field (Not required for admin/super_admin) -->
-                    <?php if ($user_role != 'admin' && $user_role != 'super_admin'): ?>
+                    <!-- Address Field -->
                     <div class="mb-3">
                         <label for="address" class="form-label">
                             <i class="fas fa-map-marker-alt text-primary me-1"></i>
@@ -159,7 +112,6 @@
                             <div class="invalid-feedback d-block"><?php echo $errors['address']; ?></div>
                         <?php endif; ?>
                     </div>
-                    <?php endif; ?>
 
                     <!-- Legislative District (Only for school users) -->
                     <?php if ($user_role == 'user'): ?>
@@ -246,8 +198,7 @@
                     </div>
                     <?php endif; ?>
 
-                    <!-- Level/Type Field (Shown for school, division, and district users) -->
-                    <?php if ($user_role != 'admin' && $user_role != 'super_admin'): ?>
+                    <!-- Level/Type Field -->
                     <div class="mb-3">
                         <label for="level" class="form-label">
                             <i class="fas fa-sitemap text-primary me-1"></i>
@@ -277,10 +228,8 @@
                             <div class="invalid-feedback d-block"><?php echo $errors['level']; ?></div>
                         <?php endif; ?>
                     </div>
-                    <?php endif; ?>
 
-                    <!-- Head Name Field (Only for school, district, and division users - NOT for admin/super_admin) -->
-                    <?php if ($user_role != 'admin' && $user_role != 'super_admin'): ?>
+                    <!-- Head Name Field -->
                     <div class="mb-4">
                         <label for="head_name" class="form-label">
                             <i class="fas fa-<?php echo $user_role == 'division' ? 'user-tie' : ($user_role == 'district' ? 'user-tie' : 'user-tie'); ?> text-primary me-1"></i>
@@ -297,7 +246,6 @@
                             <div class="invalid-feedback d-block"><?php echo $errors['head_name']; ?></div>
                         <?php endif; ?>
                     </div>
-                    <?php endif; ?>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100 py-3" id="submitBtn">
@@ -308,8 +256,6 @@
                             echo 'Save Division Information';
                         } elseif ($user_role == 'district') {
                             echo 'Save District Information';
-                        } elseif ($user_role == 'admin' || $user_role == 'super_admin') {
-                            echo 'Save Admin Information';
                         } else {
                             echo 'Save School Information';
                         }
@@ -325,115 +271,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('schoolForm');
-            const submitBtn = document.getElementById('submitBtn');
-            const submitText = document.getElementById('submitText');
-            const spinner = document.getElementById('spinner');
-            
-            <?php if ($user_role == 'user'): ?>
-            const legislativeSelect = document.getElementById('legislativeDistricts');
-            const schoolDistrictSelect = document.getElementById('SchoolDistricts');
-
-            // Handle legislative district change (only for school users)
-            if (legislativeSelect) {
-                legislativeSelect.addEventListener('change', function() {
-                    const legislativeDistrict = this.value;
-                    schoolDistrictSelect.disabled = true;
-                    schoolDistrictSelect.innerHTML = '<option value="" disabled selected>Loading school districts...</option>';
-                    
-                    if (legislativeDistrict) {
-                        console.log('Fetching school districts for:', legislativeDistrict);
-                        fetch(`<?php echo site_url('school-info/get_school_districts'); ?>?legislative_district=${encodeURIComponent(legislativeDistrict)}`)
-                            .then(response => {
-                                if (!response.ok) {
-                                    throw new Error('Network response was not ok');
-                                }
-                                return response.json();
-                            })
-                            .then(data => {
-                                console.log('School districts data:', data);
-                                schoolDistrictSelect.innerHTML = '<option value="" disabled selected>Select School District</option>';
-                                if (data && data.length > 0) {
-                                    data.forEach(district => {
-                                        const option = document.createElement('option');
-                                        option.value = district.name;
-                                        option.textContent = district.name;
-                                        schoolDistrictSelect.appendChild(option);
-                                    });
-                                    schoolDistrictSelect.disabled = false;
-                                    
-                                    // Set existing value if any
-                                    <?php if ($user->school_district): ?>
-                                        const existingValue = '<?php echo $user->school_district; ?>';
-                                        if (existingValue) {
-                                            const option = Array.from(schoolDistrictSelect.options).find(opt => opt.value === existingValue);
-                                            if (option) {
-                                                schoolDistrictSelect.value = existingValue;
-                                            }
-                                        }
-                                    <?php endif; ?>
-                                } else {
-                                    schoolDistrictSelect.innerHTML = '<option value="" disabled selected>No school districts found</option>';
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error fetching school districts:', error);
-                                schoolDistrictSelect.innerHTML = '<option value="" disabled selected>Error loading school districts</option>';
-                            });
-                    }
-                });
-
-                // Initialize if there's existing legislative district
-                <?php if ($user->legislative_district): ?>
-                    setTimeout(() => {
-                        // Trigger change event to load school districts
-                        legislativeSelect.dispatchEvent(new Event('change'));
-                    }, 100);
-                <?php endif; ?>
-            }
-            <?php endif; ?>
-
-            // For division users, auto-fill the SchoolDistricts field
-            <?php if ($user_role == 'division'): ?>
-            const nameInput = document.getElementById('name');
-            const schoolDistrictsInput = document.getElementById('SchoolDistricts');
-            
-            if (nameInput && schoolDistrictsInput) {
-                // Sync the name with SchoolDistricts for division users
-                nameInput.addEventListener('input', function() {
-                    schoolDistrictsInput.value = this.value;
-                });
-                
-                // Initialize if there's existing name
-                if (nameInput.value) {
-                    schoolDistrictsInput.value = nameInput.value;
-                }
-            }
-            <?php endif; ?>
-
-            <?php if ($user_role == 'district'): ?>
-            // For district users, mirror the District Office name into the read-only SchoolDistricts field
-            const districtNameInput = document.getElementById('name');
-            const districtReadonly = document.getElementById('SchoolDistricts');
-            if (districtNameInput && districtReadonly) {
-                districtNameInput.addEventListener('input', function() {
-                    districtReadonly.value = this.value;
-                });
-                // Initialize read-only field from current name value
-                if (districtNameInput.value) {
-                    districtReadonly.value = districtNameInput.value;
-                }
-            }
-            <?php endif; ?>
-
-            // Form submission
-            form.addEventListener('submit', function() {
-                submitBtn.disabled = true;
-                submitText.textContent = 'Saving Information...';
-                spinner.classList.remove('d-none');
-            });
-        });
+        // Pass PHP variables to JavaScript
+        const userRole = '<?php echo $user_role; ?>';
+        const siteUrl = '<?php echo site_url('school-info/get_school_districts'); ?>';
+        const userSchoolDistrict = '<?php echo $user->school_district; ?>';
+        const userLegislativeDistrict = '<?php echo $user->legislative_district; ?>';
     </script>
+    <script src="<?php echo base_url('assets/js/school-info.js'); ?>"></script>
 </body>
 </html>

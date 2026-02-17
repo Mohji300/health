@@ -9,30 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <style>
-      #wrapper { display: flex; width: 100%; }
-      #sidebar-wrapper { min-width: 220px; max-width: 260px; background: #f8f9fa; border-right: 1px solid #e3e6ea; }
-      #page-content-wrapper { flex: 1 1 auto; padding: 20px; }
-      @media (max-width: 767px) { #sidebar-wrapper { display: none; } }
-
-      .card { border: none; border-radius: 0.5rem; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); }
-      .bg-gradient-primary { background: linear-gradient(45deg, #4e73df, #224abe); }
-      .bg-gradient-info { background: linear-gradient(45deg, #17a2b8, #6f42c1); }
-      .bg-gradient-success { background: linear-gradient(45deg, #1cc88a, #13855c); }
-      .bg-gradient-warning { background: linear-gradient(45deg, #f6c23e, #dda20a); }
-      .bg-gradient-danger { background: linear-gradient(45deg, #e74a3b, #be2617); }
-      
-      .text-gray-800 { color: #5a5c69 !important; }
-      .text-gray-300 { color: #dddfeb !important; }
-      
-      .table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
-      .table-bordered th, .table-bordered td { border: 1px solid #e3e6f0; }
-      
-      .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
-      
-      .badge-baseline { background: linear-gradient(45deg, #4e73df, #224abe); }
-      .badge-endline { background: linear-gradient(45deg, #1cc88a, #13855c); }
-    </style>
+    <link rel="stylesheet" href="<?= base_url('assets/css/district-reports.css'); ?>">
   </head>
   <body class="bg-light">
     <div class="d-flex" id="wrapper">
@@ -63,7 +40,7 @@
                       </div>
                     </div>
                     <div class="col-auto">
-                      <i class="fas fa-clipboard-list fa-2x text-black"></i>
+                      <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
                     </div>
                   </div>
                 </div>
@@ -127,7 +104,7 @@
                       </div>
                     </div>
                     <div class="col-auto">
-                      <i class="fas fa-school fa-2x text-black"></i>
+                      <i class="fas fa-school fa-2x text-gray-300"></i>
                     </div>
                   </div>
                 </div>
@@ -379,37 +356,6 @@
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    <script>
-      $(document).ready(function() {
-        $('#reportsTable').DataTable({
-          "pageLength": 25,
-          "ordering": true,
-          "order": [[0, 'asc'], [3, 'asc'], [4, 'asc'], [5, 'asc']],
-          "columnDefs": [
-            { "orderable": false, "targets": [8] }
-          ],
-          "language": {
-            "emptyTable": "No reports available",
-            "info": "Showing _START_ to _END_ of _TOTAL_ reports",
-            "infoEmpty": "Showing 0 to 0 of 0 reports",
-            "infoFiltered": "(filtered from _MAX_ total reports)",
-            "lengthMenu": "Show _MENU_ reports",
-            "search": "Search:",
-            "zeroRecords": "No matching reports found"
-          },
-          "responsive": true
-        });
-
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-          return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-
-        $('form').on('submit', function() {
-          var btn = $(this).find('button[type="submit"]');
-          btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Applying...');
-        });
-      });
-    </script>
+    <script src="<?= base_url('assets/js/distric-reports.js'); ?>"></script>
   </body>
 </html>

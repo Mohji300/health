@@ -4,23 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>SBFP Form 1A - <?php echo ucfirst($assessment_type); ?> Print</title>
-    <style>
-        @page { size: A4 landscape; margin: 8mm; }
-        body { font-family: Arial, Helvetica, sans-serif; font-size: 9px; margin: 0; padding: 0; }
-        .header { text-align: center; margin-bottom: 10px; }
-        .header h2 { margin: 0; font-size: 14px; }
-        .header h3 { margin: 0; font-size: 12px; }
-        .header p { margin: 2px 0; font-size: 10px; }
-        .form-title { font-weight: bold; font-size: 11px; text-align: center; margin: 10px 0; }
-        table { width: 100%; border-collapse: collapse; font-size: 8px; }
-        th, td { border: 1px solid #000; padding: 3px; text-align: center; }
-        th { background-color: #f2f2f2; font-weight: bold; }
-        .text-left { text-align: left; }
-        .signature { margin-top: 20px; font-size: 9px; }
-        .signature table { border: none; }
-        .signature td { border: none; padding: 15px 20px; }
-        .footer-note { font-size: 8px; margin-top: 10px; font-style: italic; }
-    </style>
+    <link rel="stylesheet" href="<?= base_url('assets/css/print-sbfp.css'); ?>">
 </head>
 <body>
     <div class="header">
@@ -117,12 +101,12 @@
     </div>
     
     <script>
-        window.onload = function() {
-            window.print();
-            setTimeout(function() {
-                window.close();
-            }, 1000);
+        // Pass PHP variables to JavaScript
+        const printConfig = {
+            assessmentType: '<?php echo $assessment_type; ?>',
+            hasData: <?php echo !empty($beneficiaries) ? 'true' : 'false'; ?>
         };
     </script>
+    <script src="<?= base_url('assets/js/print-sbfp.js'); ?>"></script>
 </body>
 </html>

@@ -20,7 +20,7 @@ class SchoolInfo extends CI_Controller {
         $user_id = $this->session->userdata('user_id');
         $user = $this->User_model->get_user_by_id($user_id);
         
-        // For ALL roles, check if school info is completed
+        // Check if school info is completed
         if ($user && $user->school_info_completed) {
             // Redirect to appropriate dashboard based on role
             $this->redirect_by_role($user->role);
@@ -42,16 +42,12 @@ class SchoolInfo extends CI_Controller {
             case 'district':
                 $title_prefix = 'District Office - ';
                 break;
-            case 'admin':
-            case 'super_admin':
-                $title_prefix = 'Administrator - ';
-                break;
             case 'user':
                 $title_prefix = 'School - ';
                 break;
         }
 
-        // Fetch districts with related school districts (needed for school and district users)
+        // Fetch districts with related school districts
         $districts = [];
         if ($role == 'user' || $role == 'district') {
             $districts = $this->Legislative_district_model->get_districts_with_school_districts();
@@ -67,9 +63,8 @@ class SchoolInfo extends CI_Controller {
             'user_role' => $role
         ];
 
-        $this->load->view('templates/header', $data);
+        // Load view directly without header/footer
         $this->load->view('school_info_form', $data);
-        $this->load->view('templates/footer');
     }
 
     public function store() {
@@ -78,15 +73,15 @@ class SchoolInfo extends CI_Controller {
         // Set validation rules based on user role
         $this->form_validation->set_rules('name', 'Name', 'required|max_length[255]');
         $this->form_validation->set_rules('address', 'Address', 'required|max_length[500]');
+        
         // Only require SchoolDistricts when the role has that field in the form
         if ($user_role == 'user' || $user_role == 'division' || $user_role == 'district') {
             $this->form_validation->set_rules('SchoolDistricts', 'District/Division/Region', 'required');
         }
+        
         $this->form_validation->set_rules('head_name', 'Head/Officer/Position Name', 'required|max_length[255]');
         
-        // Note: `school_id` field removed from form; admin IDs will be assigned server-side
-        
-        // Only require level for roles that show it (school, division, district)
+        // Only require level for roles that show it
         if ($user_role == 'user' || $user_role == 'division' || $user_role == 'district') {
             $this->form_validation->set_rules('level', 'Level/Type', 'required');
         }
@@ -113,7 +108,7 @@ class SchoolInfo extends CI_Controller {
                 redirect('school-info/form');
             }
             
-            // Prepare update data (set school_district only if provided)
+            // Prepare update data
             $update_data = [
                 'name' => $this->input->post('name'),
                 'school_address' => $this->input->post('address'),
@@ -128,12 +123,6 @@ class SchoolInfo extends CI_Controller {
                 $update_data['school_level'] = $this->input->post('level');
             } elseif ($user_role == 'district' || $user_role == 'division') {
                 $update_data['school_level'] = $this->input->post('level');
-                // District/Division users don't have legislative district
-                $update_data['legislative_district'] = null;
-            } elseif ($user_role == 'admin' || $user_role == 'super_admin') {
-                // Admin users get a server-assigned school_id
-                $update_data['school_id'] = 'ADMIN-' . strtoupper($user_role) . '-' . $user_id;
-                $update_data['school_level'] = 'Administrative';
                 $update_data['legislative_district'] = null;
             }
 
@@ -143,7 +132,6 @@ class SchoolInfo extends CI_Controller {
                 $update_data['school_district'] = $postedSchoolDistrict;
             }
 
-            // Debug log: record posted district values (helps diagnose missing POST)
             log_message('debug', 'SchoolInfo::store postedSchoolDistrict=' . var_export($postedSchoolDistrict, true) . ' legislativeDistricts=' . var_export($this->input->post('legislativeDistricts'), true));
 
             $success = $this->User_model->update_user($user_id, $update_data);
@@ -155,27 +143,18 @@ class SchoolInfo extends CI_Controller {
                     'school_info_completed' => true,
                 ];
                 
-                // Add role-specific session data (only for fields present in the form)
+                // Add role-specific session data
                 if ($user_role == 'user') {
                     $session_data['legislative_district'] = $this->input->post('legislativeDistricts');
                     if ($postedSchoolDistrict) {
                         $session_data['school_district'] = $postedSchoolDistrict;
-                        // Also set `district` session key to maintain compatibility with other controllers
                         $session_data['district'] = $postedSchoolDistrict;
                     }
-                } elseif ($user_role == 'district') {
+                } elseif ($user_role == 'district' || $user_role == 'division') {
                     if ($postedSchoolDistrict) {
                         $session_data['school_district'] = $postedSchoolDistrict;
                         $session_data['district'] = $postedSchoolDistrict;
                     }
-                } elseif ($user_role == 'division') {
-                    if ($postedSchoolDistrict) {
-                        $session_data['school_district'] = $postedSchoolDistrict;
-                        $session_data['district'] = $postedSchoolDistrict;
-                    }
-                } elseif ($user_role == 'admin' || $user_role == 'super_admin') {
-                    // Only set server-assigned school_id for admin users
-                    $session_data['school_id'] = $update_data['school_id'];
                 }
                 
                 $this->session->set_userdata($session_data);
@@ -202,10 +181,6 @@ class SchoolInfo extends CI_Controller {
                 break;
             case 'district':
                 redirect('district_dashboard');
-                break;
-            case 'super_admin':
-            case 'admin':
-                redirect('superadmin');
                 break;
             case 'user':
                 redirect('user');

@@ -163,7 +163,7 @@
 
   <!-- NAV -->
   <nav class="flex-grow-1 overflow-auto py-3">
-      <ul class="nav flex-column px-2">
+    <ul class="nav flex-column px-2">
         
 
       <?php if ($is_admin): ?>
@@ -206,19 +206,6 @@
           <span class="main-sidebar-text"> SBFP Dashboard</span>
         </a>
         <?php endif; ?>
-
-        <!-- SBFP Beneficiaries - Show to ALL ROLES (Admin, District, Division, Regular User) -->
-        <a href="<?php echo site_url('sbfp-beneficiaries'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo is_active_page('sbfp-beneficiaries', $current_uri) ? 'active' : ''; ?>">
-          <i class="fas fa-users"></i>
-          <span class="main-sidebar-text"> SBFP Beneficiaries</span>
-        </a>
-
-        <a href="<?php echo site_url('archive'); ?>" 
-           class="nav-link rounded-2 mb-1 <?php echo is_active_page('archive', $current_uri) ? 'active' : ''; ?>">
-          <i class="fas fa-archive"></i>
-          <span class="main-sidebar-text"> Archive</span>
-        </a>
 
         <!-- District Dashboard - Show to Admin and District only -->
         <?php if ($is_admin || $is_district): ?>
@@ -322,6 +309,22 @@
         </a>
       </li>
       <?php endif; ?>
+
+      <!-- SBFP Beneficiaries - Show to ALL ROLES (Admin, District, Division, Regular User) -->
+      <li class="nav-item mb-2 px-2">
+        <a href="<?php echo site_url('sbfp-beneficiaries'); ?>"
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('sbfp-beneficiaries', $current_uri) ? 'active' : ''; ?>">
+          <i class="fas fa-users"></i>
+          <span class="main-sidebar-text"> SBFP Beneficiaries</span>
+        </a>
+
+        <a href="<?php echo site_url('archive'); ?>" 
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('archive', $current_uri) ? 'active' : ''; ?>">
+          <i class="fas fa-archive"></i>
+          <span class="main-sidebar-text"> Archive</span>
+        </a>
+      </li>
+
     </ul>
   </nav>
 

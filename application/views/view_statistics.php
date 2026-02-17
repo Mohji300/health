@@ -11,151 +11,14 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-
-<style>
-body {
-  background-color: #f8f9fa;
-  overflow-x: hidden;
-}
-
-/* SIMPLE FLEXBOX LAYOUT LIKE THE FIRST CODE */
-#wrapper {
-  display: flex;
-  width: 100%;
-  min-height: 100vh;
-}
-
-/* Content area - simple flexbox approach */
-#page-content-wrapper {
-  flex: 1 1 auto;
-  padding: 20px;
-  min-width: 0; /* Important for DataTables */
-}
-
-/* Card and table styling */
-.card { 
-  border: none; 
-  border-radius: 0.5rem; 
-  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); 
-  margin-bottom: 1.5rem;
-  overflow: hidden;
-}
-
-.bg-gradient-primary { background: linear-gradient(45deg, #4e73df, #224abe); }
-.bg-gradient-info { background: linear-gradient(45deg, #17a2b8, #6f42c1); }
-.bg-gradient-success { background: linear-gradient(45deg, #1cc88a, #13855c); }
-.bg-gradient-warning { background: linear-gradient(45deg, #f6c23e, #dda20a); }
-.bg-gradient-danger { background: linear-gradient(45deg, #e74a3b, #be2617); }
-
-/* Responsive tables */
-.table-responsive {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin: 0 -1px;
-  padding: 0 1px;
-}
-
-/* Ensure tables don't overflow */
-.table {
-  min-width: 100%;
-  width: 100% !important;
-  table-layout: fixed;
-  margin-bottom: 0;
-}
-
-.table th {
-  border-top: 1px solid #e3e6f0;
-  font-weight: 600;
-  background-color: #f8f9fc;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.table td {
-  vertical-align: middle;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Badge styling */
-.badge-severely-wasted { 
-  background: linear-gradient(45deg, #dc3545, #a71d2a); 
-  color: white; 
-}
-.badge-wasted { 
-  background: linear-gradient(45deg, #ffc107, #d39e00); 
-  color: black; 
-}
-.badge-normal { 
-  background: linear-gradient(45deg, #28a745, #1e7e34); 
-  color: white; 
-}
-.badge-overweight { 
-  background: linear-gradient(45deg, #17a2b8, #117a8b); 
-  color: white; 
-}
-.badge-obese { 
-  background: linear-gradient(45deg, #6f42c1, #52378f); 
-  color: white; 
-}
-
-/* Progress bar styling */
-.progress { height: 0.75rem; }
-
-/* Table row colors */
-.table-danger { background-color: rgba(220, 53, 69, 0.1) !important; }
-.table-warning { background-color: rgba(255, 193, 7, 0.1) !important; }
-.table-success { background-color: rgba(40, 167, 69, 0.1) !important; }
-.table-info { background-color: rgba(23, 162, 184, 0.1) !important; }
-.table-primary { background-color: rgba(13, 110, 253, 0.1) !important; }
-
-/* Filter form responsive */
-.filter-form .col-md-4, 
-.filter-form .col-md-3 {
-  margin-bottom: 1rem;
-}
-
-/* DataTable overrides */
-.dataTables_wrapper {
-  width: 100% !important;
-  overflow-x: hidden !important;
-}
-
-.dataTables_scroll {
-  width: 100% !important;
-  overflow-x: auto !important;
-}
-
-/* Mobile adjustments */
-@media (max-width: 768px) {
-  .card-body {
-    padding: 1rem;
-  }
-  .table-responsive {
-    font-size: 0.875rem;
-  }
-}
-
-/* Assessment badges */
-.badge-baseline { 
-  background: linear-gradient(45deg, #4e73df, #224abe); 
-  color: white;
-}
-.badge-endline { 
-  background: linear-gradient(45deg, #1cc88a, #13855c); 
-  color: white;
-}
-</style>
+<link rel="stylesheet" href="<?= base_url('assets/css/view_statistics.css'); ?>">
 </head>
 
 <body>
-  <!-- WRAPPER DIV LIKE THE FIRST CODE -->
   <div id="wrapper">
     <?php $this->load->view('templates/sidebar'); ?>
     
-    <!-- Main Content - CHANGED TO MATCH FIRST CODE STRUCTURE -->
+    <!-- Main Content -->
     <div id="page-content-wrapper">
       <div class="container-fluid py-3">
         
@@ -564,43 +427,6 @@ body {
   <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-  <script>
-  $(document).ready(function() {
-    // Initialize DataTable with responsive settings
-    const table = $('#nutritionalStatusTable').DataTable({
-      "pageLength": 25,
-      "ordering": true,
-      "order": [[0, 'asc']],
-      "responsive": true,
-      "scrollX": true,
-      "scrollCollapse": true,
-      "language": {
-        "emptyTable": "No students found with current filters",
-        "info": "Showing _START_ to _END_ of _TOTAL_ students",
-        "infoEmpty": "Showing 0 to 0 of 0 students",
-        "infoFiltered": "(filtered from _MAX_ total students)",
-        "lengthMenu": "Show _MENU_ students",
-        "search": "Search:",
-        "zeroRecords": "No matching students found"
-      },
-      "columnDefs": [
-        { "targets": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], "orderable": true }
-      ]
-    });
-    
-    // Add loading state to filter button
-    $('form').on('submit', function() {
-      var btn = $(this).find('button[type="submit"]');
-      btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Applying...');
-    });
-    
-    // Adjust columns on sidebar toggle
-    document.getElementById('sidebarToggle')?.addEventListener('click', function(){
-      setTimeout(function(){
-        table.columns.adjust().responsive.recalc();
-      }, 300);
-    });
-  });
-  </script>
+  <script src="<?= base_url('assets/js/view_statistics.js'); ?>"></script>
 </body>
 </html>

@@ -1,0 +1,284 @@
+/* Nutritional Assessment Archive Styles */
+
+/* Base Styles */
+body {
+    background-color: #f8f9fa;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+}
+
+.table-responsive {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+table th {
+    background-color: #0d6efd;
+    color: white;
+    font-weight: 600;
+}
+
+.table-sm thead th {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.table-sm tbody td {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+}
+
+/* Archive Specific */
+.bg-archive {
+    background-color: #f8f9fa;
+    border-left: 4px solid #6c757d;
+}
+
+.btn-archive {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.btn-archive:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+/* Status Classes */
+.status-severely-wasted {
+    background-color: #f8d7da !important;
+}
+
+.status-wasted {
+    background-color: #fff3cd !important;
+}
+
+.status-overweight {
+    background-color: #d1ecf1 !important;
+}
+
+.status-obese {
+    background-color: #f5c6cb !important;
+}
+
+/* Archive Badge */
+.archive-badge {
+    font-size: 0.8rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.badge-archived {
+    background: linear-gradient(45deg, #6c757d, #495057);
+    color: white;
+}
+
+/* Header Styling */
+.bg-gradient-archive {
+    background: linear-gradient(45deg, #6c757d, #495057);
+}
+
+/* Search Bar Styling */
+#searchBar {
+    border-right: none;
+}
+
+#clearSearch {
+    border-left: none;
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+}
+
+.search-result-badge {
+    position: absolute;
+    right: 10px;
+    top: -8px;
+    z-index: 100;
+    font-size: 0.7rem;
+}
+
+.input-group {
+    position: relative;
+}
+
+mark {
+    padding: 0 2px;
+    border-radius: 2px;
+    font-weight: bold;
+}
+
+/* Print Styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    body {
+        background-color: white;
+    }
+    .table-responsive {
+        overflow: visible;
+    }
+}
+
+/* Modal Styles */
+.modal-xl {
+    max-width: 95%;
+}
+
+@media (min-width: 1200px) {
+    .modal-xl {
+        max-width: 1140px;
+    }
+}
+
+/* Badge Styles */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+}
+
+/* Table Row Hover */
+.table-hover tbody tr:hover {
+    background-color: rgba(0,0,0,.075);
+    cursor: pointer;
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.year-group {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Loading Spinner */
+.spinner-border {
+    vertical-align: middle;
+}
+
+/* Alert Messages */
+.alert {
+    border-radius: 0.5rem;
+    border: none;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+/* Button Focus States */
+.btn:focus,
+.btn-close:focus {
+    box-shadow: none;
+    outline: none;
+}
+
+/* Table Cell Word Break */
+td {
+    word-break: break-word;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .btn-group-sm > .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .table-sm thead th,
+    .table-sm tbody td {
+        font-size: 0.75rem;
+        padding: 0.4rem;
+    }
+    
+    .badge {
+        font-size: 0.7rem;
+    }
+}
+
+/* Custom Scrollbar */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Tooltip Styles */
+[title] {
+    cursor: help;
+}
+
+/* Gap Utility */
+.gap-1 {
+    gap: 0.25rem;
+}
+
+/* Print Specific Styles */
+@media print {
+    .btn,
+    .btn-group,
+    .modal-footer,
+    .no-print {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #dee2e6;
+    }
+    
+    .table th {
+        background-color: #e9ecef !important;
+        color: #000 !important;
+    }
+    
+    .bg-gradient-archive {
+        background: #6c757d !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

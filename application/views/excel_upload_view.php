@@ -7,28 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <style>
-        .upload-container {
-            max-width: 800px;
-            margin: 30px auto;
-            padding: 25px;
-            border: 2px dashed #007bff;
-            border-radius: 10px;
-            background-color: #f8f9fa;
-        }
-        .stats-card {
-            margin-bottom: 20px;
-        }
-        .alert {
-            margin-bottom: 20px;
-        }
-        .card-header {
-            font-weight: 600;
-        }
-        .preview-table {
-            font-size: 0.85rem;
-        }
-    </style>
+    <link rel="stylesheet" href="<?= base_url('assets/css/excel-upload.css'); ?>">
 </head>
 <body>
     <div class="container">
@@ -102,7 +81,7 @@
 
             <!-- Clear Data Button -->
             <div class="text-center mt-4">
-                <a href="<?php echo site_url('excel_upload/clear_data'); ?>" class="btn btn-danger btn-lg" onclick="return confirm('⚠️ Are you sure you want to clear ALL data? This action cannot be undone!')">
+                <a href="<?php echo site_url('excel_upload/clear_data'); ?>" class="btn btn-danger btn-lg clear-data-btn" onclick="return confirm('⚠️ Are you sure you want to clear ALL data? This action cannot be undone!')">
                     <i class="fas fa-trash"></i> Clear All Data
                 </a>
             </div>
@@ -146,7 +125,7 @@
                         </table>
                     </div>
                     <div class="mt-3">
-                        <h6>How to convert your Excel file to CSV:</h6>
+                        <h6><i class="fas fa-question-circle me-2"></i>How to convert your Excel file to CSV:</h6>
                         <ol class="small">
                             <li>Open your Excel file in Microsoft Excel</li>
                             <li>Click <strong>File → Save As</strong></li>

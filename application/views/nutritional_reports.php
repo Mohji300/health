@@ -9,30 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <style>
-      #wrapper { display: flex; width: 100%; }
-      #sidebar-wrapper { min-width: 220px; max-width: 260px; background: #f8f9fa; border-right: 1px solid #e3e6ea; }
-      #page-content-wrapper { flex: 1 1 auto; padding: 20px; }
-      @media (max-width: 767px) { #sidebar-wrapper { display: none; } }
-
-      .card { border: none; border-radius: 0.5rem; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); }
-      .bg-gradient-primary { background: linear-gradient(45deg, #4e73df, #224abe); }
-      .bg-gradient-info { background: linear-gradient(45deg, #17a2b8, #6f42c1); }
-      .bg-gradient-success { background: linear-gradient(45deg, #1cc88a, #13855c); }
-      .bg-gradient-warning { background: linear-gradient(45deg, #f6c23e, #dda20a); }
-      .bg-gradient-danger { background: linear-gradient(45deg, #e74a3b, #be2617); }
-      
-      .text-gray-800 { color: #5a5c69 !important; }
-      .text-gray-300 { color: #dddfeb !important; }
-
-      .table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
-      .table-bordered th, .table-bordered td { border: 1px solid #e3e6f0; }
-      
-      .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
-
-      .badge-baseline { background: linear-gradient(45deg, #4e73df, #224abe); }
-      .badge-endline { background: linear-gradient(45deg, #1cc88a, #13855c); }
-    </style>
+    <link rel="stylesheet" href="<?= base_url('assets/css/nutritional-reports.css'); ?>">
   </head>
   <body class="bg-light">
     <div class="d-flex" id="wrapper">
@@ -90,7 +67,7 @@
                       </div>
                     </div>
                     <div class="col-auto">
-                      <i class="fas fa-clipboard-list fa-2x text-black"></i>
+                      <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
                     </div>
                   </div>
                 </div>
@@ -148,7 +125,7 @@
               <h6 class="m-0 font-weight-bold text-primary">
                 <i class="fas fa-filter me-1"></i> Filter Reports
               </h6>
-              <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-outline-secondary btn-sm">
+              <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-outline-secondary btn-sm" id="resetFiltersBtn">
                 <i class="fas fa-redo me-1"></i> Reset Filters
               </a>
             </div>
@@ -160,7 +137,7 @@
                   </h6>
                 </div>
                 <div class="card-body">
-                  <form method="get" action="<?php echo site_url('admin/reports'); ?>" class="row g-3">
+                  <form method="get" action="<?php echo site_url('admin/reports'); ?>" class="row g-3" id="filterForm">
                     <div class="col-md-3">
                       <label class="form-label fw-bold text-dark">
                         <i class="fas fa-flag me-1"></i> Assessment Type
@@ -193,18 +170,18 @@
                       <label class="form-label fw-bold text-dark">
                         <i class="fas fa-calendar-day me-1"></i> Date From
                       </label>
-                      <input type="date" name="date_from" class="form-control" 
+                      <input type="date" name="date_from" class="form-control" id="dateFrom"
                              value="<?php echo htmlspecialchars($current_filters['date_from'] ?? ''); ?>">
                     </div>
                     <div class="col-md-3">
                       <label class="form-label fw-bold text-dark">
                         <i class="fas fa-calendar-check me-1"></i> Date To
                       </label>
-                      <input type="date" name="date_to" class="form-control" 
+                      <input type="date" name="date_to" class="form-control" id="dateTo"
                              value="<?php echo htmlspecialchars($current_filters['date_to'] ?? ''); ?>">
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
-                      <button type="submit" class="btn btn-primary w-100 py-2">
+                      <button type="submit" class="btn btn-primary w-100 py-2" id="applyFiltersBtn">
                         <i class="fas fa-filter me-1"></i> Apply Filters
                       </button>
                     </div>
@@ -221,16 +198,16 @@
             <i class="fas fa-chart-bar me-1"></i> Nutritional Assessment Reports
         </h6>
         <div class="d-flex align-items-center">
-            <span class="badge bg-primary rounded-pill me-3">
+            <span class="badge bg-primary rounded-pill me-3" id="reportCount">
                 <?php echo number_format(count($reports)); ?> Reports
             </span>
             <div>
                 <a href="<?php echo site_url('admin/reports/export?' . http_build_query($current_filters)); ?>" 
-                   class="btn btn-success btn-sm me-2">
+                   class="btn btn-success btn-sm me-2 export-btn">
                     <i class="fas fa-file-export me-1"></i> Export to CSV
                 </a>
                 <a href="<?php echo site_url('admin/reports/statistics?' . http_build_query($current_filters)); ?>" 
-                   class="btn btn-info btn-sm">
+                   class="btn btn-info btn-sm stats-btn">
                     <i class="fas fa-chart-pie me-1"></i> View Statistics
                 </a>
                 
@@ -239,11 +216,11 @@
     </div>
     <div class="card-body">
         <?php if (empty($reports)): ?>
-            <div class="text-center py-5">
+            <div class="text-center py-5" id="noReportsMessage">
                 <i class="fas fa-inbox fa-4x text-gray-300 mb-3"></i>
                 <h5 class="text-gray-500 mb-2">No reports found</h5>
                 <p class="text-gray-500 mb-4">Try adjusting your filters or check back later for new submissions.</p>
-                <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-primary">
+                <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-primary" id="clearFiltersBtn">
                     <i class="fas fa-redo me-1"></i> Clear Filters
                 </a>
             </div>
@@ -323,7 +300,9 @@
                                     'section' => $report->section ?? '',
                                     'assessment_type' => $report->assessment_type ?? 'baseline'
                                 ])); ?>" 
-                                   class="btn btn-success btn-sm" title="Export to Excel/CSV" data-bs-toggle="tooltip">
+                                   class="btn btn-success btn-sm export-detail-btn" 
+                                   title="Export to Excel/CSV" 
+                                   data-bs-toggle="tooltip">
                                     <i class="fas fa-file-export me-1"></i> Export
                                 </a>
                             </td>
@@ -345,36 +324,14 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script>
-      $(document).ready(function() {
-        $('#reportsTable').DataTable({
-          "pageLength": 25,
-          "ordering": true,
-          "order": [[0, 'asc'], [3, 'asc'], [4, 'asc'], [5, 'asc']],
-          "columnDefs": [
-            { "orderable": false, "targets": [8] }
-          ],
-          "language": {
-            "emptyTable": "No reports available",
-            "info": "Showing _START_ to _END_ of _TOTAL_ reports",
-            "infoEmpty": "Showing 0 to 0 of 0 reports",
-            "infoFiltered": "(filtered from _MAX_ total reports)",
-            "lengthMenu": "Show _MENU_ reports",
-            "search": "Search:",
-            "zeroRecords": "No matching reports found"
-          },
-          "responsive": true
-        });
-
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-          return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-
-        $('form').on('submit', function() {
-          var btn = $(this).find('button[type="submit"]');
-          btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Applying...');
-        });
-      });
+        // Pass PHP variables to JavaScript
+        const reportsConfig = {
+            totalReports: <?php echo count($reports); ?>,
+            currentFilters: <?php echo json_encode($current_filters); ?>,
+            baseUrl: '<?php echo site_url('admin/reports'); ?>',
+            hasReports: <?php echo !empty($reports) ? 'true' : 'false'; ?>
+        };
     </script>
+    <script src="<?= base_url('assets/js/nutritional-reports.js'); ?>"></script>
   </body>
 </html>

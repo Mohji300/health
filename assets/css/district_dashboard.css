@@ -1,0 +1,58 @@
+/* Styles extracted from application/views/district_dashboard.php */
+#wrapper { display: flex; width: 100%; }
+#page-content-wrapper { flex: 1 1 auto; padding: 20px; }
+@media (max-width: 767.98px) { #mainSidebar { transform: translateX(-100%); } }
+
+.cursor-pointer { cursor: pointer; }
+.progress { height: 8px; }
+.school-item:hover { background-color: #f8f9fa; }
+.status-completed { background-color: #d1fae5; color: #065f46; }
+.status-inprogress { background-color: #fef3c7; color: #92400e; }
+.status-nodata { background-color: #f3f4f6; color: #374151; }
+.submission-pending { background-color: #f3f4f6; color: #6b7280; }
+.submission-submitted { background-color: #d1fae5; color: #065f46; }
+
+.table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
+.table-bordered th, .table-bordered td { border: 1px solid #000000; }
+.th-orange { background: linear-gradient(45deg,#ff9f43,#ff7a00); color: #ffffff; }
+.th-red { background: linear-gradient(45deg,#e74a3b,#d32f2f); color: #ffffff; }
+.th-green { background: linear-gradient(45deg,#1cc88a,#13855c); color: #ffffff; }
+
+.assessment-switcher { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 50px; padding: 2px; display: inline-flex; align-items: center; }
+.assessment-switcher .btn { border-radius: 50px; padding: 5px 15px; font-size: 0.9rem; transition: all 0.3s; min-width: 90px; }
+.assessment-switcher .btn.active { box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+.assessment-switcher .btn:not(.active) { background: transparent; border-color: transparent; }
+.assessment-switcher .btn:not(.active):hover { background: rgba(0,0,0,0.05); }
+.assessment-switcher .btn { font-weight: 600; }
+.assessment-switcher .btn.btn-primary { color: #0d6efd; }
+.assessment-switcher .btn.btn-info { color: #0dcaf0; }
+.assessment-switcher .btn.btn-success { color: #198754; }
+.assessment-switcher .btn.active.btn-primary, .assessment-switcher .btn.active.btn-info, .assessment-switcher .btn.active.btn-success { color: #ffffff !important; }
+
+.assessment-badge { font-size: 0.8rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; margin-left: 10px; }
+.badge-baseline { background: linear-gradient(45deg, #4e73df, #224abe); color: white; }
+.badge-midline { background: linear-gradient(45deg, #5ae1f6, #11c2dd); color: white; }
+.badge-endline { background: linear-gradient(45deg, #1cc88a, #13855c); color: white; }
+
+.print-debug { display: none; }
+
+@page { size: A4 landscape; margin: 8mm; }
+@media print {
+    html, body { background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: Arial, Helvetica, sans-serif; font-size: 8px; margin: 0; padding: 0; line-height: 1.2; }
+    .no-print, .btn, .assessment-switcher, .modal, #sidebar-wrapper, .btn-group { display: none !important; }
+    #wrapper { display: block !important; }
+    #page-content-wrapper { padding: 4px !important; }
+    .card { box-shadow: none !important; border: none !important; padding: 0 !important; }
+    table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; font-size: 8px !important; margin: 0 !important; }
+    th, td { padding: 2px !important; border: 0.5px solid #dee2e6 !important; word-wrap: break-word; white-space: normal; line-height: 1.1; }
+    .small-cell td, .small-cell th { padding: 1.5px !important; }
+    .table thead { background: #f8f9fc !important; -webkit-print-color-adjust: exact; }
+    .table-primary { background-color: #f1f5f9 !important; }
+    h3 { font-size: 10px; margin: 0 0 2px 0; font-weight: bold; }
+    p { font-size: 7px; margin: 0 0 4px 0; }
+    .print-debug { display: block !important; position: fixed !important; top: 4mm !important; left: 8mm !important; background: #ffeb3b !important; color: #000 !important; padding: 4px 8px !important; z-index: 99999 !important; font-weight: 700 !important; border-radius: 3px !important; }
+}
+
+#integratedSubMenu { padding: 10px 15px; background-color: #f8f9fc; border-bottom: 1px solid #e3e6ea; }
+#integratedSubMenu .btn-group { box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.filter-badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; background-color: #6c757d; color: white; margin-left: 8px; }

@@ -33,7 +33,7 @@
                         </div>
                     <?php endif; ?>
 
-                    <form method="post" action="<?php echo site_url('superadmin/add-user'); ?>">
+                    <form method="post" action="<?php echo site_url('superadmin/add-user'); ?>" id="addUserForm">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -171,21 +171,5 @@
     </div>
 </div>
 
-<script>
-// Password confirmation validation
-document.addEventListener('DOMContentLoaded', function() {
-    const password = document.getElementById('password');
-    const confirmPassword = document.getElementById('confirm_password');
-    
-    function validatePassword() {
-        if (password.value !== confirmPassword.value) {
-            confirmPassword.setCustomValidity("Passwords don't match");
-        } else {
-            confirmPassword.setCustomValidity('');
-        }
-    }
-    
-    password.addEventListener('change', validatePassword);
-    confirmPassword.addEventListener('keyup', validatePassword);
-});
-</script>
+<!-- Include external JavaScript -->
+<script src="<?php echo base_url('assets/js/add-user.js'); ?>"></script>

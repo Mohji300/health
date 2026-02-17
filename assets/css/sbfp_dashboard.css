@@ -1,0 +1,37 @@
+/* Styles extracted from sbfp_dashboard.php */
+#wrapper { display: flex; width: 100%; }
+#sidebar-wrapper { min-width: 220px; max-width: 260px; background: #f8f9fa; border-right: 1px solid #e3e6ea; }
+#page-content-wrapper { flex: 1 1 auto; padding: 20px; }
+@media (max-width: 767px) { #sidebar-wrapper { display: none; } }
+
+.card { border: none; border-radius: 0.5rem; box-shadow: 0 0.15rem 1.75rem 0 rgba(58,59,69,0.15); }
+.bg-gradient-primary { background: linear-gradient(45deg, #4e73df, #224abe); }
+.bg-gradient-success { background: linear-gradient(45deg, #1cc88a, #13855c); }
+.bg-gradient-info { background: linear-gradient(45deg, #36b9cc, #258391); }
+.bg-gradient-warning { background: linear-gradient(45deg, #f6c23e, #dda20a); }
+
+.submitted-badge { background-color: #d1fae5; color: #065f46; }
+.school-card { transition: transform 0.2s; }
+.school-card:hover { transform: translateY(-2px); }
+
+.legislative-badge { background: linear-gradient(45deg, #4e73df, #224abe); }
+.district-badge { background: linear-gradient(45deg, #1cc88a, #13855c); }
+.school-badge { background: linear-gradient(45deg, #36b9cc, #258391); }
+.level-badge { background: linear-gradient(45deg, #f6c23e, #dda20a); }
+
+.text-gray-800 { color: #5a5c69 !important; }
+.text-gray-300 { color: #dddfeb !important; }
+
+.table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
+.table-bordered th, .table-bordered td { border: 1px solid #e3e6f0; }
+
+.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+
+.assessment-switcher { background: #ffffff; border: 1px solid #ffffff; border-radius: 50px; padding: 2px; display: inline-flex; align-items: center; }
+.assessment-switcher .btn { border-radius: 50px; padding: 5px 15px; font-size: 0.9rem; transition: all 0.3s; min-width: 90px; }
+.assessment-switcher .btn.active { box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+.assessment-switcher .btn:not(.active) { background: transparent; border-color: transparent; }
+
+.btn-delete:hover { transform: scale(1.05); transition: transform 0.2s; }
+
+.modal-backdrop { opacity: 0.5; }

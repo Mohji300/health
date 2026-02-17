@@ -9,32 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <style>
-      #wrapper { display: flex; width: 100%; }
-      #sidebar-wrapper { min-width: 220px; max-width: 260px; background: #f8f9fa; border-right: 1px solid #e3e6ea; }
-      #page-content-wrapper { flex: 1 1 auto; padding: 20px; }
-      @media (max-width: 767px) { #sidebar-wrapper { display: none; } }
-
-      .card { border: none; border-radius: 0.5rem; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); }
-      .bg-gradient-primary { background: linear-gradient(45deg, #4e73df, #224abe); }
-      .text-gray-800 { color: #5a5c69 !important; }
-      .text-gray-300 { color: #dddfeb !important; }
-      
-      /* Statistics card borders to match Nutritional Dashboard */
-      .border-left-primary { border-left: 0.25rem solid #4e73df !important; }
-      .border-left-danger { border-left: 0.25rem solid #e74a3b !important; }
-      .border-left-info { border-left: 0.25rem solid #36b9cc !important; }
-      .border-left-success { border-left: 0.25rem solid #1cc88a !important; }
-      .border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
-      .border-left-secondary { border-left: 0.25rem solid #858796 !important; }
-      
-      /* Enhanced table styling to match reports */
-      .table th { border-top: 1px solid #e3e6f0; font-weight: 600; background-color: #f8f9fc; }
-      .table-bordered th, .table-bordered td { border: 1px solid #e3e6f0; }
-      
-      .role-select { min-width: 140px; }
-      #userTable tbody tr:hover { background-color: #f8f9fa; }
-    </style>
+    <link rel="stylesheet" href="<?= base_url('assets/css/superadmin_dashboard.css'); ?>">
   </head>
   <body class="bg-light">
     <div id="wrapper">
@@ -379,62 +354,10 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script>
-    $(document).ready(function() {
-        var table = $('#userTable').DataTable({
-            "pageLength": 10,
-            "ordering": true,
-            "columnDefs": [
-                { "orderable": false, "targets": [3] } // Disable sorting on Actions column
-            ]
-        });
-
-        // When "Submit Payload" is clicked, collect current role selections and POST as JSON
-        $('#submitBulkPayload').on('click', function(e) {
-            var users = [];
-            $('#userTable tbody tr').each(function() {
-                var row = $(this);
-                var userId = row.data('user-id');
-                var role = row.find('select.role-select').val();
-                if (userId !== undefined) {
-                    users.push({ id: userId, role: role });
-                }
-            });
-            $('#bulkUsersInput').val(JSON.stringify(users));
-            $('#bulkUpdateForm').submit();
-        });
-
-        // Enhanced delete confirmation with modal
-        var deleteUserModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
-        var deleteUserId = null;
-        
-        $('.delete-user-btn').on('click', function(e) {
-            e.preventDefault();
-            var userId = $(this).data('user-id');
-            var userName = $(this).data('user-name');
-            var deleteUrl = '<?php echo site_url('superadmin/delete-user/'); ?>' + userId;
-            
-            $('#userNamePlaceholder').text(userName);
-            $('#deleteUserForm').attr('action', deleteUrl);
-            deleteUserModal.show();
-        });
-
-        // Auto-submit role changes when dropdown changes (optional enhancement)
-        $('.role-select').on('change', function() {
-            // Optional: Add a small delay to show visual feedback
-            var $form = $(this).closest('form');
-            var $button = $form.find('button[type="submit"]');
-            var originalText = $button ? $button.html() : '';
-            
-            if ($button.length) {
-                $button.html('<i class="fas fa-spinner fa-spin me-1"></i> Updating...');
-                $button.prop('disabled', true);
-            }
-            
-            setTimeout(function() {
-                $form.submit();
-            }, 500);
-        });
-    });
+    window.SuperAdminConfig = {
+      delete_user_base: '<?= site_url("superadmin/delete-user/"); ?>'
+    };
     </script>
+    <script src="<?= base_url('assets/js/superadmin_dashboard.js'); ?>"></script>
   </body>
 </html>
