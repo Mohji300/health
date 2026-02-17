@@ -32,12 +32,34 @@ class UserDashboard extends CI_Controller {
         // Get current assessment type from session
         $assessment_type = $this->session->userdata('assessment_type') ?: 'baseline';
         
-        // Get school level filter from GET or session or default to 'all'
-        $school_level = $this->input->get('school_level') ?: 
-                    ($this->session->userdata('school_level') ?: 'all');
+        // FIX 1: The session key is 'user_id', not 'id'
+        $user_id = $this->session->userdata('user_id');
         
-        // Always set it in session
-        $this->session->set_userdata('school_level', $school_level);
+        // IMPORTANT: Get the user's actual school level from the users table
+        $user_school_level = $this->get_user_school_level($user_id);
+        
+        // FIX 2: Check if session already has school_level, if not, set it
+        $session_school_level = $this->session->userdata('school_level');
+        
+        // School level filter - if coming from URL parameter, use that
+        $filter_school_level = $this->input->get('school_level');
+        
+        if ($filter_school_level) {
+            // If filter is applied via URL, use that
+            $school_level = $filter_school_level;
+            // Update session with filter
+            $this->session->set_userdata('school_level', $school_level);
+        } else {
+            // If session has school_level and it's not 'all', use it
+            if ($session_school_level && $session_school_level !== 'all') {
+                $school_level = $session_school_level;
+            } else {
+                // Otherwise, use the user's actual school level from the database
+                $school_level = $user_school_level;
+                // Update session with the correct value
+                $this->session->set_userdata('school_level', $school_level);
+            }
+        }
         
         $school_name = $this->input->get('school_name') ?: $this->session->userdata('school_name') ?: null;
 
@@ -47,6 +69,7 @@ class UserDashboard extends CI_Controller {
         $data = [];
         $data['assessment_type'] = $assessment_type;
         $data['school_level'] = $school_level;
+        $data['user_actual_school_level'] = $user_school_level; // Pass this for debugging
         $data['nutritionalData'] = $result['nutritionalData'];
         $data['grandTotal'] = $result['grandTotal'];
         $data['has_data'] = $result['has_data'];
@@ -61,6 +84,52 @@ class UserDashboard extends CI_Controller {
         $this->load->view('user_dashboard', $data);
     }
     
+    /**
+     * Get the user's actual school level from the users table
+     */
+    private function get_user_school_level($user_id)
+    {
+        if (!$user_id) {
+            return 'all';
+        }
+        
+        // FIX 3: The column name is 'id' in users table, not 'user_id'
+        $this->db->select('school_level');
+        $this->db->from('users');
+        $this->db->where('id', $user_id); // Changed from 'user_id' to 'id'
+        
+        $query = $this->db->get();
+        
+        if ($query->num_rows() > 0) {
+            $row = $query->row();
+            
+            // Check if school_level exists and is not null
+            if (isset($row->school_level) && !empty($row->school_level)) {
+                $school_level = strtolower(trim($row->school_level));
+                
+                // Map database values to our expected values
+                switch ($school_level) {
+                    case 'elementary':
+                        return 'elementary'; // Return lowercase for consistency
+                    case 'secondary':
+                        return 'secondary'; // Return lowercase for consistency
+                    case 'integrated':
+                        return 'integrated'; // Return lowercase for consistency
+                    case 'standalone_shs':
+                    case 'shs':
+                    case 'senior high school':
+                    case 'senior high':
+                        return 'standalone_shs';
+                    default:
+                        return 'all';
+                }
+            }
+        }
+        
+        // If no school level found, return 'all'
+        return 'all';
+    }
+    
     // Update the validation in set_school_level method
     public function set_school_level()
     {
@@ -71,8 +140,8 @@ class UserDashboard extends CI_Controller {
         
         $school_level = $this->input->post('school_level', TRUE);
         
-        // Update validation for new levels
-        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary'];
+        // FIX 4: Use lowercase for consistency
+        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary', 'standalone_shs'];
         if (!in_array($school_level, $valid_levels)) {
             $this->output->set_content_type('application/json')->set_output(json_encode([
                 'success' => false,
@@ -149,5 +218,39 @@ class UserDashboard extends CI_Controller {
         ]));
     }
     
-
+    /**
+     * Temporary method to fix session
+     */
+    public function fix_session()
+    {
+        $user_id = $this->session->userdata('user_id');
+        
+        if ($user_id) {
+            // Get school level from database
+            $this->db->select('school_level');
+            $this->db->from('users');
+            $this->db->where('id', $user_id);
+            $query = $this->db->get();
+            
+            if ($query->num_rows() > 0) {
+                $row = $query->row();
+                $school_level = strtolower(trim($row->school_level));
+                
+                // Update session
+                $this->session->set_userdata('school_level', $school_level);
+                
+                echo "Session fixed! School level set to: " . $school_level;
+                echo "<br><br>";
+                echo "Current session data:<br>";
+                echo "<pre>";
+                print_r($this->session->userdata());
+                echo "</pre>";
+                echo "<br><br><a href='" . site_url('userdashboard') . "'>Go to Dashboard</a>";
+            } else {
+                echo "User not found in database";
+            }
+        } else {
+            echo "No user logged in";
+        }
+    }
 }

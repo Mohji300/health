@@ -47,7 +47,8 @@ class AuthController extends CI_Controller {
                 }
 
                 // Login successful — set session with all necessary data
-                $this->session->set_userdata([
+                // INCLUDING school_level
+                $session_data = [
                     'logged_in' => true,
                     'user_id' => $user->id,
                     'username' => $user->username,
@@ -56,10 +57,13 @@ class AuthController extends CI_Controller {
                     'district' => $user->district,
                     'school_id' => $user->school_id,
                     'school_name' => $user->name,
+                    'school_level' => isset($user->school_level) ? strtolower(trim($user->school_level)) : 'all', 
                     'school_info_completed' => $user->school_info_completed,
                     'legislative_district' => $user->legislative_district,
                     'school_district' => $user->school_district
-                ]);
+                ];
+                
+                $this->session->set_userdata($session_data);
 
                 // Redirect based on role and school info completion
                 $this->redirect_based_on_role_and_school_info($user);
@@ -81,54 +85,54 @@ class AuthController extends CI_Controller {
     /**
      * Redirect user based on role and school info completion status
      */
-private function redirect_based_on_role_and_school_info($user = null) {
-    if (!$user) {
-        $user_id = $this->session->userdata('user_id');
-        $user = $this->User_model->get_user_by_id($user_id);
-    }
+    private function redirect_based_on_role_and_school_info($user = null) {
+        if (!$user) {
+            $user_id = $this->session->userdata('user_id');
+            $user = $this->User_model->get_user_by_id($user_id);
+        }
 
-    if (!$user) {
-        redirect('login');
-        return;
-    }
+        if (!$user) {
+            redirect('login');
+            return;
+        }
 
-    $role = $user->role;
-    
-    // For ALL roles, check if school info is completed
-    $needs_school_info = empty($user->school_id) || !$user->school_info_completed;
-    
-    if ($needs_school_info) {
-        // Redirect ALL roles to school info form if not completed
-        redirect('school-info/form');
-    } else {
-        // If school info is complete, redirect to appropriate dashboard
-        switch ($role) {
-            case 'division':
-                redirect('division_dashboard');
-                break;
-            case 'district':
-                redirect('district_dashboard');
-                break;
-            case 'super_admin':
-            case 'admin':
-                redirect('superadmin');
-                break;
-            case 'user':
-                redirect('user');
-                break;
-            default:
-                redirect('superadmin');
-                break;
+        $role = $user->role;
+        
+        // For ALL roles, check if school info is completed
+        $needs_school_info = empty($user->school_id) || !$user->school_info_completed;
+        
+        if ($needs_school_info) {
+            // Redirect ALL roles to school info form if not completed
+            redirect('school-info/form');
+        } else {
+            // If school info is complete, redirect to appropriate dashboard
+            switch ($role) {
+                case 'division':
+                    redirect('division_dashboard');
+                    break;
+                case 'district':
+                    redirect('district_dashboard');
+                    break;
+                case 'super_admin':
+                case 'admin':
+                    redirect('superadmin');
+                    break;
+                case 'user':
+                    redirect('user');
+                    break;
+                default:
+                    redirect('superadmin');
+                    break;
+            }
         }
     }
-}
 
     public function logout()
     {
         // Clear all session data
         $session_data = [
             'logged_in', 'user_id', 'username', 'email', 'role', 
-            'district', 'school_id', 'school_info_completed',
+            'district', 'school_id', 'school_level', 'school_info_completed', 'school_level',
             'legislative_district', 'school_district'
         ];
         

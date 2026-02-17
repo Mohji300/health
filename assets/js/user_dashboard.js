@@ -6,65 +6,145 @@ $(document).ready(function() {
     $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
     $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
     
-    // School Level Filtering
-    $('#btnElementary').click(function() { 
-        $('#btnIntegrated').removeClass('active');
-        $('#integratedSubMenu').addClass('d-none');
-        enableTableSwitching();
-        setSchoolLevelFilter('elementary'); 
-    });
+    // Get display mode from config
+    var displayMode = window.UserDashboardConfig.display_mode || 'normal';
+    var schoolLevel = window.UserDashboardConfig.school_level || 'all';
     
-    $('#btnSecondary').click(function() { 
-        $('#btnIntegrated').removeClass('active');
-        $('#integratedSubMenu').addClass('d-none');
-        enableTableSwitching();
-        setSchoolLevelFilter('secondary'); 
-    });
+    console.log('Display Mode:', displayMode); // For debugging
+    console.log('School Level:', schoolLevel); // For debugging
     
-    // Integrated button shows sub-menu
-    $('#btnIntegrated').click(function(e) {
-        e.preventDefault();
+    // Set initial table visibility based on display mode
+    setInitialTableVisibility();
+    
+    // Only initialize filter buttons if in normal mode
+    if (displayMode === 'normal') {
+        initializeFilterButtons();
+    } else {
+        // If not in normal mode, hide the filter buttons completely
+        $('.btn-group.me-2').hide();
+    }
+    
+    // Function to initialize filter buttons
+    function initializeFilterButtons() {
+        $('#btnElementary').click(function() { 
+            $('#btnIntegrated').removeClass('active');
+            $('#integratedSubMenu').addClass('d-none');
+            enableTableSwitching();
+            setSchoolLevelFilter('elementary'); 
+        });
         
-        $(this).toggleClass('active');
+        $('#btnSecondary').click(function() { 
+            $('#btnIntegrated').removeClass('active');
+            $('#integratedSubMenu').addClass('d-none');
+            enableTableSwitching();
+            setSchoolLevelFilter('secondary'); 
+        });
         
-        if ($(this).hasClass('active')) {
+        // Integrated button shows sub-menu
+        $('#btnIntegrated').click(function(e) {
+            e.preventDefault();
+            
+            $(this).toggleClass('active');
+            
+            if ($(this).hasClass('active')) {
+                disableTableSwitching();
+                $('#integratedSubMenu').removeClass('d-none');
+                setSchoolLevelFilter('integrated');
+            } else {
+                enableTableSwitching();
+                $('#integratedSubMenu').addClass('d-none');
+                setSchoolLevelFilter('all');
+            }
+        });
+        
+        // Integrated sub-menu buttons
+        $('#btnIntegratedElementary').click(function() { 
+            setSchoolLevelFilter('integrated_elementary'); 
+        });
+        
+        $('#btnIntegratedSecondary').click(function() { 
+            setSchoolLevelFilter('integrated_secondary'); 
+        });
+        
+        var currentLevel = window.UserDashboardConfig.school_level || 'all';
+        if (currentLevel.startsWith('integrated')) {
+            $('#integratedSubMenu').removeClass('d-none');
+            $('#btnIntegrated').addClass('active');
             disableTableSwitching();
 
-            $('#integratedSubMenu').removeClass('d-none');
-
-            setSchoolLevelFilter('integrated');
+            $('#integratedSubMenu .btn').removeClass('btn-primary').addClass('btn-outline-primary');
+            if (currentLevel === 'integrated' || currentLevel === 'integrated_elementary') {
+                $('#btnIntegratedElementary').removeClass('btn-outline-primary').addClass('btn-primary');
+            } else if (currentLevel === 'integrated_secondary') {
+                $('#btnIntegratedSecondary').removeClass('btn-outline-primary').addClass('btn-primary');
+            }
         } else {
             enableTableSwitching();
-            
-            $('#integratedSubMenu').addClass('d-none');
-            
-            setSchoolLevelFilter('all');
         }
-    });
+        
+        // Add click handlers for table switching
+        addTableSwitchingHandlers();
+    }
     
-    // Integrated sub-menu buttons
-    $('#btnIntegratedElementary').click(function() { 
-        setSchoolLevelFilter('integrated_elementary'); 
-    });
-    
-    $('#btnIntegratedSecondary').click(function() { 
-        setSchoolLevelFilter('integrated_secondary'); 
-    });
-    
-    var currentLevel = window.UserDashboardConfig.school_level || 'all';
-    if (currentLevel.startsWith('integrated')) {
-        $('#integratedSubMenu').removeClass('d-none');
-        $('#btnIntegrated').addClass('active');
-        disableTableSwitching();
-
-        $('#integratedSubMenu .btn').removeClass('btn-primary').addClass('btn-outline-primary');
-        if (currentLevel === 'integrated' || currentLevel === 'integrated_elementary') {
-            $('#btnIntegratedElementary').removeClass('btn-outline-primary').addClass('btn-primary');
-        } else if (currentLevel === 'integrated_secondary') {
-            $('#btnIntegratedSecondary').removeClass('btn-outline-primary').addClass('btn-primary');
+    function setInitialTableVisibility() {
+        const elemTable = document.getElementById('elementaryTable');
+        const secTable = document.getElementById('secondaryTable');
+        const shsTable = document.getElementById('shsTable');
+        
+        // First, hide all tables
+        if (elemTable) elemTable.classList.add('d-none');
+        if (secTable) secTable.classList.add('d-none');
+        if (shsTable) shsTable.classList.add('d-none');
+        
+        console.log('Setting initial visibility for mode:', displayMode);
+        
+        // Show the appropriate table based on display mode
+        if (displayMode === 'elementary_only') {
+            console.log('Showing elementary table only');
+            if (elemTable) {
+                elemTable.classList.remove('d-none');
+            }
+        } else if (displayMode === 'secondary_only') {
+            console.log('Showing secondary table only');
+            if (secTable) {
+                secTable.classList.remove('d-none');
+            }
+        } else if (displayMode === 'shs_only') {
+            console.log('Showing SHS table only');
+            if (shsTable) {
+                shsTable.classList.remove('d-none');
+            }
+        } else if (displayMode === 'integrated') {
+            // For integrated, check the school level to determine which table to show
+            console.log('Integrated mode, school level:', schoolLevel);
+            if (schoolLevel === 'integrated_elementary') {
+                if (elemTable) {
+                    elemTable.classList.remove('d-none');
+                }
+            } else if (schoolLevel === 'integrated_secondary') {
+                if (secTable) {
+                    secTable.classList.remove('d-none');
+                }
+            } else {
+                // Default to elementary for integrated
+                if (elemTable) {
+                    elemTable.classList.remove('d-none');
+                }
+            }
+        } else {
+            // Normal mode - check school level to determine which table to show
+            console.log('Normal mode, school level:', schoolLevel);
+            if (schoolLevel === 'secondary') {
+                if (secTable) {
+                    secTable.classList.remove('d-none');
+                }
+            } else {
+                // Default to elementary for all, elementary, and other cases
+                if (elemTable) {
+                    elemTable.classList.remove('d-none');
+                }
+            }
         }
-    } else {
-        enableTableSwitching();
     }
     
     // Table switching functions
@@ -89,6 +169,38 @@ $(document).ready(function() {
             btnElem.style.opacity = '0.5';
             btnSec.style.pointerEvents = 'none';
             btnSec.style.opacity = '0.5';
+        }
+    }
+    
+    function addTableSwitchingHandlers() {
+        const btnElem = document.getElementById('btnElementary');
+        const btnSec = document.getElementById('btnSecondary');
+        const elemTable = document.getElementById('elementaryTable');
+        const secTable = document.getElementById('secondaryTable');
+        
+        if (btnElem && btnSec && elemTable && secTable) {
+            // Remove any existing event listeners by cloning and replacing
+            const newBtnElem = btnElem.cloneNode(true);
+            const newBtnSec = btnSec.cloneNode(true);
+            btnElem.parentNode.replaceChild(newBtnElem, btnElem);
+            btnSec.parentNode.replaceChild(newBtnSec, btnSec);
+            
+            // Add new event listeners
+            newBtnElem.addEventListener('click', function(e) {
+                e.preventDefault();
+                newBtnElem.classList.add('active');
+                newBtnSec.classList.remove('active');
+                elemTable.classList.remove('d-none');
+                secTable.classList.add('d-none');
+            });
+
+            newBtnSec.addEventListener('click', function(e) {
+                e.preventDefault();
+                newBtnSec.classList.add('active');
+                newBtnElem.classList.remove('active');
+                secTable.classList.remove('d-none');
+                elemTable.classList.add('d-none');
+            });
         }
     }
     
@@ -180,69 +292,62 @@ $(document).ready(function() {
         $('#btnIntegrated').prop('disabled', false);
     }
     
-    // Table switching (Elementary/Secondary table view)
-    const btnElem = document.getElementById('btnElementary');
-    const btnSec = document.getElementById('btnSecondary');
-    const elemTable = document.getElementById('elementaryTable');
-    const secTable = document.getElementById('secondaryTable');
+    // Table view handling based on display mode
     const btnPrint = document.getElementById('btnPrint');
     
-    var currentLevelPrint = window.UserDashboardConfig.school_level || 'all';
-    
-    if (btnElem && btnSec) {
-        if (currentLevelPrint === 'secondary' || currentLevelPrint === 'integrated_secondary') {
-            btnSec.classList.add('active');
-            btnElem.classList.remove('active');
-            secTable.classList.remove('d-none');
-            elemTable.classList.add('d-none');
-        } else {
-            btnElem.classList.add('active');
-            btnSec.classList.remove('active');
-            elemTable.classList.remove('d-none');
-            secTable.classList.add('d-none');
-        }
-        
-        btnElem.addEventListener('click', function() {
-            btnElem.classList.add('active');
-            btnSec.classList.remove('active');
-            elemTable.classList.remove('d-none');
-            secTable.classList.add('d-none');
-        });
-
-        btnSec.addEventListener('click', function() {
-            btnSec.classList.add('active');
-            btnElem.classList.remove('active');
-            secTable.classList.remove('d-none');
-            elemTable.classList.add('d-none');
-        });
-    }
-
     if (btnPrint) {
         btnPrint.addEventListener('click', () => {
             const win = window.open('', '_blank');
-            const isElemVisible = !elemTable.classList.contains('d-none');
-            const isSecVisible = !secTable.classList.contains('d-none');
             
             let tableHtml;
-            if (isSecVisible) {
-                tableHtml = secTable.outerHTML;
+            
+            // Determine which table to print based on display mode
+            if (displayMode === 'shs_only') {
+                tableHtml = document.getElementById('shsTable').outerHTML;
+            } else if (displayMode === 'elementary_only') {
+                tableHtml = document.getElementById('elementaryTable').outerHTML;
+            } else if (displayMode === 'secondary_only') {
+                tableHtml = document.getElementById('secondaryTable').outerHTML;
+            } else if (displayMode === 'integrated') {
+                // For integrated, check which table is visible
+                const elemTable = document.getElementById('elementaryTable');
+                const secTable = document.getElementById('secondaryTable');
+                
+                if (elemTable && !elemTable.classList.contains('d-none')) {
+                    tableHtml = elemTable.outerHTML;
+                } else if (secTable && !secTable.classList.contains('d-none')) {
+                    tableHtml = secTable.outerHTML;
+                } else {
+                    tableHtml = elemTable ? elemTable.outerHTML : secTable.outerHTML;
+                }
             } else {
-                tableHtml = elemTable.outerHTML;
+                // Normal mode - check which table is visible
+                const elemTable = document.getElementById('elementaryTable');
+                const secTable = document.getElementById('secondaryTable');
+                
+                if (secTable && !secTable.classList.contains('d-none')) {
+                    tableHtml = secTable.outerHTML;
+                } else if (elemTable && !elemTable.classList.contains('d-none')) {
+                    tableHtml = elemTable.outerHTML;
+                } else {
+                    tableHtml = elemTable ? elemTable.outerHTML : secTable.outerHTML;
+                }
             }
             
             const assessmentType = window.UserDashboardConfig.assessment_type_display || '';
             const schoolLevel = window.UserDashboardConfig.school_level || '';
             const reportDate = new Date().toLocaleDateString();
             
-            let schoolLevelDisplay = 'All Schools (Elementary View)';
+            let schoolLevelDisplay = 'All Schools';
             switch(schoolLevel) {
-                case 'all': schoolLevelDisplay = 'All Schools (Elementary View)'; break;
+                case 'all': schoolLevelDisplay = 'All Schools'; break;
                 case 'elementary': schoolLevelDisplay = 'Elementary Schools'; break;
                 case 'secondary': schoolLevelDisplay = 'Secondary Schools'; break;
-                case 'integrated': schoolLevelDisplay = 'Integrated Schools (Elementary View)'; break;
+                case 'standalone_shs': schoolLevelDisplay = 'Standalone SHS'; break;
+                case 'integrated': schoolLevelDisplay = 'Integrated Schools'; break;
                 case 'integrated_elementary': schoolLevelDisplay = 'Integrated Schools (Elementary Only)'; break;
                 case 'integrated_secondary': schoolLevelDisplay = 'Integrated Schools (Secondary Only)'; break;
-                default: schoolLevelDisplay = 'All Schools (Elementary View)';
+                default: schoolLevelDisplay = 'All Schools';
             }
             
             const printCss = '<style>' +
