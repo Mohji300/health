@@ -215,7 +215,7 @@
                                 <option value="City Division" <?php echo (isset($input_data['level']) && $input_data['level'] == 'City Division') ? 'selected' : ''; ?>>City Division</option>
                             <?php elseif ($user_role == 'district'): ?>
                                 <option value="Municipal District" <?php echo (isset($input_data['level']) && $input_data['level'] == 'Municipal District') ? 'selected' : ''; ?>>Municipal District</option>
-                                <option value="City District" <?php echo (isset($input_data['level']) && $input_data['level'] == 'City District') ? 'selected' : ''; ?>>City District</option>
+                                <option value="School District" <?php echo (isset($input_data['level']) && $input_data['level'] == 'School District') ? 'selected' : ''; ?>>School District</option>
                                 <option value="Provincial District" <?php echo (isset($input_data['level']) && $input_data['level'] == 'Provincial District') ? 'selected' : ''; ?>>Provincial District</option>
                             <?php else: ?>
                                 <option value="Elementary" <?php echo (isset($input_data['level']) && $input_data['level'] == 'Elementary') ? 'selected' : ''; ?>>Elementary</option>
