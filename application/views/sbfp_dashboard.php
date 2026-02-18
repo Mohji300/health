@@ -242,8 +242,31 @@ foreach ($submitted as $s) {
                                   <label class="form-label fw-bold text-dark">Grade Level</label>
                                   <select name="grade" class="form-select" required>
                                       <option value="">Select Grade</option>
-                                      <?php $grades = ['Kindergarten','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
-                                      foreach ($grades as $g): ?>
+                                      <?php 
+                                      // Get user's school level
+                                      $user_school_level = isset($auth->school_level) ? strtolower(trim($auth->school_level)) : '';
+                                      
+                                      // Define grade arrays based on school level
+                                      $elementary_grades = ['Kindergarten','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6'];
+                                      $secondary_grades = ['Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
+                                      $shs_grades = ['Grade 11','Grade 12'];
+                                      $all_grades = ['Kindergarten','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
+                                      
+                                      // Filter grades based on school level
+                                      if ($user_school_level === 'elementary') {
+                                          $grades_to_show = $elementary_grades;
+                                      } elseif ($user_school_level === 'secondary') {
+                                          $grades_to_show = $secondary_grades;
+                                      } elseif ($user_school_level === 'stand alone shs' || $user_school_level === 'standalone_shs' || $user_school_level === 'shs') {
+                                          $grades_to_show = $shs_grades;
+                                      } elseif ($user_school_level === 'integrated') {
+                                          $grades_to_show = $all_grades; // Integrated schools show all grades
+                                      } else {
+                                          $grades_to_show = $all_grades; // Default to all grades
+                                      }
+                                      
+                                      // Display the filtered grades
+                                      foreach ($grades_to_show as $g): ?>
                                           <option value="<?php echo htmlspecialchars($g); ?>"><?php echo htmlspecialchars($g); ?></option>
                                       <?php endforeach; ?>
                                   </select>

@@ -27,11 +27,62 @@
 
 .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
 
-.assessment-switcher { background: #ffffff; border: 1px solid #ffffff; border-radius: 50px; padding: 2px; display: inline-flex; align-items: center; }
-.assessment-switcher .btn { border-radius: 50px; padding: 5px 15px; font-size: 0.9rem; transition: all 0.3s; min-width: 90px; }
-.assessment-switcher .btn.active { box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-.assessment-switcher .btn:not(.active) { background: transparent; border-color: transparent; }
+      /* Assessment type switcher */
+      .assessment-switcher {
+        background: #ffffff;
+        border: 1px solid #ffffff;
+        border-radius: 50px;
+        padding: 2px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .assessment-switcher .btn {
+        border-radius: 50px;
+        padding: 5px 15px;
+        font-size: 0.9rem;
+        transition: all 0.3s;
+        min-width: 90px;
+      }
+      .assessment-switcher .btn.active {
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      }
+      .assessment-switcher .btn:not(.active) {
+        background: transparent;
+        border-color: transparent;
+      }
 
+      /* Delete button animation */
+      .btn-delete:hover {
+        transform: scale(1.05);
+        transition: transform 0.2s;
+      }
+
+      /* Fix switcher visibility */
+      .assessment-switcher .btn {
+        font-weight: 600;
+      }
+
+      /* Baseline button colors */
+      .assessment-switcher .btn.btn-primary {
+        color: #0d6efd; /* Bootstrap primary blue */
+      }
+
+      .assessment-switcher .btn.btn-info {
+      color: #0dcaf0; /* Bootstrap info cyan */
+      }
+
+      /* Endline button colors */
+      .assessment-switcher .btn.btn-success {
+        color: #198754; /* Bootstrap success green */
+      }
+
+      /* Active state keeps white text */
+      .assessment-switcher .btn.active.btn-primary,
+      .assessment-switcher .btn.active.btn-info,
+      .assessment-switcher .btn.active.btn-success {
+        color: #ffffff !important;
+      }
+      
 .btn-delete:hover { transform: scale(1.05); transition: transform 0.2s; }
 
 .modal-backdrop { opacity: 0.5; }
