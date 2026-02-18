@@ -265,17 +265,17 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
                       <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
                     </tr>
                     <tr class="table-secondary">
-                      <th colspan="2" class="text-center th-red">Severely Wasted</th>
-                      <th colspan="2" class="text-center th-orange">Wasted</th>
-                      <th colspan="2" class="text-center th-green">Normal BMI</th>
-                      <th colspan="2" class="text-center th-orange">Overweight</th>
-                      <th colspan="2" class="text-center th-red">Obese</th>
+                      <th colspan="2" class="text-center th-red text-white">Severely Wasted</th>
+                      <th colspan="2" class="text-center th-orange text-white">Wasted</th>
+                      <th colspan="2" class="text-center th-green text-white">Normal BMI</th>
+                      <th colspan="2" class="text-center th-orange text-white">Overweight</th>
+                      <th colspan="2" class="text-center th-red text-white">Obese</th>
 
-                      <th colspan="2" class="text-center th-red">Severely Stunted</th>
-                      <th colspan="2" class="text-center th-orange">Stunted</th>
-                      <th colspan="2" class="text-center th-green">Normal HFA</th>
-                      <th colspan="2" class="text-center th-green">Tall</th>
-                      <th colspan="2" class="text-center ">Pupils Height</th>
+                      <th colspan="2" class="text-center th-red text-white">Severely Stunted</th>
+                      <th colspan="2" class="text-center th-orange text-white">Stunted</th>
+                      <th colspan="2" class="text-center th-green text-white">Normal HFA</th>
+                      <th colspan="2" class="text-center th-green text-white">Tall</th>
+                      <th colspan="2" class="text-center">Pupils Height</th>
                     </tr>
                     <tr class="table-secondary">
                       <!-- For each category: count and % -->
@@ -349,16 +349,16 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
                       <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
                     </tr>
                     <tr class="table-secondary">
-                      <th colspan="2" class="text-center th-red">Severely Wasted</th>
-                      <th colspan="2" class="text-center th-orange">Wasted</th>
-                      <th colspan="2" class="text-center th-green">Normal BMI</th>
-                      <th colspan="2" class="text-center th-orange">Overweight</th>
-                      <th colspan="2" class="text-center th-red">Obese</th>
+                      <th colspan="2" class="text-center th-red text-white">Severely Wasted</th>
+                      <th colspan="2" class="text-center th-orange text-white">Wasted</th>
+                      <th colspan="2" class="text-center th-green text-white">Normal BMI</th>
+                      <th colspan="2" class="text-center th-orange text-white">Overweight</th>
+                      <th colspan="2" class="text-center th-red text-white">Obese</th>
 
-                      <th colspan="2" class="text-center th-red">Severely Stunted</th>
-                      <th colspan="2" class="text-center th-orange">Stunted</th>
-                      <th colspan="2" class="text-center th-green">Normal HFA</th>
-                      <th colspan="2" class="text-center th-green">Tall</th>
+                      <th colspan="2" class="text-center th-red text-white">Severely Stunted</th>
+                      <th colspan="2" class="text-center th-orange text-white">Stunted</th>
+                      <th colspan="2" class="text-center th-green text-white">Normal HFA</th>
+                      <th colspan="2" class="text-center th-green text-white">Tall</th>
                       <th colspan="2" class="text-center">Pupils Height</th>
                     </tr>
                     <tr class="table-secondary">
