@@ -22,7 +22,7 @@ class Nutritional_model extends CI_Model {
             $this->db->where('assessment_type', $assessment_type);
         }
 
-        // ADD THIS LINE - Filter out deleted records
+        // Filter out deleted records
         $this->db->where('is_deleted', 0);
 
         // Optional school filter (filter by school_name in nutritional_assessments)
@@ -30,42 +30,38 @@ class Nutritional_model extends CI_Model {
             $this->db->where('school_name', $school_name);
         }
 
-        // NEW: Add school level filtering
+        // Add school level filtering using the actual school_level from users table
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
-                // For secondary, check for High School indicators
-                $this->db->where("(
-                    school_name LIKE '%High%' OR 
-                    school_name LIKE '%National High School%' OR
-                    school_name LIKE '%NHS%' OR
-                    school_name LIKE '%Secondary%' OR
-                    school_name LIKE '%HighSchool%'
-                    AND school_name NOT LIKE '%Integrated%'
-                )");
+                // For secondary, get schools with school_level = 'secondary' from users table
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
+                // Also filter by grade levels 7-12
+                $this->db->where_in('grade_level', ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
             } 
             elseif ($school_level === 'elementary') {
-                // For elementary, exclude secondary/integrated indicators
-                $this->db->where("(
-                    school_name NOT LIKE '%High%' AND 
-                    school_name NOT LIKE '%Secondary%' AND
-                    school_name NOT LIKE '%Integrated%' AND
-                    school_name NOT LIKE '%NHS%' AND
-                    school_name NOT LIKE '%HighSchool%'
-                )");
+                // For elementary, get schools with school_level = 'elementary' from users table
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'elementary')");
+                // Also filter by grade levels K-6
+                $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
             }
             elseif ($school_level === 'integrated') {
                 // All grades from integrated schools
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
             }
             elseif ($school_level === 'integrated_elementary') {
                 // Only elementary grades (K-6) from integrated schools
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
                 $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
             }
             elseif ($school_level === 'integrated_secondary') {
                 // Only secondary grades (7-12) from integrated schools
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
                 $this->db->where_in('grade_level', ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
+            }
+            elseif ($school_level === 'Stand Alone SHS') {
+                // Only grades 11-12 from Stand Alone SHS schools
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE school_level = 'Stand Alone SHS' OR LOWER(school_level) IN ('shs', 'senior high school', 'senior high'))");
+                $this->db->where_in('grade_level', ['Grade 11', 'Grade 12']);
             }
         }
 
@@ -227,37 +223,30 @@ class Nutritional_model extends CI_Model {
             $this->db->where('school_name', $school_name);
         }
         
-        // NEW: Add school level filtering
+        // Add school level filtering using the actual school_level from users table
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
-                $this->db->where("(
-                    school_name LIKE '%High%' OR 
-                    school_name LIKE '%National High School%' OR
-                    school_name LIKE '%NHS%' OR
-                    school_name LIKE '%Secondary%' OR
-                    school_name LIKE '%HighSchool%'
-                    AND school_name NOT LIKE '%Integrated%'
-                )");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
+                $this->db->where_in('grade_level', ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
             } 
             elseif ($school_level === 'elementary') {
-                $this->db->where("(
-                    school_name NOT LIKE '%High%' AND 
-                    school_name NOT LIKE '%Secondary%' AND
-                    school_name NOT LIKE '%Integrated%' AND
-                    school_name NOT LIKE '%NHS%' AND
-                    school_name NOT LIKE '%HighSchool%'
-                )");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'elementary')");
+                $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
             }
             elseif ($school_level === 'integrated') {
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
             }
             elseif ($school_level === 'integrated_elementary') {
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
                 $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
             }
             elseif ($school_level === 'integrated_secondary') {
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
                 $this->db->where_in('grade_level', ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
+            }
+            elseif ($school_level === 'Stand Alone SHS') {
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE school_level = 'Stand Alone SHS' OR LOWER(school_level) IN ('shs', 'senior high school', 'senior high'))");
+                $this->db->where_in('grade_level', ['Grade 11', 'Grade 12']);
             }
         }
         
@@ -277,37 +266,30 @@ class Nutritional_model extends CI_Model {
             $this->db->where('school_name', $school_name);
         }
         
-        // NEW: Add school level filtering
+        // Add school level filtering using the actual school_level from users table
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
-                $this->db->where("(
-                    school_name LIKE '%High%' OR 
-                    school_name LIKE '%National High School%' OR
-                    school_name LIKE '%NHS%' OR
-                    school_name LIKE '%Secondary%' OR
-                    school_name LIKE '%HighSchool%'
-                    AND school_name NOT LIKE '%Integrated%'
-                )");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
+                $this->db->where_in('grade_level', ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
             } 
             elseif ($school_level === 'elementary') {
-                $this->db->where("(
-                    school_name NOT LIKE '%High%' AND 
-                    school_name NOT LIKE '%Secondary%' AND
-                    school_name NOT LIKE '%Integrated%' AND
-                    school_name NOT LIKE '%NHS%' AND
-                    school_name NOT LIKE '%HighSchool%'
-                )");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'elementary')");
+                $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
             }
             elseif ($school_level === 'integrated') {
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
             }
             elseif ($school_level === 'integrated_elementary') {
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
                 $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
             }
             elseif ($school_level === 'integrated_secondary') {
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
                 $this->db->where_in('grade_level', ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
+            }
+            elseif ($school_level === 'Stand Alone SHS') {
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE school_level = 'Stand Alone SHS' OR LOWER(school_level) IN ('shs', 'senior high school', 'senior high'))");
+                $this->db->where_in('grade_level', ['Grade 11', 'Grade 12']);
             }
         }
         
@@ -325,29 +307,19 @@ class Nutritional_model extends CI_Model {
             $this->db->where('school_name', $school_name);
         }
         
-        // NEW: Add school level filtering
+        // Add school level filtering using the actual school_level from users table
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
-                $this->db->where("(
-                    school_name LIKE '%High%' OR 
-                    school_name LIKE '%National High School%' OR
-                    school_name LIKE '%NHS%' OR
-                    school_name LIKE '%Secondary%' OR
-                    school_name LIKE '%HighSchool%'
-                    AND school_name NOT LIKE '%Integrated%'
-                )");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
             } 
             elseif ($school_level === 'elementary') {
-                $this->db->where("(
-                    school_name NOT LIKE '%High%' AND 
-                    school_name NOT LIKE '%Secondary%' AND
-                    school_name NOT LIKE '%Integrated%' AND
-                    school_name NOT LIKE '%NHS%' AND
-                    school_name NOT LIKE '%HighSchool%'
-                )");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'elementary')");
             }
             elseif ($school_level === 'integrated') {
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
+            }
+            elseif ($school_level === 'Stand Alone SHS') {
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE school_level = 'Stand Alone SHS' OR LOWER(school_level) IN ('shs', 'senior high school', 'senior high'))");
             }
         }
         
@@ -369,29 +341,19 @@ class Nutritional_model extends CI_Model {
             $this->db->where('school_name', $school_name);
         }
         
-        // NEW: Add school level filtering
+        // Add school level filtering using the actual school_level from users table
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
-                $this->db->where("(
-                    school_name LIKE '%High%' OR 
-                    school_name LIKE '%National High School%' OR
-                    school_name LIKE '%NHS%' OR
-                    school_name LIKE '%Secondary%' OR
-                    school_name LIKE '%HighSchool%'
-                    AND school_name NOT LIKE '%Integrated%'
-                )");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
             } 
             elseif ($school_level === 'elementary') {
-                $this->db->where("(
-                    school_name NOT LIKE '%High%' AND 
-                    school_name NOT LIKE '%Secondary%' AND
-                    school_name NOT LIKE '%Integrated%' AND
-                    school_name NOT LIKE '%NHS%' AND
-                    school_name NOT LIKE '%HighSchool%'
-                )");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'elementary')");
             }
             elseif ($school_level === 'integrated') {
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
+            }
+            elseif ($school_level === 'Stand Alone SHS') {
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE school_level = 'Stand Alone SHS' OR LOWER(school_level) IN ('shs', 'senior high school', 'senior high'))");
             }
         }
         
@@ -410,29 +372,19 @@ class Nutritional_model extends CI_Model {
             $this->db->where('school_name', $school_name);
         }
         
-        // NEW: Add school level filtering
+        // Add school level filtering using the actual school_level from users table
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
-                $this->db->where("(
-                    school_name LIKE '%High%' OR 
-                    school_name LIKE '%National High School%' OR
-                    school_name LIKE '%NHS%' OR
-                    school_name LIKE '%Secondary%' OR
-                    school_name LIKE '%HighSchool%'
-                    AND school_name NOT LIKE '%Integrated%'
-                )");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
             } 
             elseif ($school_level === 'elementary') {
-                $this->db->where("(
-                    school_name NOT LIKE '%High%' AND 
-                    school_name NOT LIKE '%Secondary%' AND
-                    school_name NOT LIKE '%Integrated%' AND
-                    school_name NOT LIKE '%NHS%' AND
-                    school_name NOT LIKE '%HighSchool%'
-                )");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'elementary')");
             }
             elseif ($school_level === 'integrated') {
-                $this->db->where("school_name LIKE '%Integrated%'");
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
+            }
+            elseif ($school_level === 'Stand Alone SHS') {
+                $this->db->where("school_name IN (SELECT school_name FROM users WHERE school_level = 'Stand Alone SHS' OR LOWER(school_level) IN ('shs', 'senior high school', 'senior high'))");
             }
         }
         

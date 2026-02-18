@@ -32,13 +32,13 @@ class UserDashboard extends CI_Controller {
         // Get current assessment type from session
         $assessment_type = $this->session->userdata('assessment_type') ?: 'baseline';
         
-        // FIX 1: The session key is 'user_id', not 'id'
+        // Get the logged-in user's ID
         $user_id = $this->session->userdata('user_id');
         
         // IMPORTANT: Get the user's actual school level from the users table
         $user_school_level = $this->get_user_school_level($user_id);
         
-        // FIX 2: Check if session already has school_level, if not, set it
+        // Check if session already has school_level, if not, set it
         $session_school_level = $this->session->userdata('school_level');
         
         // School level filter - if coming from URL parameter, use that
@@ -70,6 +70,21 @@ class UserDashboard extends CI_Controller {
         $data['assessment_type'] = $assessment_type;
         $data['school_level'] = $school_level;
         $data['user_actual_school_level'] = $user_school_level; // Pass this for debugging
+        
+        // Set display mode based on school level
+        $display_mode = 'normal'; // default
+        
+        if ($school_level === 'Stand Alone SHS') {
+            $display_mode = 'shs_only';
+        } elseif ($school_level === 'elementary') {
+            $display_mode = 'elementary_only';
+        } elseif ($school_level === 'secondary') {
+            $display_mode = 'secondary_only';
+        } elseif (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) {
+            $display_mode = 'integrated';
+        }
+        
+        $data['display_mode'] = $display_mode;
         $data['nutritionalData'] = $result['nutritionalData'];
         $data['grandTotal'] = $result['grandTotal'];
         $data['has_data'] = $result['has_data'];
@@ -93,10 +108,10 @@ class UserDashboard extends CI_Controller {
             return 'all';
         }
         
-        // FIX 3: The column name is 'id' in users table, not 'user_id'
+        // Query the users table to get the school level for this user
         $this->db->select('school_level');
         $this->db->from('users');
-        $this->db->where('id', $user_id); // Changed from 'user_id' to 'id'
+        $this->db->where('id', $user_id);
         
         $query = $this->db->get();
         
@@ -105,23 +120,22 @@ class UserDashboard extends CI_Controller {
             
             // Check if school_level exists and is not null
             if (isset($row->school_level) && !empty($row->school_level)) {
-                $school_level = strtolower(trim($row->school_level));
+                $school_level = trim($row->school_level); // Don't convert to lowercase yet
                 
-                // Map database values to our expected values
-                switch ($school_level) {
-                    case 'elementary':
-                        return 'elementary'; // Return lowercase for consistency
-                    case 'secondary':
-                        return 'secondary'; // Return lowercase for consistency
-                    case 'integrated':
-                        return 'integrated'; // Return lowercase for consistency
-                    case 'standalone_shs':
-                    case 'shs':
-                    case 'senior high school':
-                    case 'senior high':
-                        return 'standalone_shs';
-                    default:
-                        return 'all';
+                // Map database values to our expected values - PRESERVE THE EXACT FORMAT
+                if (strtolower($school_level) === 'elementary') {
+                    return 'elementary';
+                } elseif (strtolower($school_level) === 'secondary') {
+                    return 'secondary';
+                } elseif (strtolower($school_level) === 'integrated') {
+                    return 'integrated';
+                } elseif (strtolower($school_level) === 'stand alone shs' || 
+                          strtolower($school_level) === 'standalone_shs' || 
+                          strtolower($school_level) === 'shs' || 
+                          strtolower($school_level) === 'senior high school') {
+                    return 'Stand Alone SHS'; // Return with proper capitalization and spaces
+                } else {
+                    return 'all';
                 }
             }
         }
@@ -140,8 +154,8 @@ class UserDashboard extends CI_Controller {
         
         $school_level = $this->input->post('school_level', TRUE);
         
-        // FIX 4: Use lowercase for consistency
-        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary', 'standalone_shs'];
+        // Update validation for new levels - include "Stand Alone SHS"
+        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary', 'Stand Alone SHS'];
         if (!in_array($school_level, $valid_levels)) {
             $this->output->set_content_type('application/json')->set_output(json_encode([
                 'success' => false,
@@ -171,7 +185,6 @@ class UserDashboard extends CI_Controller {
         
         $assessment_type = $this->input->post('assessment_type', TRUE);
         
-        // Add 'midline' to the allowed assessment types
         if (!in_array($assessment_type, ['baseline', 'midline', 'endline'])) {
             $this->output->set_content_type('application/json')->set_output(json_encode([
                 'success' => false,
@@ -234,9 +247,9 @@ class UserDashboard extends CI_Controller {
             
             if ($query->num_rows() > 0) {
                 $row = $query->row();
-                $school_level = strtolower(trim($row->school_level));
+                $school_level = trim($row->school_level);
                 
-                // Update session
+                // Update session with the EXACT database value
                 $this->session->set_userdata('school_level', $school_level);
                 
                 echo "Session fixed! School level set to: " . $school_level;

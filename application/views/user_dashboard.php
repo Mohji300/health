@@ -38,6 +38,8 @@ $secondaryGrades = [
   'Grade 8_m' => 'Grade 8 (M)', 'Grade 8_f' => 'Grade 8 (F)', 'Grade 8_total' => 'Grade 8 (Total)',
   'Grade 9_m' => 'Grade 9 (M)', 'Grade 9_f' => 'Grade 9 (F)', 'Grade 9_total' => 'Grade 9 (Total)',
   'Grade 10_m' => 'Grade 10 (M)', 'Grade 10_f' => 'Grade 10 (F)', 'Grade 10_total' => 'Grade 10 (Total)',
+  'Grade 11_m' => 'Grade 11 (M)', 'Grade 11_f' => 'Grade 11 (F)', 'Grade 11_total' => 'Grade 11 (Total)',
+  'Grade 12_m' => 'Grade 12 (M)', 'Grade 12_f' => 'Grade 12 (F)', 'Grade 12_total' => 'Grade 12 (Total)'
 ];
 
 $shsGrades = [
@@ -45,26 +47,9 @@ $shsGrades = [
   'Grade 12_m' => 'Grade 12 (M)', 'Grade 12_f' => 'Grade 12 (F)', 'Grade 12_total' => 'Grade 12 (Total)'
 ];
 
-// Determine display mode based on school level
+// Get values from controller - DO NOT override with duplicate logic
 $school_level = isset($school_level) ? $school_level : 'all';
-$display_mode = 'normal'; // normal, elementary_only, secondary_only, shs_only, integrated
-
-// Check if this is a standalone SHS
-if ($school_level === 'standalone_shs') {
-    $display_mode = 'shs_only';
-} 
-// Check if this is elementary only
-elseif ($school_level === 'elementary') {
-    $display_mode = 'elementary_only';
-}
-// Check if this is secondary only
-elseif ($school_level === 'secondary') {
-    $display_mode = 'secondary_only';
-}
-// Check if this is integrated
-elseif (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) {
-    $display_mode = 'integrated';
-}
+$display_mode = isset($display_mode) ? $display_mode : 'normal';
 ?>
 <!doctype html>
 <html lang="en">
@@ -217,14 +202,14 @@ elseif (in_array($school_level, ['integrated', 'integrated_elementary', 'integra
                       <?php 
                           if ($school_level === 'integrated_elementary') echo 'Integrated (Elementary)';
                           elseif ($school_level === 'integrated_secondary') echo 'Integrated (Secondary)';
-                          elseif ($school_level === 'standalone_shs') echo 'Standalone SHS';
+                          elseif ($school_level === 'Stand Alone SHS') echo 'Stand Alone SHS';
                           else echo ucfirst($school_level); 
                       ?>
                   </span>
                   <?php endif; ?>
               </h6>
-              <div class="no-print">
-                  <!-- School Level Filter Buttons - Only show if not in a specific mode -->
+              <div class="no-print d-flex align-items-center">
+                  <!-- School Level Filter Buttons - Only show if in normal mode -->
                   <?php if ($display_mode === 'normal'): ?>
                   <div class="btn-group me-2" role="group">
                       <button id="btnElementary" type="button" 
@@ -244,29 +229,28 @@ elseif (in_array($school_level, ['integrated', 'integrated_elementary', 'integra
                       </button>
                   </div>
                   <?php endif; ?>
+                  
+                  <!-- Integrated SubMenu - Only show for integrated mode -->
+                  <?php if ($display_mode === 'integrated'): ?>
+                  <div id="integratedSubMenu" class="btn-group me-2" role="group">
+                      <button id="btnIntegratedElementary" type="button" 
+                              class="btn btn-sm <?php echo (in_array($school_level, ['integrated', 'integrated_elementary'])) ? 'btn-primary' : 'btn-outline-primary'; ?>">
+                          <i class="fas fa-child me-1"></i> Elementary
+                          <span class="badge bg-info ms-1">K-6</span>
+                      </button>
+                      <button id="btnIntegratedSecondary" type="button" 
+                              class="btn btn-sm <?php echo ($school_level === 'integrated_secondary') ? 'btn-primary' : 'btn-outline-primary'; ?>">
+                          <i class="fas fa-graduation-cap me-1"></i> Secondary
+                          <span class="badge bg-info ms-1">7-12</span>
+                      </button>
+                  </div>
+                  <?php endif; ?>
+                  
                   <button id="btnPrint" class="btn btn-success">
                       <i class="fas fa-print me-1"></i> Print Report
                   </button>
               </div>
           </div>
-
-          <!-- Integrated SubMenu - Only show for integrated schools -->
-          <?php if ($display_mode === 'integrated'): ?>
-          <div id="integratedSubMenu" class="no-print mb-3">
-              <div class="btn-group" role="group">
-                  <button id="btnIntegratedElementary" type="button" 
-                          class="btn btn-sm <?php echo (in_array($school_level, ['integrated', 'integrated_elementary'])) ? 'btn-primary' : 'btn-outline-primary'; ?>">
-                      <i class="fas fa-child me-1"></i> Integrated Elementary
-                      <span class="badge bg-info ms-1">K-6</span>
-                  </button>
-                  <button id="btnIntegratedSecondary" type="button" 
-                          class="btn btn-sm <?php echo ($school_level === 'integrated_secondary') ? 'btn-primary' : 'btn-outline-primary'; ?>">
-                      <i class="fas fa-graduation-cap me-1"></i> Integrated Secondary
-                      <span class="badge bg-info ms-1">7-12</span>
-                  </button>
-              </div>
-          </div>
-          <?php endif; ?>
 
             <div class="card-body p-0">
               <div id="tableContainer" class="table-responsive p-3">
@@ -354,7 +338,7 @@ elseif (in_array($school_level, ['integrated', 'integrated_elementary', 'integra
                   </tbody>
                 </table>
 
-                <!-- Secondary Table - Always present, visibility controlled by JS -->
+                <!-- Secondary Table - Now includes Grades 11-12 for integrated secondary -->
                 <table id="secondaryTable" class="table table-bordered table-sm table-fixed small-cell mb-0">
                   <thead class="table-light">
                     <tr>
@@ -432,7 +416,7 @@ elseif (in_array($school_level, ['integrated', 'integrated_elementary', 'integra
                   </tbody>
                 </table>
 
-                <!-- SHS Table - Always present, visibility controlled by JS -->
+                <!-- SHS Table - Standalone Senior High School -->
                 <table id="shsTable" class="table table-bordered table-sm table-fixed small-cell mb-0">
                   <thead class="table-light">
                     <tr>
