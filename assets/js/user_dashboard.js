@@ -1,5 +1,5 @@
 /* JS extracted from application/views/user_dashboard.php
-   Uses runtime config object provided by the view: window.UserDashboardConfig
+   Uses runtime config object provided by the view: window.user_dashboard_controllerConfig
 */
 $(document).ready(function() {
     $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
@@ -7,8 +7,8 @@ $(document).ready(function() {
     $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
     
     // Get display mode from config
-    var displayMode = window.UserDashboardConfig.display_mode || 'normal';
-    var schoolLevel = window.UserDashboardConfig.school_level || 'all';
+    var displayMode = window.user_dashboard_controllerConfig.display_mode || 'normal';
+    var schoolLevel = window.user_dashboard_controllerConfig.school_level || 'all';
     
     console.log('Display Mode:', displayMode); // For debugging
     console.log('School Level:', schoolLevel); // For debugging
@@ -128,7 +128,7 @@ $(document).ready(function() {
             }
         });
         
-        var currentLevel = window.UserDashboardConfig.school_level || 'all';
+        var currentLevel = window.user_dashboard_controllerConfig.school_level || 'all';
         if (currentLevel.startsWith('integrated')) {
             $('#integratedSubMenu').removeClass('d-none');
             $('#btnIntegrated').addClass('active');
@@ -292,14 +292,14 @@ $(document).ready(function() {
         activeBtn.prop('disabled', true);
         
         $.ajax({
-            url: window.UserDashboardConfig.urls.set_assessment_type,
+            url: window.user_dashboard_controllerConfig.urls.set_assessment_type,
             method: 'POST',
             data: { assessment_type: type },
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    var url = window.UserDashboardConfig.urls.base;
-                    var schoolLevel = window.UserDashboardConfig.school_level || '';
+                    var url = window.user_dashboard_controllerConfig.urls.base;
+                    var schoolLevel = window.user_dashboard_controllerConfig.school_level || '';
                     if (schoolLevel && schoolLevel !== 'all') {
                         url += '?school_level=' + encodeURIComponent(schoolLevel);
                     }
@@ -334,7 +334,7 @@ $(document).ready(function() {
         $('#btnElementary, #btnSecondary, #btnIntegrated, #btnIntegratedElementary, #btnIntegratedSecondary').prop('disabled', true);
         
         $.ajax({
-            url: window.UserDashboardConfig.urls.set_school_level,
+            url: window.user_dashboard_controllerConfig.urls.set_school_level,
             method: 'POST',
             data: { school_level: level },
             dataType: 'json',
@@ -408,8 +408,8 @@ $(document).ready(function() {
                 }
             }
             
-            const assessmentType = window.UserDashboardConfig.assessment_type_display || '';
-            const schoolLevel = window.UserDashboardConfig.school_level || '';
+            const assessmentType = window.user_dashboard_controllerConfig.assessment_type_display || '';
+            const schoolLevel = window.user_dashboard_controllerConfig.school_level || '';
             const reportDate = new Date().toLocaleDateString();
             
             let schoolLevelDisplay = 'All Schools';

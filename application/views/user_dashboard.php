@@ -507,11 +507,11 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-    window.UserDashboardConfig = {
+    window.user_dashboard_controllerConfig = {
       urls: {
-        set_assessment_type: '<?= site_url("userdashboard/set_assessment_type"); ?>',
-        set_school_level: '<?= site_url("userdashboard/set_school_level"); ?>',
-        base: '<?= site_url("userdashboard"); ?>'
+        set_assessment_type: '<?= site_url("user_dashboard_controller/set_assessment_type"); ?>',
+        set_school_level: '<?= site_url("user_dashboard_controller/set_school_level"); ?>',
+        base: '<?= site_url("user_dashboard_controller"); ?>'
       },
       school_level: '<?= isset($school_level) ? $school_level : ""; ?>',
       assessment_type_display: '<?= ucfirst($assessment_type); ?>',

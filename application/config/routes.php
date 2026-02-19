@@ -83,8 +83,8 @@ $route['superadmin/delete-user/(:num)'] = 'SuperAdminController/delete_user/$1';
 // ========================
 // USER DASHBOARD ROUTES
 // ========================
-$route['user'] = 'UserDashboard/index';
-$route['user/dashboard'] = 'UserDashboard/index';
+$route['user'] = 'user_dashboard_controller/index';
+$route['user/dashboard'] = 'user_dashboard_controller/index';
 
 // ========================
 // USER PROFILE ROUTES  

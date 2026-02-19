@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class UserDashboard extends CI_Controller {
+class user_dashboard_controller extends CI_Controller {
 
     public function __construct()
     {
