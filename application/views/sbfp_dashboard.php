@@ -237,7 +237,7 @@ foreach ($submitted as $s) {
                           </h6>
                       </div>
                       <div class="card-body">
-                          <form action="<?php echo site_url('sbfpdashboard/create_section'); ?>" method="post" class="row g-3" id="createSectionForm">
+                          <form action="<?php echo site_url('sbfp/create_section'); ?>" method="post" class="row g-3" id="createSectionForm">
                               <div class="col-md-3">
                                   <label class="form-label fw-bold text-dark">Grade Level</label>
                                   <select name="grade" class="form-select" required>
@@ -601,7 +601,7 @@ foreach ($submitted as $s) {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="removeSectionForm" method="post" action="<?php echo site_url('sbfpdashboard/remove_section'); ?>" style="display: inline;">
+                <form id="removeSectionForm" method="post" action="<?php echo site_url('sbfp/remove_section'); ?>" style="display: inline;">
                     <input type="hidden" name="section_id" id="removeSectionId" value="">
                     <button type="submit" class="btn btn-danger">Remove Section</button>
                 </form>
@@ -613,11 +613,11 @@ foreach ($submitted as $s) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-window.SbfpDashboardConfig = {
+window.sbfp_dashboard_controllerConfig = {
   urls: {
-    set_assessment_type: '<?= site_url("sbfpdashboard/set_assessment_type"); ?>',
-    delete_assessment: '<?= site_url("sbfpdashboard/delete_assessment"); ?>',
-    toggle_lock: '<?= site_url("sbfpdashboard/toggle_lock"); ?>'
+    set_assessment_type: '<?= site_url("sbfp/set_assessment_type"); ?>',
+    delete_assessment: '<?= site_url("sbfp/delete_assessment"); ?>',
+    toggle_lock: '<?= site_url("sbfp/toggle_lock"); ?>'
   },
   assessment_type: '<?= isset($assessment_type) ? $assessment_type : ""; ?>'
 };

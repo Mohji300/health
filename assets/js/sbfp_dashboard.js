@@ -1,7 +1,7 @@
-/* Externalized JS for sbfp_dashboard.php — reads runtime config from window.SbfpDashboardConfig */
+/* Externalized JS for sbfp_dashboard.php — reads runtime config from window.sbfp_dashboard_controllerConfig */
 $(document).ready(function() {
     console.log('SBFP Dashboard JS loaded');
-    console.log('Current assessment type:', window.SbfpDashboardConfig.assessment_type || '');
+    console.log('Current assessment type:', window.sbfp_dashboard_controllerConfig.assessment_type || '');
 
     $('#switchToBaseline').click(function() { console.log('Switching to baseline...'); switchAssessmentType('baseline'); });
     $('#switchToMidline').click(function() { console.log('Switching to midline...'); switchAssessmentType('midline'); });
@@ -9,7 +9,7 @@ $(document).ready(function() {
 
     function switchAssessmentType(type) {
         $.ajax({
-            url: window.SbfpDashboardConfig.urls.set_assessment_type,
+            url: window.sbfp_dashboard_controllerConfig.urls.set_assessment_type,
             method: 'POST',
             data: { assessment_type: type },
             dataType: 'json',
@@ -77,43 +77,41 @@ $(document).ready(function() {
             return;
         }
 
-        if (confirm('Are you absolutely sure? This will permanently delete the assessment data.')) {
-            var button = $(this);
-            var originalText = button.html();
-            button.html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
-            button.prop('disabled', true);
+        var button = $(this);
+        var originalText = button.html();
+        button.html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
+        button.prop('disabled', true);
 
-            $.ajax({
-                url: window.SbfpDashboardConfig.urls.delete_assessment,
-                method: 'POST',
-                data: {
-                    grade: grade,
-                    section: section,
-                    school_year: school_year,
-                    assessment_type: type
-                },
-                dataType: 'json',
-                success: function(response) {
-                    console.log('Delete response:', response);
-                    if (response.success) {
-                        var deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteAssessmentModal'));
-                        deleteModal.hide();
-                        location.reload();
-                    } else {
-                        alert('Error: ' + response.message);
-                        button.html(originalText);
-                        button.prop('disabled', false);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Delete AJAX error:', error);
-                    console.error('Response:', xhr.responseText);
-                    alert('Error communicating with server. Check console for details.');
+        $.ajax({
+            url: window.sbfp_dashboard_controllerConfig.urls.delete_assessment,
+            method: 'POST',
+            data: {
+                grade: grade,
+                section: section,
+                school_year: school_year,
+                assessment_type: type
+            },
+            dataType: 'json',
+            success: function(response) {
+                // Removed console.log for delete response
+                if (response.success) {
+                    var deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteAssessmentModal'));
+                    deleteModal.hide();
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.message);
                     button.html(originalText);
                     button.prop('disabled', false);
                 }
-            });
-        }
+            },
+            error: function(xhr, status, error) {
+                console.error('Delete AJAX error:', error);
+                console.error('Response:', xhr.responseText);
+                alert('Error communicating with server. Check console for details.');
+                button.html(originalText);
+                button.prop('disabled', false);
+            }
+        });
     });
 
     // Toggle Lock functionality
@@ -129,7 +127,7 @@ $(document).ready(function() {
         button.prop('disabled', true);
 
         $.ajax({
-            url: window.SbfpDashboardConfig.urls.toggle_lock,
+            url: window.sbfp_dashboard_controllerConfig.urls.toggle_lock,
             method: 'POST',
             data: {
                 grade: grade,

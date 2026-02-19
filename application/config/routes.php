@@ -96,14 +96,21 @@ $route['profile/update'] = 'Profile_controller/update';
 // ========================
 // SBFP DASHBOARD ROUTES
 // ========================
-$route['sbfp'] = 'SbfpDashboard/index';
-$route['sbfp/dashboard'] = 'SbfpDashboard/index';
-$route['sbfp/create_section'] = 'SbfpDashboard/create_section';
-$route['sbfp/remove_section'] = 'SbfpDashboard/remove_section';
-$route['sbfp/assessment'] = 'SbfpDashboard/go_to_assessment';
-$route['sbfp/view_assessments'] = 'SbfpDashboard/view_assessments';
-$route['sbfp/export_assessments'] = 'SbfpDashboard/export_assessments';
-$route['sbfp/statistics'] = 'SbfpDashboard/get_statistics';
+$route['sbfp'] = 'sbfp_dashboard_controller/index';
+$route['sbfp/dashboard'] = 'sbfp_dashboard_controller/index';
+$route['sbfp/create_section'] = 'sbfp_dashboard_controller/create_section';
+$route['sbfp/remove_section'] = 'sbfp_dashboard_controller/remove_section';
+$route['sbfp/assessment'] = 'sbfp_dashboard_controller/go_to_assessment';
+$route['sbfp/view_assessments'] = 'sbfp_dashboard_controller/view_assessments';
+$route['sbfp/export_assessments'] = 'sbfp_dashboard_controller/export_assessments';
+$route['sbfp/statistics'] = 'sbfp_dashboard_controller/get_statistics';
+
+// AJAX Routes
+$route['sbfp/set_assessment_type'] = 'sbfp_dashboard_controller/set_assessment_type';
+$route['sbfp/delete_assessment'] = 'sbfp_dashboard_controller/delete_assessment';
+$route['sbfp/toggle_lock'] = 'sbfp_dashboard_controller/toggle_lock';
+$route['sbfp/get_assessment_types'] = 'sbfp_dashboard_controller/get_assessment_types';
+$route['sbfp/get_existing_data'] = 'sbfp_dashboard_controller/get_existing_data';
 
 // ========================
 // BACKWARD COMPATIBILITY

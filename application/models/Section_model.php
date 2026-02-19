@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Section_model extends CI_Model {
+class section_model extends CI_Model {
 
     protected $table = 'grade_sections';
 
@@ -37,10 +37,10 @@ class Section_model extends CI_Model {
             return false; // No user logged in
         }
 
-        // Check if section already exists (including school_year in the check)
+        // Check if section already exists 
         $this->db->where('grade', $grade);
         $this->db->where('section', $section);
-        $this->db->where('year', $school_year); // Changed to 'year'
+        $this->db->where('year', $school_year); 
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
         $this->db->where('user_id', $user_id);
@@ -53,10 +53,10 @@ class Section_model extends CI_Model {
         $data = [
             'grade' => $grade,
             'section' => $section,
-            'year' => $school_year, // Changed to 'year'
+            'year' => $school_year, 
             'legislative_district' => $legislative_district,
             'school_district' => $school_district,
-            'user_id' => $user_id, // Add the user_id
+            'user_id' => $user_id, 
             'created_at' => date('Y-m-d H:i:s')
         ];
 
