@@ -102,97 +102,59 @@ $school_level = isset($school_level) ? $school_level : 'all';
           
           <!-- Statistics Cards -->
           <div class="row mb-4">
-            <div class="col-xl-3 col-md-6 mb-4">
-              <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                  <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                      <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Beneficiaries</div>
-                      <div class="h5 mb-0 font-weight-bold text-gray-800">
-                        <?php 
-                          if ($is_baseline) echo $baseline_count;
-                          elseif ($is_midline) echo $midline_count;
-                          else echo $endline_count;
-                        ?>
+              <div class="col-xl-3 col-md-6 mb-4">
+                  <div class="card border-left-primary shadow h-100 py-2">
+                      <div class="card-body">
+                          <div class="row no-gutters align-items-center">
+                              <div class="col mr-2">
+                                  <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Beneficiaries</div>
+                                  <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                      <?php 
+                                          if ($is_baseline) echo $baseline_count;
+                                          elseif ($is_midline) echo $midline_count;
+                                          else echo $endline_count;
+                                      ?>
+                                  </div>
+                              </div>
+                              <div class="col-auto">
+                                  <i class="fas fa-users fa-2x text-gray-300"></i>
+                              </div>
+                          </div>
                       </div>
-                    </div>
-                    <div class="col-auto">
-                      <i class="fas fa-users fa-2x text-gray-300"></i>
-                    </div>
                   </div>
-                </div>
               </div>
-            </div>
-            
-            <div class="col-xl-3 col-md-6 mb-4">
-              <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                  <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                      <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Normal Nutritional Status</div>
-                      <?php 
-                        $normal_count = 0;
-                        $stats = $this->Sbfp_Beneficiaries_model->get_nutritional_stats($assessment_type);
-                        foreach ($stats as $stat) {
-                          if ($stat['nutritional_status'] == 'Normal') {
-                            $normal_count = $stat['count'];
-                            break;
-                          }
-                        }
-                      ?>
-                      <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $normal_count ?></div>
-                    </div>
-                    <div class="col-auto">
-                      <i class="fas fa-heart fa-2x text-gray-300"></i>
-                    </div>
+              
+              <div class="col-xl-3 col-md-6 mb-4">
+                  <div class="card border-left-success shadow h-100 py-2">
+                      <div class="card-body">
+                          <div class="row no-gutters align-items-center">
+                              <div class="col mr-2">
+                                  <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Normal Nutritional Status</div>
+                                  <div class="h5 mb-0 font-weight-bold text-gray-800"><?= isset($normal_count) ? $normal_count : 0 ?></div>
+                              </div>
+                              <div class="col-auto">
+                                  <i class="fas fa-heart fa-2x text-gray-300"></i>
+                              </div>
+                          </div>
+                      </div>
                   </div>
-                </div>
               </div>
-            </div>
-            
-            <div class="col-xl-3 col-md-6 mb-4">
-              <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                  <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                      <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Needs Intervention</div>
-                      <?php 
-                        $intervention_count = 0;
-                        foreach ($stats as $stat) {
-                          if (in_array($stat['nutritional_status'], ['Severely Wasted', 'Wasted', 'Overweight', 'Obese'])) {
-                            $intervention_count += $stat['count'];
-                          }
-                        }
-                      ?>
-                      <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $intervention_count ?></div>
-                    </div>
-                    <div class="col-auto">
-                      <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
-                    </div>
+              
+              <div class="col-xl-3 col-md-6 mb-4">
+                  <div class="card border-left-warning shadow h-100 py-2">
+                      <div class="card-body">
+                          <div class="row no-gutters align-items-center">
+                              <div class="col mr-2">
+                                  <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Needs Intervention</div>
+                                  <div class="h5 mb-0 font-weight-bold text-gray-800"><?= isset($intervention_count) ? $intervention_count : 0 ?></div>
+                              </div>
+                              <div class="col-auto">
+                                  <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                              </div>
+                          </div>
+                      </div>
                   </div>
-                </div>
               </div>
-            </div>
-            
-            <div class="col-xl-3 col-md-6 mb-4">
-              <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                  <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                      <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Schools Covered</div>
-                      <?php 
-                        $schools = $this->Sbfp_Beneficiaries_model->get_schools();
-                        $school_count = count($schools);
-                      ?>
-                      <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $school_count ?></div>
-                    </div>
-                    <div class="col-auto">
-                      <i class="fas fa-school fa-2x text-gray-300"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- Main Content Card -->
@@ -211,28 +173,41 @@ $school_level = isset($school_level) ? $school_level : 'all';
                     ?> ms-2">
                         <?php echo ucfirst($assessment_type); ?>
                     </span>
+
                     <?php if ($school_level !== 'all'): ?>
-                    <span class="badge bg-secondary ms-2">
-                        <i class="fas fa-filter me-1"></i>
-                        <?php 
-                            if ($school_level === 'elementary') echo 'Elementary';
-                            elseif ($school_level === 'secondary') echo 'Secondary';
-                            elseif ($school_level === 'integrated_elementary') echo 'Integrated (Elementary)';
-                            elseif ($school_level === 'integrated_secondary') echo 'Integrated (Secondary)';
-                            else echo 'All Schools'; 
-                        ?>
-                    </span>
+                        <span class="badge bg-secondary ms-2">
+                            <i class="fas fa-filter me-1"></i>
+                            <?php 
+                                $display_level = '';
+                                if ($school_level === 'elementary') {
+                                    $display_level = 'Elementary';
+                                } elseif ($school_level === 'secondary') {
+                                    $display_level = 'Secondary';
+                                } elseif ($school_level === 'integrated') {
+                                    $display_level = 'Integrated';  
+                                } elseif ($school_level === 'integrated_elementary') {
+                                    $display_level = 'Integrated (Elementary)';
+                                } elseif ($school_level === 'integrated_secondary') {
+                                    $display_level = 'Integrated (Secondary)';
+                                } elseif ($school_level === 'Stand Alone SHS') {
+                                    $display_level = 'Stand Alone SHS';
+                                } else {
+                                    $display_level = ucfirst($school_level);
+                                }
+                                echo $display_level;
+                            ?>
+                        </span>
                     <?php endif; ?>
                 </h6>
                 <div class="no-print">
                     <!-- Export buttons -->
                     <div class="btn-group me-2" role="group">
-                        <a href="<?= site_url('sbfp_beneficiaries/export_excel') ?>" class="btn btn-success btn-sm">
-                            <i class="fas fa-file-excel me-1"></i> Export to Excel
-                        </a>
-                        <a href="<?= site_url('sbfp_beneficiaries/print_report') ?>" target="_blank" class="btn btn-outline-info btn-sm no-print">
+                      <a href="<?= site_url('sbfp_beneficiaries_controller/export_excel') ?>" class="btn btn-success btn-sm">
+                          <i class="fas fa-file-excel me-1"></i> Export to Excel
+                      </a>
+                      <a href="<?= site_url('sbfp_beneficiaries_controller/print_report') ?>" target="_blank" class="btn btn-outline-info btn-sm no-print">
                           <i class="fas fa-print me-1"></i> Print Form
-                        </a>
+                      </a>
                     </div>
                 </div>
             </div>
@@ -398,13 +373,22 @@ $school_level = isset($school_level) ? $school_level : 'all';
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script>
-      window.SbfpBeneficiariesConfig = {
-      urls: {
-        set_assessment_type: '<?= site_url("sbfp_beneficiaries/set_assessment_type"); ?>'
-      },
-      assessment_type: '<?= $assessment_type; ?>',
-      hasData: <?= !empty($beneficiaries) ? 'true' : 'false'; ?>
-      };
+    window.SbfpBeneficiariesConfig = {
+        urls: {
+            set_assessment_type: '<?= site_url("sbfp_beneficiaries_controller/set_assessment_type"); ?>',
+            set_school_level: '<?= site_url("sbfp_beneficiaries_controller/set_school_level"); ?>',
+            set_selected_school: '<?= site_url("sbfp_beneficiaries_controller/set_selected_school"); ?>',
+            export_excel: '<?= site_url("sbfp_beneficiaries_controller/export_excel"); ?>',
+            print_report: '<?= site_url("sbfp_beneficiaries_controller/print_report"); ?>'
+        },
+        assessment_type: '<?= $assessment_type; ?>',
+        hasData: <?= !empty($beneficiaries) ? 'true' : 'false'; ?>,
+        user_role: '<?= isset($user_role) ? $user_role : 'school'; ?>',
+        school_id: '<?= isset($school_id) ? $school_id : ''; ?>',
+        district: '<?= isset($district) ? $district : ''; ?>',
+        school_name: '<?= isset($school_name) ? $school_name : ''; ?>',
+        school_level: '<?= isset($school_level) ? $school_level : 'all'; ?>'
+    };
     </script>
     <script src="<?= base_url('assets/js/sbfp_beneficiaries.js'); ?>"></script>
   </body>

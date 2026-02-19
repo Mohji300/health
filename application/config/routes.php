@@ -212,11 +212,11 @@ $route['division/reports/comparison_report'] = 'Division_reports_controller/comp
 // ========================
 // SBFP BENEFICIARIES ROUTES
 // ========================
-$route['sbfp-beneficiaries'] = 'sbfp_beneficiaries';
-$route['sbfp-beneficiaries/export_excel'] = 'sbfp_beneficiaries/export_excel';
-$route['sbfp-beneficiaries/print_report'] = 'sbfp_beneficiaries/print_report';
-$route['sbfp-beneficiaries/set_assessment_type'] = 'sbfp_beneficiaries/set_assessment_type';
-$route['sbfp-beneficiaries/set_school_level'] = 'sbfp_beneficiaries/set_school_level';
+$route['sbfp-beneficiaries'] = 'sbfp_beneficiaries_controller/index';
+$route['sbfp-beneficiaries/export_excel'] = 'sbfp_beneficiaries_controller/export_excel';
+$route['sbfp-beneficiaries/print_report'] = 'sbfp_beneficiaries_controller/print_report';
+$route['sbfp-beneficiaries/set_assessment_type'] = 'sbfp_beneficiaries_controller/set_assessment_type';
+$route['sbfp-beneficiaries/set_school_level'] = 'sbfp_beneficiaries_controller/set_school_level';
 
 // ========================
 // ARCHIVE ROUTES
