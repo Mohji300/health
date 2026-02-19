@@ -1,6 +1,6 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /SHN/
+  RewriteBase /shn/
 
   # If the requested file or directory exists, serve it directly
   RewriteCond %{REQUEST_FILENAME} !-f

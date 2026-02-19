@@ -26,7 +26,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 $config['base_url'] = (isset($_SERVER['HTTP_HOST']))
 	? ((isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1)) ? 'https' : 'http')
 		. '://' . $_SERVER['HTTP_HOST'] . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') . '/'
-	: 'http://localhost/SHN/';
+	: 'http://localhost/shn/';
 
 /*
 |--------------------------------------------------------------------------
