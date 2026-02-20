@@ -550,7 +550,7 @@
             set_assessment_type: '<?= site_url("division_dashboard_controller/set_assessment_type"); ?>',
             set_school_level: '<?= site_url("division_dashboard_controller/set_school_level"); ?>',
             base: '<?= site_url("division_dashboard_controller"); ?>',
-            get_school_details: '<?= base_url("index.php/division_dashboard_controller/get_school_details/"); ?>'
+            get_school_details: '<?= base_url("division_dashboard_controller/get_school_details/"); ?>'
         },
         school_level: '<?= isset($school_level) ? $school_level : "all"; ?>',
         assessment_type: '<?= isset($assessment_type) ? $assessment_type : ""; ?>',

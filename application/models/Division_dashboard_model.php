@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Division_dashboard_model extends CI_Model {
+class division_dashboard_model extends CI_Model {
     
     public function __construct() {
         parent::__construct();
@@ -207,26 +207,41 @@ class Division_dashboard_model extends CI_Model {
             return ['baseline' => 0, 'midline' => 0, 'endline' => 0];
         }
         
-        // Baseline count
-        $this->db->from('nutritional_assessments')
-                 ->where('is_deleted', 0)
-                 ->where('assessment_type', 'baseline');
-        $this->apply_school_level_filter($school_level);
-        $baseline = $this->db->count_all_results();
+        // Use COUNT(DISTINCT school_id) to count unique schools with assessments
+        // This prevents counting the same school multiple times
         
-        // Midline count - NEW
-        $this->db->from('nutritional_assessments')
-                 ->where('is_deleted', 0)
-                 ->where('assessment_type', 'midline');
-        $this->apply_school_level_filter($school_level);
-        $midline = $this->db->count_all_results();
+        // Baseline count - count unique schools with baseline assessments
+        $this->db->select('COUNT(DISTINCT n.school_id) as count')
+                ->from('nutritional_assessments n')
+                ->join('schools s', 'n.school_id = s.id', 'left')
+                ->where('n.is_deleted', 0)
+                ->where('n.assessment_type', 'baseline');
         
-        // Endline count
-        $this->db->from('nutritional_assessments')
-                 ->where('is_deleted', 0)
-                 ->where('assessment_type', 'endline');
         $this->apply_school_level_filter($school_level);
-        $endline = $this->db->count_all_results();
+        $baseline_query = $this->db->get();
+        $baseline = $baseline_query->row()->count ?? 0;
+        
+        // Midline count - count unique schools with midline assessments
+        $this->db->select('COUNT(DISTINCT n.school_id) as count')
+                ->from('nutritional_assessments n')
+                ->join('schools s', 'n.school_id = s.id', 'left')
+                ->where('n.is_deleted', 0)
+                ->where('n.assessment_type', 'midline');
+        
+        $this->apply_school_level_filter($school_level);
+        $midline_query = $this->db->get();
+        $midline = $midline_query->row()->count ?? 0;
+        
+        // Endline count - count unique schools with endline assessments
+        $this->db->select('COUNT(DISTINCT n.school_id) as count')
+                ->from('nutritional_assessments n')
+                ->join('schools s', 'n.school_id = s.id', 'left')
+                ->where('n.is_deleted', 0)
+                ->where('n.assessment_type', 'endline');
+        
+        $this->apply_school_level_filter($school_level);
+        $endline_query = $this->db->get();
+        $endline = $endline_query->row()->count ?? 0;
         
         return [
             'baseline' => $baseline,
@@ -251,29 +266,75 @@ class Division_dashboard_model extends CI_Model {
             return array();
         }
         
-        // Get schools
-        $schools_query = $this->db->select('name, school_id as code')
-                                 ->from('schools')
-                                 ->where('school_district_id', $district->id)
-                                 ->order_by('name')
-                                 ->get();
+        // Get schools with their IDs - IMPORTANT: Get both id and school_id
+        $schools_query = $this->db->select('id, name, school_id as code, school_id')
+                                ->from('schools')
+                                ->where('school_district_id', $district->id)
+                                ->order_by('name')
+                                ->get();
         
         $schools = array();
         if ($schools_query->num_rows() > 0) {
             foreach ($schools_query->result() as $row) {
-                // Check if school has assessments for the requested assessment type (if provided)
-                $this->db->from('nutritional_assessments')
-                         ->where('school_name', $row->name)
-                         ->where('is_deleted', 0);
+                // Use school_id (the official school code) for checking, NOT the auto-increment id
+                // This matches with nutritional_assessments.school_id
+                
+                // Check for baseline assessments using school_id (official code)
+                $has_baseline = $this->db->from('nutritional_assessments')
+                                        ->where('school_id', $row->school_id)  // Use school_code, not id
+                                        ->where('is_deleted', 0)
+                                        ->where('assessment_type', 'baseline')
+                                        ->count_all_results() > 0;
+                
+                // Check for midline assessments using school_id (official code)
+                $has_midline = $this->db->from('nutritional_assessments')
+                                    ->where('school_id', $row->school_id)  // Use school_code, not id
+                                    ->where('is_deleted', 0)
+                                    ->where('assessment_type', 'midline')
+                                    ->count_all_results() > 0;
+                
+                // Check for endline assessments using school_id (official code)
+                $has_endline = $this->db->from('nutritional_assessments')
+                                    ->where('school_id', $row->school_id)  // Use school_code, not id
+                                    ->where('is_deleted', 0)
+                                    ->where('assessment_type', 'endline')
+                                    ->count_all_results() > 0;
+                
+                // If a specific assessment type is requested, also include the filtered result
+                $has_submitted = false;
                 if (!empty($assessment_type)) {
-                    $this->db->where('assessment_type', $assessment_type);
+                    switch($assessment_type) {
+                        case 'baseline':
+                            $has_submitted = $has_baseline;
+                            break;
+                        case 'midline':
+                            $has_submitted = $has_midline;
+                            break;
+                        case 'endline':
+                            $has_submitted = $has_endline;
+                            break;
+                        default:
+                            $has_submitted = $has_baseline || $has_midline || $has_endline;
+                    }
+                } else {
+                    $has_submitted = $has_baseline || $has_midline || $has_endline;
                 }
-                $has_submitted = $this->db->count_all_results() > 0;
                 
                 $schools[] = array(
+                    'id' => $row->id,
                     'name' => $row->name,
                     'code' => $row->code,
-                    'has_submitted' => $has_submitted
+                    'school_id' => $row->school_id, // Add the official school code
+                    'has_baseline' => $has_baseline,
+                    'has_midline' => $has_midline,
+                    'has_endline' => $has_endline,
+                    'has_submitted' => $has_submitted,
+                    'assessments' => array(
+                        'baseline' => $has_baseline,
+                        'midline' => $has_midline,
+                        'endline' => $has_endline,
+                        'any' => $has_baseline || $has_midline || $has_endline
+                    )
                 );
             }
         }
@@ -355,32 +416,178 @@ class Division_dashboard_model extends CI_Model {
     }
     
     /**
-     * Get user schools (for division view)
+     * Get school details by ID or name
+     */
+    public function get_school_details($identifier) {
+        // Build the base query
+        $this->db->select('s.id, s.name, s.school_id as code, s.address, s.school_level as level, 
+                        s.school_head_name as contact_person, s.contact_number, s.email, 
+                        sd.name as district, s.region, s.division, s.school_type as type')
+                ->from('schools s')
+                ->join('school_districts sd', 's.school_district_id = sd.id', 'left');
+        
+        // Check if identifier is numeric (ID) or string (name)
+        if (is_numeric($identifier)) {
+            $this->db->where('s.id', $identifier);
+        } else {
+            // When searching by name, be more specific to avoid duplicates
+            $this->db->where('s.name', $identifier);
+        }
+        
+        $query = $this->db->limit(1)->get();
+        $school = $query->row_array();
+        
+        if ($school) {
+            // Add assessment information using school_id for accuracy
+            $school['assessments'] = array(
+                'has_baseline' => $this->db->from('nutritional_assessments')
+                                        ->where('school_id', $school['id'])  // Use school_id, not name
+                                        ->where('is_deleted', 0)
+                                        ->where('assessment_type', 'baseline')
+                                        ->count_all_results() > 0,
+                'has_midline' => $this->db->from('nutritional_assessments')
+                                        ->where('school_id', $school['id'])
+                                        ->where('is_deleted', 0)
+                                        ->where('assessment_type', 'midline')
+                                        ->count_all_results() > 0,
+                'has_endline' => $this->db->from('nutritional_assessments')
+                                        ->where('school_id', $school['id'])
+                                        ->where('is_deleted', 0)
+                                        ->where('assessment_type', 'endline')
+                                        ->count_all_results() > 0,
+                'last_assessment_date' => $this->get_last_assessment_date($school['id'])
+            );
+        }
+        
+        return $school;
+    }
+
+    /**
+     * Helper method to get last assessment date for a school using school_id
+     */
+    private function get_last_assessment_date($school_id) {
+        $query = $this->db->select('created_at')
+                        ->from('nutritional_assessments')
+                        ->where('school_id', $school_id)
+                        ->where('is_deleted', 0)
+                        ->order_by('created_at', 'DESC')
+                        ->limit(1)
+                        ->get();
+        
+        if ($query->num_rows() > 0) {
+            $row = $query->row();
+            return date('Y-m-d', strtotime($row->created_at));
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get user schools based on user type and district
+     * This method is called by the controller to get schools for the current user
      */
     public function get_user_schools($user_id, $user_type, $user_district) {
-        $summary = $this->get_division_summary();
+        // For division-level users, return all schools in the division
+        if ($user_type === 'division') {
+            // Get all districts first
+            $districts = $this->get_all_districts();
+            
+            $all_schools = array();
+            
+            foreach ($districts as $district) {
+                // Get schools for each district
+                $district_schools = $this->db->select('id, name, school_id as code')
+                                            ->from('schools')
+                                            ->where('school_district_id', $district['id'])
+                                            ->order_by('name')
+                                            ->get()
+                                            ->result_array();
+                
+                // Add district info to each school
+                foreach ($district_schools as &$school) {
+                    $school['district'] = $district['name'];
+                    $school['district_id'] = $district['id'];
+                    
+                    // Check assessment status for each school
+                    $school['has_baseline'] = $this->db->from('nutritional_assessments')
+                                                    ->where('school_id', $school['id'])
+                                                    ->where('is_deleted', 0)
+                                                    ->where('assessment_type', 'baseline')
+                                                    ->count_all_results() > 0;
+                    
+                    $school['has_midline'] = $this->db->from('nutritional_assessments')
+                                                    ->where('school_id', $school['id'])
+                                                    ->where('is_deleted', 0)
+                                                    ->where('assessment_type', 'midline')
+                                                    ->count_all_results() > 0;
+                    
+                    $school['has_endline'] = $this->db->from('nutritional_assessments')
+                                                    ->where('school_id', $school['id'])
+                                                    ->where('is_deleted', 0)
+                                                    ->where('assessment_type', 'endline')
+                                                    ->count_all_results() > 0;
+                    
+                    $school['has_submitted'] = $school['has_baseline'] || $school['has_midline'] || $school['has_endline'];
+                }
+                
+                $all_schools = array_merge($all_schools, $district_schools);
+            }
+            
+            return $all_schools;
+        }
+        // For district-level users, return only schools in their district
+        elseif ($user_type === 'district' && !empty($user_district)) {
+            // Get district ID from name
+            $district = $this->db->select('id')
+                                ->from('school_districts')
+                                ->where('name', $user_district)
+                                ->limit(1)
+                                ->get()
+                                ->row();
+            
+            if (!$district) {
+                return array();
+            }
+            
+            // Get schools for this district
+            $schools = $this->db->select('id, name, school_id as code')
+                            ->from('schools')
+                            ->where('school_district_id', $district->id)
+                            ->order_by('name')
+                            ->get()
+                            ->result_array();
+            
+            // Add assessment status
+            foreach ($schools as &$school) {
+                $school['district'] = $user_district;
+                $school['district_id'] = $district->id;
+                
+                $school['has_baseline'] = $this->db->from('nutritional_assessments')
+                                                ->where('school_id', $school['id'])
+                                                ->where('is_deleted', 0)
+                                                ->where('assessment_type', 'baseline')
+                                                ->count_all_results() > 0;
+                
+                $school['has_midline'] = $this->db->from('nutritional_assessments')
+                                                ->where('school_id', $school['id'])
+                                                ->where('is_deleted', 0)
+                                                ->where('assessment_type', 'midline')
+                                                ->count_all_results() > 0;
+                
+                $school['has_endline'] = $this->db->from('nutritional_assessments')
+                                                ->where('school_id', $school['id'])
+                                                ->where('is_deleted', 0)
+                                                ->where('assessment_type', 'endline')
+                                                ->count_all_results() > 0;
+                
+                $school['has_submitted'] = $school['has_baseline'] || $school['has_midline'] || $school['has_endline'];
+            }
+            
+            return $schools;
+        }
         
-        return array(
-            array(
-                'name' => 'Division Summary',
-                'has_submitted' => $summary['schools_with_assessments'] > 0,
-                'total_schools' => $summary['total_schools'],
-                'submitted_schools' => $summary['schools_with_assessments']
-            )
-        );
-    }
-    
-    /**
-     * Get school details
-     */
-    public function get_school_details($school_name) {
-        $query = $this->db->select('name, address, school_level, school_head_name, email, school_district')
-                         ->from('schools')
-                         ->where('name', $school_name)
-                         ->limit(1)
-                         ->get();
-        
-        return $query->num_rows() > 0 ? $query->row_array() : null;
+        // Default return empty array
+        return array();
     }
     
     /**
@@ -393,13 +600,14 @@ class Division_dashboard_model extends CI_Model {
         $total_assessments = 0;
         if ($this->db->table_exists('nutritional_assessments')) {
             $total_assessments = $this->db->from('nutritional_assessments')
-                                         ->where('is_deleted', 0)
-                                         ->count_all_results();
+                                        ->where('is_deleted', 0)
+                                        ->count_all_results();
         }
         
+        // Use COUNT(DISTINCT school_id) to count unique schools with assessments
         $schools_with_assessments = 0;
         if ($this->db->table_exists('nutritional_assessments')) {
-            $schools_with_assessments = $this->db->select('COUNT(DISTINCT school_name) as count')
+            $schools_with_assessments = $this->db->select('COUNT(DISTINCT school_id) as count')
                                                 ->from('nutritional_assessments')
                                                 ->where('is_deleted', 0)
                                                 ->get()

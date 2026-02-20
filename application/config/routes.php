@@ -195,9 +195,9 @@ $route['district/reports/comparison_report'] = 'District_reports_controller/comp
 // ========================
 // DIVISION DASHBOARD ROUTES        
 // ========================
-$route['division_dashboard'] = 'Division_dashboard_controller/index';
-$route['division_dashboard/get_district_schools/(:any)'] = 'Division_dashboard_controller/get_district_schools/$1';
-$route['division_dashboard/get_school_details/(:any)'] = 'Division_dashboard_controller/get_school_details/$1';
+$route['division_dashboard'] = 'division_dashboard_controller/index';
+$route['division_dashboard/get_district_schools/(:any)'] = 'division_dashboard_controller/get_district_schools/$1';
+$route['division_dashboard/get_school_details/(:any)'] = 'division_dashboard_controller/get_school_details/$1';
 
 // ========================
 //   DIVISION REPORTS ROUTES
