@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Nutritional_model extends CI_Model {
+class nutritional_model extends CI_Model {
 
     protected $table = 'nutritional_assessments';
 
