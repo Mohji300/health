@@ -6,8 +6,8 @@ class user_dashboard_controller extends CI_Controller {
     public function __construct()
     {
         parent::__construct();
-        $this->load->model('Nutritional_model');
-        $this->load->model('User_model');
+        $this->load->model('nutritional_model');
+        $this->load->model('user_model');
         $this->load->library('form_validation');
         $this->load->helper('url');
 
@@ -64,7 +64,7 @@ class user_dashboard_controller extends CI_Controller {
         $school_name = $this->input->get('school_name') ?: $this->session->userdata('school_name') ?: null;
 
         // Pass school_level to model
-        $result = $this->Nutritional_model->get_processed_data($assessment_type, $school_name, $school_level);
+        $result = $this->nutritional_model->get_processed_data($assessment_type, $school_name, $school_level);
 
         $data = [];
         $data['assessment_type'] = $assessment_type;
@@ -92,9 +92,9 @@ class user_dashboard_controller extends CI_Controller {
         $data['selected_school'] = $school_name;
         
         // Get assessment counts with school_level filter
-        $data['baseline_count'] = $this->Nutritional_model->get_assessment_count_by_type('baseline', $school_name, $school_level);
-        $data['midline_count'] = $this->Nutritional_model->get_assessment_count_by_type('midline', $school_name, $school_level);
-        $data['endline_count'] = $this->Nutritional_model->get_assessment_count_by_type('endline', $school_name, $school_level);
+        $data['baseline_count'] = $this->nutritional_model->get_assessment_count_by_type('baseline', $school_name, $school_level);
+        $data['midline_count'] = $this->nutritional_model->get_assessment_count_by_type('midline', $school_name, $school_level);
+        $data['endline_count'] = $this->nutritional_model->get_assessment_count_by_type('endline', $school_name, $school_level);
         
         $this->load->view('user_dashboard', $data);
     }
@@ -219,7 +219,7 @@ class user_dashboard_controller extends CI_Controller {
         }
         
         // Fetch processed nutritional data from model with assessment_type filter
-        $result = $this->Nutritional_model->get_processed_data($type);
+        $result = $this->nutritional_model->get_processed_data($type);
         
         $this->output->set_content_type('application/json')->set_output(json_encode([
             'success' => true,
