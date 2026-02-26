@@ -1,13 +1,13 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Profile_controller extends CI_Controller {
+class profile_controller extends CI_Controller {
 
     public function __construct()
     {
         parent::__construct();
         $this->load->library('session');
-        $this->load->model('User_model');
+        $this->load->model('user_model');
         $this->load->library('form_validation');
         $this->load->helper('url');
 
@@ -19,7 +19,7 @@ class Profile_controller extends CI_Controller {
     public function index()
     {
         $user_id = $this->session->userdata('user_id');
-        $user = $this->User_model->get_user_by_id($user_id);
+        $user = $this->user_model->get_user_by_id($user_id);
 
         $data = [
             'user' => $user,
@@ -61,7 +61,7 @@ class Profile_controller extends CI_Controller {
             'school_district' => $this->input->post('SchoolDistricts') ?: $this->input->post('school_district')
         ];
 
-        $success = $this->User_model->update_user($user_id, $update_data);
+        $success = $this->user_model->update_user($user_id, $update_data);
 
         if ($success) {
             $this->session->set_userdata([
