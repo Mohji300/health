@@ -16,7 +16,7 @@
       <div id="page-content-wrapper" class="w-100">
         <div class="container-fluid py-4">
 
-          <!-- Header Card - Similar to User Dashboard -->
+          <!-- Header Card -->
           <div class="card bg-gradient-primary text-white mb-4">
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-center">
@@ -57,13 +57,13 @@
           </div>
           <?php endif; ?>
 
-          <!-- Excel Upload Section (simplified) -->
+          <!-- Excel Upload Section -->
           <div class="bg-purple-light p-4 rounded mb-4 no-print">
             <h2 class="h4 text-dark mb-3"><i class="fas fa-file-excel"></i> Extract Data from Nutritional Status Report</h2>
             <form id="uploadForm" enctype="multipart/form-data" class="d-flex flex-column align-items-center">
               <input type="file" id="excelFile" name="excel_file" accept=".xlsx,.xls,.csv" class="d-none">
               <button type="button" id="chooseFileBtn" class="btn btn-purple mb-2">
-                <i class="fas fa-file-excel me-2"></i>Choose Nutritional Report File
+                <i class="fas fa-file-excel me-2"></i>Upload Nutritional Report File
               </button>
               <small class="text-muted">Supported formats: .xlsx, .xls, .csv (Max 5MB)</small>
             </form>
@@ -89,7 +89,6 @@
               <form id="assessmentForm" class="needs-validation" novalidate>
                 <div class="row">
                   <!-- Left Column -->
-
                   <div class="col-md-6">
                       <div class="mb-3">
                           <label for="date" class="form-label fw-bold">Date of Weighing:</label>
@@ -216,7 +215,7 @@
         </tr>
     </thead>
                   <tbody id="studentTableBody">
-                    <tr><td colspan="13" class="text-center text-muted">No student records yet. Add some students above.</td></tr>
+                    <tr><td colspan="14" class="text-center text-muted">No student records yet. Add some students above.</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -233,10 +232,9 @@
               </div>
             </div>
           </div>
-
-        </div> <!-- /.container-fluid -->
-      </div> <!-- /#page-content-wrapper -->
-    </div> <!-- /#wrapper -->
+        </div> 
+      </div> 
+    </div> 
 
     <!-- Loading Modal -->
     <div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
@@ -329,14 +327,37 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    window.NutritionalAssessmentConfig = {
+    window.nutritionalassessmentConfig = {
       urls: {
         process_excel: '<?= site_url("nutritional_upload/process_excel"); ?>',
         bulk_store: '<?= site_url("nutritionalassessment/bulk_store"); ?>'
       },
-      redirect_after: '<?= site_url("sbfpdashboard"); ?>'
+      redirect_after: '<?= site_url("sbfp/dashboard"); ?>'
     };
   </script>
+  
+  <script>
+    window.addEventListener('error', function(e) {
+        if (e.target.tagName === 'SCRIPT' && e.target.src.includes('nutritional_assessment.js')) {
+            console.error('External JS failed to load, using inline fallback');
+        }
+    }, true);
+  </script>
+  
   <script src="<?= base_url('assets/js/nutritional_assessment.js'); ?>"></script>
+  
+  <script>
+    window.showAlert = window.showAlert || function(title, message) {
+        const tEl = document.getElementById('alertTitle'); 
+        const bEl = document.getElementById('alertBody'); 
+        if (tEl) tEl.textContent = title; 
+        if (bEl) bEl.textContent = message; 
+        const alertModal = bootstrap.Modal.getInstance(document.getElementById('alertModal')) || 
+                          new bootstrap.Modal(document.getElementById('alertModal'));
+        if (alertModal) alertModal.show(); 
+        else alert(title + '\n\n' + message); 
+    };
+  </script>
+  
   </body>
 </html>

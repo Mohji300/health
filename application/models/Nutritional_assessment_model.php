@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Nutritional_assessment_model extends CI_Model {
+class nutritional_assessment_model extends CI_Model {
 
     protected $table = 'nutritional_assessments';
 
@@ -106,7 +106,7 @@ class Nutritional_assessment_model extends CI_Model {
         $this->db->where('is_deleted', FALSE);
         
         // Add school_year filter if provided
-        if ($school_year && $school_year !== 'N/A') {
+        if ($school_year && $school_year !== 'N/A' && $school_year !== '') {
             $this->db->where('year', $school_year);
         }
         
@@ -270,104 +270,106 @@ class Nutritional_assessment_model extends CI_Model {
         ];
     }
 
-/**
- * Get reports with filters for Nutritional Reports page
- */
-public function get_reports_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null)
-{
-    $this->db->select('
-        school_id,
-        school_name, 
-        legislative_district, 
-        school_district, 
-        grade_level, 
-        section,
-        year as school_year,
-        assessment_type,
-        COUNT(*) as student_count, 
-        MIN(created_at) as first_submission, 
-        MAX(created_at) as last_submission
-    ');
-    $this->db->from($this->table);
-    $this->db->where('is_deleted', FALSE);
-    $this->db->group_by('school_id, school_name, legislative_district, school_district, grade_level, section, year, assessment_type');
+    /**
+     * Get reports with filters for Nutritional Reports page
+     */
+    public function get_reports_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null)
+    {
+        $this->db->select('
+            school_id,
+            school_name, 
+            legislative_district, 
+            school_district, 
+            grade_level, 
+            section,
+            year, 
+            year as school_year,
+            assessment_type,
+            COUNT(*) as student_count, 
+            MIN(created_at) as first_submission, 
+            MAX(created_at) as last_submission
+        ');
 
-    // Apply filters
-    if (!empty($legislative_district)) {
-        $this->db->where('legislative_district', $legislative_district);
-    }
-    if (!empty($school_district)) {
-        $this->db->where('school_district', $school_district);
-    }
-    if (!empty($school_name)) {
-        $this->db->where('school_name', $school_name);
-    }
-    if (!empty($grade_level)) {
-        $this->db->where('grade_level', $grade_level);
-    }
-    if (!empty($date_from)) {
-        $this->db->where('DATE(created_at) >=', $date_from);
-    }
-    if (!empty($date_to)) {
-        $this->db->where('DATE(created_at) <=', $date_to);
-    }
-    if (!empty($assessment_type)) {
-        $this->db->where('assessment_type', $assessment_type);
+        $this->db->from($this->table);
+        $this->db->where('is_deleted', FALSE);
+        $this->db->group_by('school_id, school_name, legislative_district, school_district, grade_level, section, year, assessment_type');
+
+        // Apply filters
+        if (!empty($legislative_district)) {
+            $this->db->where('legislative_district', $legislative_district);
+        }
+        if (!empty($school_district)) {
+            $this->db->where('school_district', $school_district);
+        }
+        if (!empty($school_name)) {
+            $this->db->where('school_name', $school_name);
+        }
+        if (!empty($grade_level)) {
+            $this->db->where('grade_level', $grade_level);
+        }
+        if (!empty($date_from)) {
+            $this->db->where('DATE(created_at) >=', $date_from);
+        }
+        if (!empty($date_to)) {
+            $this->db->where('DATE(created_at) <=', $date_to);
+        }
+        if (!empty($assessment_type)) {
+            $this->db->where('assessment_type', $assessment_type);
+        }
+
+        $this->db->order_by('school_name', 'ASC');
+        $this->db->order_by('grade_level', 'ASC');
+        $this->db->order_by('section', 'ASC');
+        $this->db->order_by('assessment_type', 'ASC');
+
+        return $this->db->get()->result();
     }
 
-    $this->db->order_by('school_name', 'ASC');
-    $this->db->order_by('grade_level', 'ASC');
-    $this->db->order_by('section', 'ASC');
-    $this->db->order_by('assessment_type', 'ASC');
-
-    return $this->db->get()->result();
-}
-
-/**
- * Get SBFP beneficiaries with filters
- */
-public function get_sbfp_beneficiaries($filters = [])
-{
-    $this->db->select('*');
-    $this->db->from($this->table);
-    $this->db->where('is_deleted', FALSE);
-    
-    // Filter for SBFP beneficiaries (Yes) - make sure the column name is correct
-    $this->db->where('sbfp_beneficiary', 'Yes');
-    
-    // Apply other filters EXCEPT nutritional_status (since we're already filtering by SBFP)
-    if (!empty($filters['legislative_district'])) {
-        $this->db->where('legislative_district', $filters['legislative_district']);
+    /**
+     * Get SBFP beneficiaries with filters
+     */
+    public function get_sbfp_beneficiaries($filters = [])
+    {
+        $this->db->select('*');
+        $this->db->from($this->table);
+        $this->db->where('is_deleted', FALSE);
+        
+        // Filter for SBFP beneficiaries (Yes) - make sure the column name is correct
+        $this->db->where('sbfp_beneficiary', 'Yes');
+        
+        // Apply other filters EXCEPT nutritional_status (since we're already filtering by SBFP)
+        if (!empty($filters['legislative_district'])) {
+            $this->db->where('legislative_district', $filters['legislative_district']);
+        }
+        if (!empty($filters['school_district'])) {
+            $this->db->where('school_district', $filters['school_district']);
+        }
+        if (!empty($filters['school_name'])) {
+            $this->db->where('school_name', $filters['school_name']);
+        }
+        if (!empty($filters['grade_level'])) {
+            $this->db->where('grade_level', $filters['grade_level']);
+        }
+        if (!empty($filters['assessment_type'])) {
+            $this->db->where('assessment_type', $filters['assessment_type']);
+        }
+        if (!empty($filters['date_from'])) {
+            $this->db->where('DATE(created_at) >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('DATE(created_at) <=', $filters['date_to']);
+        }
+        
+        // DO NOT apply nutritional_status filter here since we're getting SBFP beneficiaries
+        
+        $this->db->order_by('school_name', 'ASC');
+        $this->db->order_by('grade_level', 'ASC');
+        $this->db->order_by('section', 'ASC');
+        $this->db->order_by('name', 'ASC');
+        
+        $query = $this->db->get();
+        return $query->result();
     }
-    if (!empty($filters['school_district'])) {
-        $this->db->where('school_district', $filters['school_district']);
-    }
-    if (!empty($filters['school_name'])) {
-        $this->db->where('school_name', $filters['school_name']);
-    }
-    if (!empty($filters['grade_level'])) {
-        $this->db->where('grade_level', $filters['grade_level']);
-    }
-    if (!empty($filters['assessment_type'])) {
-        $this->db->where('assessment_type', $filters['assessment_type']);
-    }
-    if (!empty($filters['date_from'])) {
-        $this->db->where('DATE(created_at) >=', $filters['date_from']);
-    }
-    if (!empty($filters['date_to'])) {
-        $this->db->where('DATE(created_at) <=', $filters['date_to']);
-    }
-    
-    // DO NOT apply nutritional_status filter here since we're getting SBFP beneficiaries
-    
-    $this->db->order_by('school_name', 'ASC');
-    $this->db->order_by('grade_level', 'ASC');
-    $this->db->order_by('section', 'ASC');
-    $this->db->order_by('name', 'ASC');
-    
-    $query = $this->db->get();
-    return $query->result();
-}
     
     /**
      * Get unique legislative districts
@@ -673,49 +675,49 @@ public function get_sbfp_beneficiaries($filters = [])
         return $this->db->get()->row();
     }
 
-/**
- * Helper method to apply filters
- */
-private function apply_filters($filters = [])
-{
-    if (!empty($filters['legislative_district'])) {
-        $this->db->where('legislative_district', $filters['legislative_district']);
+    /**
+     * Helper method to apply filters
+     */
+    private function apply_filters($filters = [])
+    {
+        if (!empty($filters['legislative_district'])) {
+            $this->db->where('legislative_district', $filters['legislative_district']);
+        }
+        
+        if (!empty($filters['school_district'])) {
+            $this->db->where('school_district', $filters['school_district']);
+        }
+        
+        if (!empty($filters['school_name'])) {
+            $this->db->where('school_name', $filters['school_name']);
+        }
+        
+        if (!empty($filters['grade_level'])) {
+            $this->db->where('grade_level', $filters['grade_level']);
+        }
+        
+        if (!empty($filters['assessment_type'])) {
+            $this->db->where('assessment_type', $filters['assessment_type']);
+        }
+        
+        // Add school_year filter if specified
+        if (!empty($filters['school_year'])) {
+            $this->db->where('year', $filters['school_year']);
+        }
+        
+        // Add nutritional_status filter if specified
+        if (!empty($filters['nutritional_status'])) {
+            $this->db->where('LOWER(nutritional_status)', strtolower($filters['nutritional_status']));
+        }
+        
+        if (!empty($filters['date_from'])) {
+            $this->db->where('DATE(created_at) >=', $filters['date_from']);
+        }
+        
+        if (!empty($filters['date_to'])) {
+            $this->db->where('DATE(created_at) <=', $filters['date_to']);
+        }
     }
-    
-    if (!empty($filters['school_district'])) {
-        $this->db->where('school_district', $filters['school_district']);
-    }
-    
-    if (!empty($filters['school_name'])) {
-        $this->db->where('school_name', $filters['school_name']);
-    }
-    
-    if (!empty($filters['grade_level'])) {
-        $this->db->where('grade_level', $filters['grade_level']);
-    }
-    
-    if (!empty($filters['assessment_type'])) {
-        $this->db->where('assessment_type', $filters['assessment_type']);
-    }
-    
-    // Add school_year filter if specified
-    if (!empty($filters['school_year'])) {
-        $this->db->where('year', $filters['school_year']);
-    }
-    
-    // Add nutritional_status filter if specified
-    if (!empty($filters['nutritional_status'])) {
-        $this->db->where('LOWER(nutritional_status)', strtolower($filters['nutritional_status']));
-    }
-    
-    if (!empty($filters['date_from'])) {
-        $this->db->where('DATE(created_at) >=', $filters['date_from']);
-    }
-    
-    if (!empty($filters['date_to'])) {
-        $this->db->where('DATE(created_at) <=', $filters['date_to']);
-    }
-}
 
     /**
      * Get school ID (assuming there's a school_id field in the table)
@@ -809,55 +811,129 @@ private function apply_filters($filters = [])
      */
     public function get_grade_levels()
     {
+        return $this->get_unique_grade_levels();
+    }
+
+    /**
+     * Get export data with filters
+     */
+    public function get_export_data_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null)
+    {
+        $this->db->select('*');
+        $this->db->from($this->table);
+        $this->db->where('is_deleted', FALSE);
+
+        // Apply filters
+        if (!empty($legislative_district)) {
+            $this->db->where('legislative_district', $legislative_district);
+        }
+        if (!empty($school_district)) {
+            $this->db->where('school_district', $school_district);
+        }
+        if (!empty($school_name)) {
+            $this->db->where('school_name', $school_name);
+        }
+        if (!empty($grade_level)) {
+            $this->db->where('grade_level', $grade_level);
+        }
+        if (!empty($date_from)) {
+            $this->db->where('DATE(created_at) >=', $date_from);
+        }
+        if (!empty($date_to)) {
+            $this->db->where('DATE(created_at) <=', $date_to);
+        }
+        if (!empty($assessment_type)) {
+            $this->db->where('assessment_type', $assessment_type);
+        }
+
+        $this->db->order_by('school_name', 'ASC');
+        $this->db->order_by('grade_level', 'ASC');
+        $this->db->order_by('section', 'ASC');
+        $this->db->order_by('name', 'ASC');
+
+        return $this->db->get()->result();
+    }
+    
+    /**
+     * Get unique grade levels filtered by user's school
+     */
+    public function get_unique_grade_levels_by_user($school_name = null)
+    {
         $this->db->distinct();
         $this->db->select('grade_level');
         $this->db->from($this->table);
         $this->db->where('grade_level IS NOT NULL');
         $this->db->where('grade_level !=', '');
         $this->db->where('is_deleted', FALSE);
-        $this->db->order_by('grade_level', 'ASC');
         
+        // Filter by school if provided
+        if (!empty($school_name)) {
+            $this->db->where('school_name', $school_name);
+        }
+        
+        $this->db->order_by('grade_level', 'ASC');
         return $this->db->get()->result();
     }
 
-/**
- * Get export data with filters
- */
-public function get_export_data_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null)
-{
-    $this->db->select('*');
-    $this->db->from($this->table);
-    $this->db->where('is_deleted', FALSE);
-
-    // Apply filters
-    if (!empty($legislative_district)) {
-        $this->db->where('legislative_district', $legislative_district);
-    }
-    if (!empty($school_district)) {
-        $this->db->where('school_district', $school_district);
-    }
-    if (!empty($school_name)) {
-        $this->db->where('school_name', $school_name);
-    }
-    if (!empty($grade_level)) {
-        $this->db->where('grade_level', $grade_level);
-    }
-    if (!empty($date_from)) {
-        $this->db->where('DATE(created_at) >=', $date_from);
-    }
-    if (!empty($date_to)) {
-        $this->db->where('DATE(created_at) <=', $date_to);
-    }
-    if (!empty($assessment_type)) {
-        $this->db->where('assessment_type', $assessment_type);
+    /**
+     * Get unique legislative districts filtered by user's school
+     */
+    public function get_unique_legislative_districts_by_user($school_name = null)
+    {
+        $this->db->distinct();
+        $this->db->select('legislative_district');
+        $this->db->from($this->table);
+        $this->db->where('legislative_district IS NOT NULL');
+        $this->db->where('legislative_district !=', '');
+        $this->db->where('is_deleted', FALSE);
+        
+        if (!empty($school_name)) {
+            $this->db->where('school_name', $school_name);
+        }
+        
+        $this->db->order_by('legislative_district', 'ASC');
+        return $this->db->get()->result();
     }
 
-    $this->db->order_by('school_name', 'ASC');
-    $this->db->order_by('grade_level', 'ASC');
-    $this->db->order_by('section', 'ASC');
-    $this->db->order_by('name', 'ASC');
+    /**
+     * Get unique school districts filtered by user's school
+     */
+    public function get_unique_school_districts_by_user($school_name = null)
+    {
+        $this->db->distinct();
+        $this->db->select('school_district');
+        $this->db->from($this->table);
+        $this->db->where('school_district IS NOT NULL');
+        $this->db->where('school_district !=', '');
+        $this->db->where('is_deleted', FALSE);
+        
+        if (!empty($school_name)) {
+            $this->db->where('school_name', $school_name);
+        }
+        
+        $this->db->order_by('school_district', 'ASC');
+        return $this->db->get()->result();
+    }
 
-    return $this->db->get()->result();
-}
+    /**
+     * Get unique school names (only schools the user has access to)
+     */
+    public function get_unique_school_names_by_user($session_school = null, $role = null)
+    {
+        $this->db->distinct();
+        $this->db->select('school_name');
+        $this->db->from($this->table);
+        $this->db->where('school_name IS NOT NULL');
+        $this->db->where('school_name !=', '');
+        $this->db->where('is_deleted', FALSE);
+        
+        // For non-admin users, only show their school
+        if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
+            $this->db->where('school_name', $session_school);
+        }
+        
+        $this->db->order_by('school_name', 'ASC');
+        return $this->db->get()->result();
+    }
 
 }
