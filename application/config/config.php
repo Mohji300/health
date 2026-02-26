@@ -386,11 +386,11 @@ $config['encryption_key'] = '';
 | except for 'cookie_prefix' and 'cookie_httponly', which are ignored here.
 |
 */
-$config['sess_driver'] = 'files';
+$config['sess_driver'] = 'database';
 $config['sess_cookie_name'] = 'ci_session';
 $config['sess_samesite'] = 'Lax';
 $config['sess_expiration'] = 7200;
-$config['sess_save_path'] = NULL;
+$config['sess_save_path'] = 'ci_sessions';
 $config['sess_match_ip'] = FALSE;
 $config['sess_time_to_update'] = 300;
 $config['sess_regenerate_destroy'] = FALSE;
@@ -534,24 +534,3 @@ $config['rewrite_short_tags'] = FALSE;
 */
 $config['proxy_ips'] = '';
 
-/*
-|--------------------------------------------------------------------------
-| Session Configuration
-|--------------------------------------------------------------------------
-|
-| sess_driver         = Session storage driver ('files', 'database', etc.)
-| sess_cookie_name    = Name of the session cookie
-| sess_expiration     = Session expiration time in seconds (0 = until browser closes)
-| sess_save_path      = Path to store session files
-| sess_match_ip       = Whether to match user IP address
-| sess_match_useragent = Whether to match user agent
-| sess_time_to_update = How often to update the session identifier
-|
-*/
-$config['sess_driver'] = 'files';
-$config['sess_cookie_name'] = 'ci_session';
-$config['sess_expiration'] = 7200;
-$config['sess_save_path'] = APPPATH . 'cache/sessions';
-$config['sess_match_ip'] = FALSE;
-$config['sess_match_useragent'] = TRUE;
-$config['sess_time_to_update'] = 300;
