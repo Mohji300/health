@@ -1,10 +1,10 @@
 <?php
-// application/controllers/SuperAdminController.php
-class SuperAdminController extends CI_Controller {
+// application/controllers/superadmincontroller.php
+class superadmincontroller extends CI_Controller {
     
     public function __construct() {
         parent::__construct();
-        $this->load->model('User_model');
+        $this->load->model('user_model');
         $this->load->library('session');
         $this->load->helper('url');
         
@@ -19,10 +19,10 @@ class SuperAdminController extends CI_Controller {
     
     public function index() {
         // Get user counts by role
-        $userCounts = $this->User_model->get_user_counts_by_role();
+        $userCounts = $this->user_model->get_user_counts_by_role();
         
         // Get all users for management
-        $users = $this->User_model->get_all_users();
+        $users = $this->user_model->get_all_users();
         
         // Define available roles
         $availableRoles = ['super_admin', 'admin', 'district', 'division', 'user'];
@@ -37,7 +37,7 @@ class SuperAdminController extends CI_Controller {
         
         $this->load->view('templates/header', $data);
         // Load the new standard PHP view
-        $this->load->view('SuperAdminDashboard', $data);
+        $this->load->view('superadmindashboard', $data);
         $this->load->view('templates/footer');
     }
 
@@ -68,7 +68,7 @@ class SuperAdminController extends CI_Controller {
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
 
-                if ($this->User_model->create_user($userData)) {
+                if ($this->user_model->create_user($userData)) {
                     $this->session->set_flashdata('success', 'User created successfully.');
                     redirect('superadmin');
                     return;
@@ -85,7 +85,7 @@ class SuperAdminController extends CI_Controller {
         ];
 
         $this->load->view('templates/header', $data);
-        $this->load->view('Add_User', $data);
+        $this->load->view('add_user', $data);
         $this->load->view('templates/footer');
     }
     
@@ -96,7 +96,7 @@ class SuperAdminController extends CI_Controller {
         
         $new_role = $this->input->post('role');
         
-        if ($this->User_model->update_user_role($user_id, $new_role)) {
+        if ($this->user_model->update_user_role($user_id, $new_role)) {
             $this->session->set_flashdata('success', 'User role updated successfully!');
         } else {
             $this->session->set_flashdata('error', 'Failed to update user role.');
@@ -121,21 +121,21 @@ class SuperAdminController extends CI_Controller {
                 return;
             }
 
-            if ($this->User_model->update_multiple_user_roles($users_data)) {
+            if ($this->user_model->update_multiple_user_roles($users_data)) {
                 $this->session->set_flashdata('success', 'All user roles updated successfully (payload)!');
             } else {
                 $this->session->set_flashdata('error', 'Failed to update user roles (payload).');
             }
         } else {
             // Server-driven update: call model method that performs default logic
-            if (method_exists($this->User_model, 'update_all_roles')) {
-                if ($this->User_model->update_all_roles()) {
+            if (method_exists($this->user_model, 'update_all_roles')) {
+                if ($this->user_model->update_all_roles()) {
                     $this->session->set_flashdata('success', 'All user roles updated successfully (server-driven)!');
                 } else {
                     $this->session->set_flashdata('error', 'Failed to update user roles (server-driven).');
                 }
             } else {
-                $this->session->set_flashdata('error', 'No users payload provided and server-driven update not implemented in User_model.');
+                $this->session->set_flashdata('error', 'No users payload provided and server-driven update not implemented in user_model.');
             }
         }
 
@@ -148,7 +148,7 @@ class SuperAdminController extends CI_Controller {
             show_404();
         }
 
-        if ($this->User_model->delete_user($user_id)) {
+        if ($this->user_model->delete_user($user_id)) {
             $this->session->set_flashdata('success', 'User deleted successfully!');
         } else {
             $this->session->set_flashdata('error', 'Failed to delete user.');
@@ -162,7 +162,7 @@ class SuperAdminController extends CI_Controller {
         $this->load->library('form_validation');
 
         // Get the user to edit
-        $user = $this->User_model->get_user_by_id($user_id);
+        $user = $this->user_model->get_user_by_id($user_id);
         if (!$user) {
             show_404();
             return;
@@ -202,7 +202,7 @@ class SuperAdminController extends CI_Controller {
                     $updateData['password'] = password_hash($password, PASSWORD_DEFAULT);
                 }
 
-                if ($this->User_model->update_user($user_id, $updateData)) {
+                if ($this->user_model->update_user($user_id, $updateData)) {
                     $this->session->set_flashdata('success', 'User updated successfully.');
                     redirect('superadmin');
                     return;
@@ -219,7 +219,7 @@ class SuperAdminController extends CI_Controller {
         ];
 
         $this->load->view('templates/header', $data);
-        $this->load->view('Edit_User', $data);
+        $this->load->view('edit_user', $data);
         $this->load->view('templates/footer');
     }
 }
