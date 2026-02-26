@@ -10,6 +10,7 @@ $midline_count = isset($midline_count) ? $midline_count : 0;
 $endline_count = isset($endline_count) ? $endline_count : 0;
 
 $school_level = isset($school_level) ? $school_level : 'all';
+$school_year = isset($school_year) ? $school_year : '';
 ?>
 <!doctype html>
 <html lang="en">
@@ -35,7 +36,7 @@ $school_level = isset($school_level) ? $school_level : 'all';
               <div class="d-flex justify-content-between align-items-center">
                 <div>
                   <h1 class="h2 font-weight-bold mb-2">SBFP Beneficiaries Master List<?php echo !empty($selected_school) ? ' — ' . htmlspecialchars($selected_school) : ''; ?></h1>
-                  <p class="mb-0 opacity-8">School-Based Feeding Program (SY 2025-2026) - <?php echo ucfirst($assessment_type); ?> Data</p>
+                  <p class="mb-0 opacity-8">School-Based Feeding Program (SY <?php echo $school_year; ?>) - <?php echo ucfirst($assessment_type); ?> Data</p>
                 </div>
                 <div class="d-flex align-items-center">
                   <div class="assessment-switcher">
@@ -80,13 +81,12 @@ $school_level = isset($school_level) ? $school_level : 'all';
                   </span>
                 </h5>
                 <p class="mb-0">
-                  Department of Education | Region V-Bicol | Division: MASBATE PROVINCE
                   <?php if ($is_baseline): ?>
-                    | Baseline Assessment (SY 2025-2026)
+                    | Baseline Assessment (SY <?php echo $school_year; ?>)
                   <?php elseif ($is_midline): ?>
-                    | Midline Assessment (SY 2025-2026)
+                    | Midline Assessment (SY <?php echo $school_year; ?>)
                   <?php else: ?>
-                    | Endline Assessment (SY 2025-2026)
+                    | Endline Assessment (SY <?php echo $school_year; ?>)
                   <?php endif; ?>
                 </p>
               </div>
@@ -331,7 +331,7 @@ $school_level = isset($school_level) ? $school_level : 'all';
           </div>
           <div class="modal-body">
             <h6><i class="fas fa-list-alt me-2"></i>SBFP Master List Beneficiaries</h6>
-            <p>This form contains the complete list of beneficiaries for the School-Based Feeding Program (SBFP) for SY 2025-2026.</p>
+            <p>This form contains the complete list of beneficiaries for the School-Based Feeding Program (SBFP) for SY <?php echo $school_year; ?>.</p>
             
             <div class="row mt-3">
               <div class="col-md-6">
