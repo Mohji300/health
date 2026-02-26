@@ -1,14 +1,14 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class SchoolInfo extends CI_Controller {
+class schoolinfo extends CI_Controller {
 
     public function __construct() {
         parent::__construct();
         $this->load->library('session');
         $this->load->library('form_validation');
-        $this->load->model('User_model');
-        $this->load->model('Legislative_district_model');
+        $this->load->model('user_model');
+        $this->load->model('legislative_district_model');
         $this->load->helper('url');
         
         // Check if user is logged in
@@ -18,7 +18,7 @@ class SchoolInfo extends CI_Controller {
         
         // Check if user already completed school info
         $user_id = $this->session->userdata('user_id');
-        $user = $this->User_model->get_user_by_id($user_id);
+        $user = $this->user_model->get_user_by_id($user_id);
         
         // Check if school info is completed
         if ($user && $user->school_info_completed) {
@@ -29,7 +29,7 @@ class SchoolInfo extends CI_Controller {
 
     public function show_form() {
         $user_id = $this->session->userdata('user_id');
-        $user = $this->User_model->get_user_by_id($user_id);
+        $user = $this->user_model->get_user_by_id($user_id);
         
         $role = $this->session->userdata('role');
         $title_prefix = '';
@@ -50,7 +50,7 @@ class SchoolInfo extends CI_Controller {
         // Fetch districts with related school districts
         $districts = [];
         if ($role == 'user' || $role == 'district') {
-            $districts = $this->Legislative_district_model->get_districts_with_school_districts();
+            $districts = $this->legislative_district_model->get_districts_with_school_districts();
         }
 
         $data = [
@@ -100,7 +100,7 @@ class SchoolInfo extends CI_Controller {
 
         try {
             $user_id = $this->session->userdata('user_id');
-            $user = $this->User_model->get_user_by_id($user_id);
+            $user = $this->user_model->get_user_by_id($user_id);
             
             // Prevent duplicate completion
             if ($user->school_info_completed) {
@@ -132,9 +132,9 @@ class SchoolInfo extends CI_Controller {
                 $update_data['school_district'] = $postedSchoolDistrict;
             }
 
-            log_message('debug', 'SchoolInfo::store postedSchoolDistrict=' . var_export($postedSchoolDistrict, true) . ' legislativeDistricts=' . var_export($this->input->post('legislativeDistricts'), true));
+            log_message('debug', 'schoolinfo::store postedSchoolDistrict=' . var_export($postedSchoolDistrict, true) . ' legislativeDistricts=' . var_export($this->input->post('legislativeDistricts'), true));
 
-            $success = $this->User_model->update_user($user_id, $update_data);
+            $success = $this->user_model->update_user($user_id, $update_data);
 
             if ($success) {
                 // Update session data
@@ -203,7 +203,7 @@ class SchoolInfo extends CI_Controller {
             
             log_message('debug', 'Fetching school districts for: ' . $legislative_district);
             
-            $school_districts = $this->Legislative_district_model->get_school_districts_by_legislative($legislative_district);
+            $school_districts = $this->legislative_district_model->get_school_districts_by_legislative($legislative_district);
             
             log_message('debug', 'School districts found: ' . count($school_districts));
             
@@ -226,7 +226,7 @@ class SchoolInfo extends CI_Controller {
             return;
         }
         
-        $schools = $this->Legislative_district_model->get_schools_by_district($school_district);
+        $schools = $this->legislative_district_model->get_schools_by_district($school_district);
         
         header('Content-Type: application/json');
         echo json_encode($schools);

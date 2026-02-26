@@ -276,7 +276,7 @@ document.addEventListener('DOMContentLoaded', function() {
 /**
  * Additional utility functions for form handling
  */
-const SchoolInfoForm = {
+const schoolinfoForm = {
     /**
      * Reset form to initial state
      */
@@ -325,5 +325,5 @@ const SchoolInfoForm = {
 
 // Export for use in other modules if needed
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = SchoolInfoForm;
+    module.exports = schoolinfoForm;
 }
