@@ -365,7 +365,7 @@
                     ?>
                     <tr class="<?php echo $row_class; ?>">
                       <td>
-                        <span class="badge <?php echo ($student->assessment_type ?? 'baseline') == 'baseline' ? 'badge-baseline' : 'badge-endline'; ?>">
+                        <span class="badge text-black <?php echo ($student->assessment_type ?? 'baseline') == 'baseline' ? 'badge-baseline' : 'badge-endline'; ?>">
                           <?php echo ($student->assessment_type ?? 'baseline') == 'baseline' ? 'Baseline' : 'Endline'; ?>
                         </span>
                       </td>

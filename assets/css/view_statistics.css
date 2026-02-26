@@ -59,11 +59,11 @@ body {
   text-overflow: ellipsis;
 }
 
-.badge-severely-wasted { background: linear-gradient(45deg, #dc3545, #a71d2a); color: white; }
+.badge-severely-wasted { background: linear-gradient(45deg, #dc3545, #a71d2a); color: black; }
 .badge-wasted { background: linear-gradient(45deg, #ffc107, #d39e00); color: black; }
-.badge-normal { background: linear-gradient(45deg, #28a745, #1e7e34); color: white; }
-.badge-overweight { background: linear-gradient(45deg, #17a2b8, #117a8b); color: white; }
-.badge-obese { background: linear-gradient(45deg, #6f42c1, #52378f); color: white; }
+.badge-normal { background: linear-gradient(45deg, #28a745, #1e7e34); color: black; }
+.badge-overweight { background: linear-gradient(45deg, #17a2b8, #117a8b); color: black; }
+.badge-obese { background: linear-gradient(45deg, #6f42c1, #52378f); color: black; }
 
 .progress { height: 0.75rem; }
 
