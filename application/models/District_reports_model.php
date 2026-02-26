@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class District_reports_model extends CI_Model {
+class district_reports_model extends CI_Model {
 
     protected $table = 'nutritional_assessments';
 
@@ -87,13 +87,18 @@ class District_reports_model extends CI_Model {
     /**
      * Get assessments by section
      */
-    public function get_by_section($legislative_district, $school_district, $grade_level, $section, $assessment_type = null)
+    public function get_by_section($legislative_district, $school_district, $grade_level, $section, $school_year = null, $assessment_type = null)
     {
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
         $this->db->where('grade_level', $grade_level);
         $this->db->where('section', $section);
         $this->db->where('is_deleted', FALSE);
+        
+        // Add school_year filter if provided
+        if ($school_year && $school_year !== 'N/A' && $school_year !== '') {
+            $this->db->where('year', $school_year);
+        }
         
         if ($assessment_type) {
             $this->db->where('assessment_type', $assessment_type);
@@ -797,43 +802,43 @@ private function apply_filters($filters = [])
     }
 
     /**
- * Get export data with filters
- */
-public function get_export_data_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null)
-{
-    $this->db->select('*');
-    $this->db->from($this->table);
-    $this->db->where('is_deleted', FALSE);
+     * Get export data with filters
+     */
+    public function get_export_data_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null)
+    {
+        $this->db->select('*');
+        $this->db->from($this->table);
+        $this->db->where('is_deleted', FALSE);
 
-    // Apply filters
-    if (!empty($legislative_district)) {
-        $this->db->where('legislative_district', $legislative_district);
-    }
-    if (!empty($school_district)) {
-        $this->db->where('school_district', $school_district);
-    }
-    if (!empty($school_name)) {
-        $this->db->where('school_name', $school_name);
-    }
-    if (!empty($grade_level)) {
-        $this->db->where('grade_level', $grade_level);
-    }
-    if (!empty($date_from)) {
-        $this->db->where('DATE(created_at) >=', $date_from);
-    }
-    if (!empty($date_to)) {
-        $this->db->where('DATE(created_at) <=', $date_to);
-    }
-    if (!empty($assessment_type)) {
-        $this->db->where('assessment_type', $assessment_type);
-    }
+        // Apply filters
+        if (!empty($legislative_district)) {
+            $this->db->where('legislative_district', $legislative_district);
+        }
+        if (!empty($school_district)) {
+            $this->db->where('school_district', $school_district);
+        }
+        if (!empty($school_name)) {
+            $this->db->where('school_name', $school_name);
+        }
+        if (!empty($grade_level)) {
+            $this->db->where('grade_level', $grade_level);
+        }
+        if (!empty($date_from)) {
+            $this->db->where('DATE(created_at) >=', $date_from);
+        }
+        if (!empty($date_to)) {
+            $this->db->where('DATE(created_at) <=', $date_to);
+        }
+        if (!empty($assessment_type)) {
+            $this->db->where('assessment_type', $assessment_type);
+        }
 
-    $this->db->order_by('school_name', 'ASC');
-    $this->db->order_by('grade_level', 'ASC');
-    $this->db->order_by('section', 'ASC');
-    $this->db->order_by('name', 'ASC');
+        $this->db->order_by('school_name', 'ASC');
+        $this->db->order_by('grade_level', 'ASC');
+        $this->db->order_by('section', 'ASC');
+        $this->db->order_by('name', 'ASC');
 
-    return $this->db->get()->result();
-}
+        return $this->db->get()->result();
+    }
 
 }
