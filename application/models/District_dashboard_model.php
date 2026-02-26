@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class District_dashboard_model extends CI_Model {
+class district_dashboard_model extends CI_Model {
     
     public function __construct() {
         parent::__construct();
@@ -42,7 +42,7 @@ class District_dashboard_model extends CI_Model {
     
     /**
      * COMPLETELY REBUILT: Get processed nutritional data for district
-     * Now uses the efficient approach from Nutritional_model with school level filtering
+     * Now uses the efficient approach from nutritional_model with school level filtering
      */
     public function get_district_nutritional_data($district_name, $assessment_type = 'baseline', $school_level = 'all') {
         // Get all school names in the district
@@ -63,7 +63,7 @@ class District_dashboard_model extends CI_Model {
         $this->db->where('assessment_type', $assessment_type);
         $this->db->where('is_deleted', 0);
         
-        // NEW: Apply school level filtering (same logic as Nutritional_model)
+        // NEW: Apply school level filtering (same logic as nutritional_model)
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
                 // For secondary, check for High School indicators
