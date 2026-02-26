@@ -7,9 +7,9 @@ class sbfp_dashboard_controller extends CI_Controller {
     {
         parent::__construct();
         $this->load->model('section_model');
-        $this->load->model('Nutritional_assessment_model');
-        $this->load->model('User_model');
-        $this->load->model('Legislative_district_model');
+        $this->load->model('nutritional_assessment_model');
+        $this->load->model('user_model');
+        $this->load->model('legislative_district_model');
         $this->load->helper(['url', 'form', 'cookie']);
         $this->load->library(['session', 'form_validation']);
         $this->load->database();
@@ -55,7 +55,7 @@ class sbfp_dashboard_controller extends CI_Controller {
             }
 
             // Get complete user data with school information
-            $user = $this->User_model->get_user_by_id($user_id);
+            $user = $this->user_model->get_user_by_id($user_id);
             
             if (!$user) {
                 $this->session->set_flashdata('error', 'User not found');
@@ -99,7 +99,7 @@ class sbfp_dashboard_controller extends CI_Controller {
             // Get list of submitted assessments
             if (!empty($user->legislative_district) && !empty($user->school_district)) {
                 try {
-                    $data['submittedAssessments'] = $this->Nutritional_assessment_model->get_submitted_summary(
+                    $data['submittedAssessments'] = $this->nutritional_assessment_model->get_submitted_summary(
                         $user->legislative_district, 
                         $user->school_district
                     );
@@ -305,7 +305,7 @@ class sbfp_dashboard_controller extends CI_Controller {
             $assessment_type = $this->input->post('assessment_type', TRUE) ?: 'baseline';
             
             $user_id = $this->session->userdata('user_id');
-            $user = $this->User_model->get_user_by_id($user_id);
+            $user = $this->user_model->get_user_by_id($user_id);
             
             if (!$user || !$grade || !$section) {
                 $this->output->set_content_type('application/json')
@@ -320,7 +320,7 @@ class sbfp_dashboard_controller extends CI_Controller {
                 return;
             }
 
-            $deleted = $this->Nutritional_assessment_model->delete_assessment(
+            $deleted = $this->nutritional_assessment_model->delete_assessment(
                 $user->legislative_district,
                 $user->school_district,
                 $grade,
@@ -366,7 +366,7 @@ class sbfp_dashboard_controller extends CI_Controller {
             $assessment_type = $this->input->post('assessment_type', TRUE) ?: 'baseline';
             
             $user_id = $this->session->userdata('user_id');
-            $user = $this->User_model->get_user_by_id($user_id);
+            $user = $this->user_model->get_user_by_id($user_id);
             
             if (!$user || !$grade || !$section) {
                 $this->output->set_content_type('application/json')
@@ -418,7 +418,7 @@ class sbfp_dashboard_controller extends CI_Controller {
             }
 
             // Get legislative district ID
-            $legislative = $this->Legislative_district_model->get_by_name($legislative_district);
+            $legislative = $this->legislative_district_model->get_by_name($legislative_district);
             if (!$legislative) {
                 return $summary;
             }
@@ -551,7 +551,7 @@ class sbfp_dashboard_controller extends CI_Controller {
             $assessment_type = $this->input->get('assessment_type', TRUE) ?: 'baseline';
             
             $user_id = $this->session->userdata('user_id');
-            $user = $this->User_model->get_user_by_id($user_id);
+            $user = $this->user_model->get_user_by_id($user_id);
             
             if (!$user || !$grade || !$section) {
                 $this->session->set_flashdata('error', 'Missing required parameters');
@@ -596,7 +596,7 @@ class sbfp_dashboard_controller extends CI_Controller {
             $section = $this->input->get('section', TRUE);
             
             $user_id = $this->session->userdata('user_id');
-            $user = $this->User_model->get_user_by_id($user_id);
+            $user = $this->user_model->get_user_by_id($user_id);
             
             if (!$user || !$grade || !$section) {
                 $this->output->set_content_type('application/json')
@@ -611,7 +611,7 @@ class sbfp_dashboard_controller extends CI_Controller {
                 return;
             }
 
-            $types = $this->Nutritional_assessment_model->get_assessment_types(
+            $types = $this->nutritional_assessment_model->get_assessment_types(
                 $user->legislative_district,
                 $user->school_district,
                 $grade,
@@ -649,7 +649,7 @@ class sbfp_dashboard_controller extends CI_Controller {
             $assessment_type = $this->input->get('assessment_type', TRUE) ?: 'baseline';
             
             $user_id = $this->session->userdata('user_id');
-            $user = $this->User_model->get_user_by_id($user_id);
+            $user = $this->user_model->get_user_by_id($user_id);
             
             if (!$user || !$grade || !$section) {
                 $this->output->set_content_type('application/json')
@@ -664,7 +664,7 @@ class sbfp_dashboard_controller extends CI_Controller {
                 return;
             }
 
-            $data = $this->Nutritional_assessment_model->get_by_section(
+            $data = $this->nutritional_assessment_model->get_by_section(
                 $user->legislative_district,
                 $user->school_district,
                 $grade,

@@ -238,6 +238,7 @@ foreach ($submitted as $s) {
                       </div>
                       <div class="card-body">
                           <form action="<?php echo site_url('sbfp/create_section'); ?>" method="post" class="row g-3" id="createSectionForm">
+                            <input type="hidden" name="<?php echo $csrf_name; ?>" value="<?php echo $csrf_hash; ?>">
                               <div class="col-md-3">
                                   <label class="form-label fw-bold text-dark">Grade Level</label>
                                   <select name="grade" class="form-select" required>
@@ -260,9 +261,9 @@ foreach ($submitted as $s) {
                                       } elseif ($user_school_level === 'stand alone shs' || $user_school_level === 'standalone_shs' || $user_school_level === 'shs') {
                                           $grades_to_show = $shs_grades;
                                       } elseif ($user_school_level === 'integrated') {
-                                          $grades_to_show = $all_grades; // Integrated schools show all grades
+                                          $grades_to_show = $all_grades;
                                       } else {
-                                          $grades_to_show = $all_grades; // Default to all grades
+                                          $grades_to_show = $all_grades;
                                       }
                                       
                                       // Display the filtered grades
