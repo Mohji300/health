@@ -191,129 +191,130 @@
             </div>
           </div>
 
-<!-- Reports Table -->
-<div class="card shadow">
-    <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-chart-bar me-1"></i> Nutritional Assessment Reports
-        </h6>
-        <div class="d-flex align-items-center">
-            <span class="badge bg-primary rounded-pill me-3" id="reportCount">
-                <?php echo number_format(count($reports)); ?> Reports
-            </span>
-            <div>
-                <a href="<?php echo site_url('admin/reports/export?' . http_build_query($current_filters)); ?>" 
-                   class="btn btn-success btn-sm me-2 export-btn">
-                    <i class="fas fa-file-export me-1"></i> Export to CSV
-                </a>
-                <a href="<?php echo site_url('admin/reports/statistics?' . http_build_query($current_filters)); ?>" 
-                   class="btn btn-info btn-sm stats-btn">
-                    <i class="fas fa-chart-pie me-1"></i> View Statistics
-                </a>
-                
-            </div>
-        </div>
-    </div>
-    <div class="card-body">
-        <?php if (empty($reports)): ?>
-            <div class="text-center py-5" id="noReportsMessage">
-                <i class="fas fa-inbox fa-4x text-gray-300 mb-3"></i>
-                <h5 class="text-gray-500 mb-2">No reports found</h5>
-                <p class="text-gray-500 mb-4">Try adjusting your filters or check back later for new submissions.</p>
-                <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-primary" id="clearFiltersBtn">
-                    <i class="fas fa-redo me-1"></i> Clear Filters
-                </a>
-            </div>
-        <?php else: ?>
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="reportsTable" width="100%" cellspacing="0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>School Name</th>
-                            <th>School ID</th>
-                            <th>Legislative District</th>
-                            <th>School District</th>
-                            <th>Grade Level</th>
-                            <th>Section</th>
-                            <th>Assessment Type</th>
-                            <th class="text-center">Students</th>
-                            <th>Date Submitted</th>
-                            <th class="text-center">Export</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($reports as $report): ?>
-                        <?php 
-                            $assessment_type_class = ($report->assessment_type == 'baseline') ? 'badge-baseline' : 'badge-endline';
-                            $assessment_icon = ($report->assessment_type == 'baseline') ? 'flag' : 'flag-checkered';
-                        ?>
-                        <tr>
-                            <td class="fw-bold text-primary">
-                                <i class="fas fa-school me-1"></i> <?php echo htmlspecialchars($report->school_name ?? 'N/A'); ?>
-                            </td>
-                            <td>
-                                <span class="badge bg-dark">
-                                    <i class="fas fa-id-card me-1"></i> <?php echo htmlspecialchars($report->school_id ?? 'N/A'); ?>
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge bg-primary">
-                                    <i class="fas fa-landmark me-1"></i> <?php echo htmlspecialchars($report->legislative_district ?? 'N/A'); ?>
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge bg-success">
-                                    <i class="fas fa-map-marker-alt me-1"></i> <?php echo htmlspecialchars($report->school_district ?? 'N/A'); ?>
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge bg-info"><?php echo htmlspecialchars($report->grade_level ?? 'N/A'); ?></span>
-                            </td>
-                            <td><?php echo htmlspecialchars($report->section ?? 'N/A'); ?></td>
-                            <td>
-                                <span class="badge <?php echo $assessment_type_class; ?> text-white">
-                                    <i class="fas fa-<?php echo $assessment_icon; ?> me-1"></i> 
-                                    <?php echo ucfirst($report->assessment_type ?? 'baseline'); ?>
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-primary rounded-pill py-2 px-3">
-                                    <i class="fas fa-users me-1"></i> <?php echo $report->student_count ?? 0; ?>
-                                </span>
-                            </td>
-                            <td>
-                                <?php if (!empty($report->first_submission)): ?>
-                                    <span class="badge bg-light text-dark">
-                                        <i class="fas fa-calendar-day me-1"></i> <?php echo date('M j, Y', strtotime($report->first_submission)); ?>
-                                    </span>
-                                <?php else: ?>
-                                    <span class="text-muted">N/A</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-center">
-                                <a href="<?php echo site_url('admin/reports/export_detail?' . http_build_query([
-                                    'legislative_district' => $report->legislative_district ?? '',
-                                    'school_district' => $report->school_district ?? '',
-                                    'school_name' => $report->school_name ?? '',
-                                    'school_id' => $report->school_id ?? '',
-                                    'grade_level' => $report->grade_level ?? '',
-                                    'section' => $report->section ?? '',
-                                    'assessment_type' => $report->assessment_type ?? 'baseline'
-                                ])); ?>" 
-                                   class="btn btn-success btn-sm export-detail-btn" 
-                                   title="Export to Excel/CSV" 
-                                   data-bs-toggle="tooltip">
-                                    <i class="fas fa-file-export me-1"></i> Export
-                                </a>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
-    </div>
-</div>
+          <!-- Reports Table -->
+          <div class="card shadow">
+              <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                  <h6 class="m-0 font-weight-bold text-primary">
+                      <i class="fas fa-chart-bar me-1"></i> Nutritional Assessment Reports
+                  </h6>
+                  <div class="d-flex align-items-center">
+                      <span class="badge bg-primary rounded-pill me-3" id="reportCount">
+                          <?php echo number_format(count($reports)); ?> Reports
+                      </span>
+                      <div>
+                          <a href="<?php echo site_url('admin/reports/export?' . http_build_query($current_filters)); ?>" 
+                            class="btn btn-success btn-sm me-2 export-btn">
+                              <i class="fas fa-file-export me-1"></i> Export to CSV
+                          </a>
+                          <a href="<?php echo site_url('admin/reports/statistics?' . http_build_query($current_filters)); ?>" 
+                            class="btn btn-info btn-sm stats-btn">
+                              <i class="fas fa-chart-pie me-1"></i> View Statistics
+                          </a>
+                          
+                      </div>
+                  </div>
+              </div>
+              <div class="card-body">
+                  <?php if (empty($reports)): ?>
+                      <div class="text-center py-5" id="noReportsMessage">
+                          <i class="fas fa-inbox fa-4x text-gray-300 mb-3"></i>
+                          <h5 class="text-gray-500 mb-2">No reports found</h5>
+                          <p class="text-gray-500 mb-4">Try adjusting your filters or check back later for new submissions.</p>
+                          <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-primary" id="clearFiltersBtn">
+                              <i class="fas fa-redo me-1"></i> Clear Filters
+                          </a>
+                      </div>
+                  <?php else: ?>
+                      <div class="table-responsive">
+                          <table class="table table-bordered table-hover" id="reportsTable" width="100%" cellspacing="0">
+                              <thead class="table-light">
+                                  <tr>
+                                      <th>School Name</th>
+                                      <th>School ID</th>
+                                      <th>Legislative District</th>
+                                      <th>School District</th>
+                                      <th>Grade Level</th>
+                                      <th>Section</th>
+                                      <th>Assessment Type</th>
+                                      <th class="text-center">Students</th>
+                                      <th>Date Submitted</th>
+                                      <th class="text-center">Export</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  <?php foreach ($reports as $report): ?>
+                                  <?php 
+                                      $assessment_type_class = ($report->assessment_type == 'baseline') ? 'badge-baseline' : 'badge-endline';
+                                      $assessment_icon = ($report->assessment_type == 'baseline') ? 'flag' : 'flag-checkered';
+                                  ?>
+                                  <tr>
+                                      <td class="fw-bold text-primary">
+                                          <i class="fas fa-school me-1"></i> <?php echo htmlspecialchars($report->school_name ?? 'N/A'); ?>
+                                      </td>
+                                      <td>
+                                          <span class="badge bg-dark">
+                                              <i class="fas fa-id-card me-1"></i> <?php echo htmlspecialchars($report->school_id ?? 'N/A'); ?>
+                                          </span>
+                                      </td>
+                                      <td>
+                                          <span class="badge bg-primary">
+                                              <i class="fas fa-landmark me-1"></i> <?php echo htmlspecialchars($report->legislative_district ?? 'N/A'); ?>
+                                          </span>
+                                      </td>
+                                      <td>
+                                          <span class="badge bg-success">
+                                              <i class="fas fa-map-marker-alt me-1"></i> <?php echo htmlspecialchars($report->school_district ?? 'N/A'); ?>
+                                          </span>
+                                      </td>
+                                      <td>
+                                          <span class="badge bg-info"><?php echo htmlspecialchars($report->grade_level ?? 'N/A'); ?></span>
+                                      </td>
+                                      <td><?php echo htmlspecialchars($report->section ?? 'N/A'); ?></td>
+                                      <td>
+                                          <span class="badge <?php echo $assessment_type_class; ?> text-white">
+                                              <i class="fas fa-<?php echo $assessment_icon; ?> me-1"></i> 
+                                              <?php echo ucfirst($report->assessment_type ?? 'baseline'); ?>
+                                          </span>
+                                      </td>
+                                      <td class="text-center">
+                                          <span class="badge bg-primary rounded-pill py-2 px-3">
+                                              <i class="fas fa-users me-1"></i> <?php echo $report->student_count ?? 0; ?>
+                                          </span>
+                                      </td>
+                                      <td>
+                                          <?php if (!empty($report->first_submission)): ?>
+                                              <span class="badge bg-light text-dark">
+                                                  <i class="fas fa-calendar-day me-1"></i> <?php echo date('M j, Y', strtotime($report->first_submission)); ?>
+                                              </span>
+                                          <?php else: ?>
+                                              <span class="text-muted">N/A</span>
+                                          <?php endif; ?>
+                                      </td>
+                                      <td class="text-center">
+                                          <a href="<?php echo site_url('admin/reports/export_detail?' . http_build_query([
+                                              'legislative_district' => $report->legislative_district ?? '',
+                                              'school_district' => $report->school_district ?? '',
+                                              'school_name' => $report->school_name ?? '',
+                                              'school_id' => $report->school_id ?? '',
+                                              'grade_level' => $report->grade_level ?? '',
+                                              'section' => $report->section ?? '',
+                                              'year' => $report->year ?? '',
+                                              'assessment_type' => $report->assessment_type ?? 'baseline'
+                                          ])); ?>" 
+                                            class="btn btn-success btn-sm export-detail-btn" 
+                                            title="Export to Excel/CSV" 
+                                            data-bs-toggle="tooltip">
+                                              <i class="fas fa-file-export me-1"></i> Export
+                                          </a>
+                                      </td>
+                                    </tr>
+                                  <?php endforeach; ?>
+                              </tbody>
+                          </table>
+                      </div>
+                  <?php endif; ?>
+              </div>
+          </div>
 
         </div>
       </div>

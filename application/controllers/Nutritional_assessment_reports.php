@@ -1,13 +1,13 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Nutritional_assessment_reports extends CI_Controller {
+class nutritional_assessment_reports extends CI_Controller {
 
     public function __construct()
     {
         parent::__construct();
-        $this->load->model('Nutritional_assessment_model');
-        $this->load->model('User_model');
+        $this->load->model('nutritional_assessment_model');
+        $this->load->model('user_model');
         $this->load->helper(['url', 'form']);
         $this->load->library('session');
         
@@ -18,70 +18,70 @@ class Nutritional_assessment_reports extends CI_Controller {
     }
 
     /**
-     * Main reports dashboard - UPDATED
+     * Main reports dashboard 
      */
     public function index()
     {
         $data = [];
         
-        // Get filter parameters - ADD ASSESSMENT TYPE
+        // Get filter parameters 
         $legislative_district = $this->input->get('legislative_district', TRUE);
         $school_district = $this->input->get('school_district', TRUE);
         $school_name = $this->input->get('school_name', TRUE);
 
-        // Enforce session school for non-admin users when exporting
         $session_school = $this->session->userdata('school_name');
         $role = $this->session->userdata('role');
         if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
             $school_name = $session_school;
         }
 
-        // If the current session is tied to a specific school and the user is not an admin,
-        // force the reports to only show that school's data.
-        $session_school = $this->session->userdata('school_name');
-        $role = $this->session->userdata('role');
-        if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
-            $school_name = $session_school;
-        }
         $grade_level = $this->input->get('grade_level', TRUE);
         $assessment_type = $this->input->get('assessment_type', TRUE);
         $date_from = $this->input->get('date_from', TRUE);
         $date_to = $this->input->get('date_to', TRUE);
 
-        // Get reports data with filters
-        $data['reports'] = $this->Nutritional_assessment_model->get_reports_with_filters(
+        $data['reports'] = $this->nutritional_assessment_model->get_reports_with_filters(
             $legislative_district,
             $school_district,
             $school_name,
             $grade_level,
             $date_from,
             $date_to,
-            $assessment_type  // assessment_type is now the 7th parameter
+            $assessment_type  
         );
 
-        // Get unique values for filters
-        $data['legislative_districts'] = $this->Nutritional_assessment_model->get_unique_legislative_districts();
-        $data['school_districts'] = $this->Nutritional_assessment_model->get_unique_school_districts();
-        $data['school_names'] = $this->Nutritional_assessment_model->get_unique_school_names();
-        $data['grade_levels'] = $this->Nutritional_assessment_model->get_unique_grade_levels();
+        if (in_array($role, ['admin', 'super_admin', 'district', 'division'])) {
+            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts();
+            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts();
+            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names();
+            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels();
+        } else {
+            // For regular users, only show options from their school
+            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts_by_user($session_school);
+            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts_by_user($session_school);
+            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names_by_user($session_school, $role);
+            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels_by_user($session_school);
+        }
         
         // Add assessment types for filter
         $data['assessment_types'] = [
             '' => 'All Types',
             'baseline' => 'Baseline',
+            'midline' => 'Midline',
             'endline' => 'Endline'
         ];
 
-        // Statistics - UPDATED TO SHOW BOTH BASELINE AND ENDLINE COUNTS
-        $data['total_assessments'] = $this->Nutritional_assessment_model->get_total_assessments_count();
-        $data['total_schools'] = $this->Nutritional_assessment_model->get_total_schools_count();
-        $data['total_students'] = $this->Nutritional_assessment_model->get_total_students_count();
+        // Statistics
+        $data['total_assessments'] = $this->nutritional_assessment_model->get_total_assessments_count();
+        $data['total_schools'] = $this->nutritional_assessment_model->get_total_schools_count();
+        $data['total_students'] = $this->nutritional_assessment_model->get_total_students_count();
         
         // Get counts by assessment type
-        $data['baseline_count'] = $this->Nutritional_assessment_model->get_assessment_type_count('baseline');
-        $data['endline_count'] = $this->Nutritional_assessment_model->get_assessment_type_count('endline');
+        $data['baseline_count'] = $this->nutritional_assessment_model->get_assessment_type_count('baseline');
+        $data['midline_count'] = $this->nutritional_assessment_model->get_assessment_type_count('midline');
+        $data['endline_count'] = $this->nutritional_assessment_model->get_assessment_type_count('endline');
 
-        // Pass filter values back to view - ADD ASSESSMENT TYPE
+        // Pass filter values back to view
         $data['current_filters'] = [
             'legislative_district' => $legislative_district,
             'school_district' => $school_district,
@@ -92,377 +92,728 @@ class Nutritional_assessment_reports extends CI_Controller {
             'date_to' => $date_to
         ];
 
-        // Load the new view file
         $this->load->view('nutritional_reports', $data);
     }
 
     /**
-     * Export reports to XLSX instead of CSV
+     * Export reports using nutritional_report_template.xlsx template
      */
     public function export()
     {
-        // Get filter parameters
-        $legislative_district = $this->input->get('legislative_district', TRUE);
-        $school_district = $this->input->get('school_district', TRUE);
-        $school_name = $this->input->get('school_name', TRUE);
-        $grade_level = $this->input->get('grade_level', TRUE);
-        $assessment_type = $this->input->get('assessment_type', TRUE);
-        $date_from = $this->input->get('date_from', TRUE);
-        $date_to = $this->input->get('date_to', TRUE);
+        try {
+            // Get filter parameters
+            $legislative_district = $this->input->get('legislative_district', TRUE);
+            $school_district = $this->input->get('school_district', TRUE);
+            $school_name = $this->input->get('school_name', TRUE);
+            $grade_level = $this->input->get('grade_level', TRUE);
+            $assessment_type = $this->input->get('assessment_type', TRUE);
+            $date_from = $this->input->get('date_from', TRUE);
+            $date_to = $this->input->get('date_to', TRUE);
 
-        // Get data with filters
-        $reports = $this->Nutritional_assessment_model->get_export_data_with_filters(
-            $legislative_district,
-            $school_district,
-            $school_name,
-            $grade_level,
-            $date_from,
-            $date_to,
-            $assessment_type
-        );
+            // Get data with filters
+            $reports = $this->nutritional_assessment_model->get_export_data_with_filters(
+                $legislative_district,
+                $school_district,
+                $school_name,
+                $grade_level,
+                $date_from,
+                $date_to,
+                $assessment_type
+            );
 
-        // Use PhpSpreadsheet
-        require_once APPPATH . '../vendor/autoload.php';
+            if (empty($reports)) {
+                show_error('No data found for the specified criteria');
+            }
 
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
+            require_once APPPATH . '../vendor/autoload.php';
 
-        // Set document properties
-        $spreadsheet->getProperties()
-            ->setCreator('SBFP System')
-            ->setTitle('Nutritional Assessments Export')
-            ->setDescription('Export of nutritional assessment data');
+            // Define template path
+            $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
+            
+            if (!file_exists($templatePath)) {
+                show_error('Template file not found. Please ensure nutritional_report_template.xlsx is in assets/templates/');
+            }
 
-        // Set headers
-        $headers = [
-            'A1' => 'Assessment Type',
-            'B1' => 'School Name',
-            'C1' => 'School ID',
-            'D1' => 'Legislative District',
-            'E1' => 'School District',
-            'F1' => 'Grade Level',
-            'G1' => 'Section',
-            'H1' => 'Student Name',
-            'I1' => 'Birthday',
-            'J1' => 'Sex',
-            'K1' => 'Weight (kg)',
-            'L1' => 'Height (m)',
-            'M1' => 'BMI',
-            'N1' => 'Nutritional Status',
-            'O1' => 'SBFP Beneficiary',
-            'P1' => 'Height for Age',
-            'Q1' => 'Date of Weighing',
-            'R1' => 'Created Date'
-        ];
+            // Load the template
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
+            $sheet = $spreadsheet->setActiveSheetIndex(0);
+            
+            // Clear existing data rows
+            for ($row = 9; $row <= 200; $row++) {
+                $sheet->setCellValue('A' . $row, '');
+                $sheet->setCellValue('B' . $row, '');
+                $sheet->setCellValue('C' . $row, '');
+                $sheet->setCellValue('D' . $row, '');
+                $sheet->setCellValue('E' . $row, '');
+                $sheet->setCellValue('F' . $row, '');
+                $sheet->setCellValue('G' . $row, '');
+                $sheet->setCellValue('H' . $row, '');
+                $sheet->setCellValue('I' . $row, '');
+                $sheet->setCellValue('J' . $row, '');
+                $sheet->setCellValue('K' . $row, '');
+                $sheet->setCellValue('L' . $row, '');
+                $sheet->setCellValue('M' . $row, '');
+                $sheet->setCellValue('N' . $row, '');
+            }
+            
+            // Get the actual year from the first record if available
+            $actual_year = !empty($reports) && isset($reports[0]->year) ? $reports[0]->year : '';
+            
+            // Calculate date of weighing (get earliest date)
+            $dates = array_filter(array_map(function($r) {
+                return !empty($r->date_of_weighing) ? $r->date_of_weighing : null;
+            }, $reports));
+            
+            if (!empty($dates)) {
+                sort($dates);
+                $date_of_weighing_display = date('F d, Y', strtotime($dates[0]));
+            } else {
+                $date_of_weighing_display = date('F d, Y');
+            }
+            
+            // Format date for A6 (short format)
+            $date_of_weighing_short = date('m/d/y');
+            
+            // POPULATE HEADER INFORMATION
+            $sheet->setCellValue('A1', 'NUTRITIONAL STATUS REPORT');
+            $sheet->setCellValue('A2', $school_name ?: 'All Schools');
+            $sheet->setCellValue('A3', 'School Year: ' . ($actual_year ?: 'N/A'));
+            $sheet->setCellValue('A4', 'Assessment Type: ' . ucfirst($assessment_type ?: 'All'));
+            $sheet->setCellValue('A6', 'Date of Weighing: ' . $date_of_weighing_short);
+            $sheet->setCellValue('N6', $grade_level ?: 'All Grade Levels');
 
-        foreach ($headers as $cell => $header) {
-            $sheet->setCellValue($cell, $header);
-            $sheet->getStyle($cell)->getFont()->setBold(true);
+            // Add grade level if filtered
+            if ($grade_level) {
+                $sheet->setCellValue('A8', 'Grade Level: ' . $grade_level);
+            }
+
+            // Initialize counters
+            $bmi_summary = [
+                'male' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0],
+                'female' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0],
+                'total' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0]
+            ];
+
+            $hfa_summary = [
+                'male' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0],
+                'female' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0],
+                'total' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0]
+            ];
+            
+            // Populate data starting from row 9
+            $startRow = 9;
+            $counter = 1;
+            
+            foreach ($reports as $report) {
+                $currentRow = $startRow + ($counter - 1);
+                
+                // A: Student Number
+                $sheet->setCellValue('A' . $currentRow, $counter);
+
+                // B: Punctuation before name
+                $sheet->setCellValue('B' . $currentRow,  '.');
+                
+                // C: Names
+                $sheet->setCellValue('C' . $currentRow, $report->name ?? '');
+                
+                // D: Birthday
+                if (!empty($report->birthday) && $report->birthday != '0000-00-00') {
+                    $sheet->setCellValue('D' . $currentRow, date('m/d/Y', strtotime($report->birthday)));
+                }
+
+                // E: Weight
+                $sheet->setCellValue('E' . $currentRow, $report->weight ?? '');
+                
+                // F: Height (meters)
+                $height = $report->height ?? '';
+                if (!empty($height) && is_numeric($height)) {
+                    // If height is in cm (>10), convert to meters
+                    if ($height > 10) {
+                        $height = $height / 100;
+                    }
+                    $sheet->setCellValue('F' . $currentRow, number_format((float)$height, 2));
+                }
+                
+                // G: Sex
+                $sex = !empty($report->sex) ? strtoupper(substr(trim($report->sex), 0, 1)) : '';
+                $sheet->setCellValue('G' . $currentRow, $sex);
+                
+                // H: Height²
+                if (!empty($report->height_squared)) {
+                    $sheet->setCellValue('H' . $currentRow, $report->height_squared);
+                } elseif (!empty($height) && is_numeric($height)) {
+                    $height_m = ($height > 10) ? $height/100 : $height;
+                    $sheet->setCellValue('H' . $currentRow, round(pow((float)$height_m, 2), 4));
+                }
+                
+                // I-K: Age
+                if (!empty($report->birthday) && !empty($report->date_of_weighing)) {
+                    try {
+                        $birthDate = new DateTime($report->birthday);
+                        $weighingDate = new DateTime($report->date_of_weighing);
+                        $age = $birthDate->diff($weighingDate);
+                        
+                        $sheet->setCellValue('I' . $currentRow, $age->y);
+                        $sheet->setCellValue('J' . $currentRow, ',');
+                        $sheet->setCellValue('K' . $currentRow, $age->m);
+                    } catch (Exception $e) {
+                        log_message('error', 'Age calculation error: ' . $e->getMessage());
+                    }
+                }
+                
+                // L: BMI
+                $sheet->setCellValue('L' . $currentRow, $report->bmi ?? '');
+                
+                // M: Nutritional Status (BMI)
+                $nutritional_status = strtolower(trim($report->nutritional_status ?? ''));
+                $sheet->setCellValue('M' . $currentRow, $report->nutritional_status ?? '');
+                
+                // N: Height-For-Age
+                $height_for_age = strtolower(trim($report->height_for_age ?? ''));
+                $sheet->setCellValue('N' . $currentRow, $report->height_for_age ?? '');
+                
+                // Update BMI counters based on sex and nutritional status
+                if ($sex == 'M') {
+                    $bmi_summary['male']['total']++;
+                    $bmi_summary['total']['total']++;
+                    
+                    if ($nutritional_status == 'severely wasted') {
+                        $bmi_summary['male']['severely_wasted']++;
+                        $bmi_summary['total']['severely_wasted']++;
+                    } elseif ($nutritional_status == 'wasted') {
+                        $bmi_summary['male']['wasted']++;
+                        $bmi_summary['total']['wasted']++;
+                    } elseif ($nutritional_status == 'normal') {
+                        $bmi_summary['male']['normal']++;
+                        $bmi_summary['total']['normal']++;
+                    } elseif ($nutritional_status == 'overweight') {
+                        $bmi_summary['male']['overweight']++;
+                        $bmi_summary['total']['overweight']++;
+                    } elseif ($nutritional_status == 'obese') {
+                        $bmi_summary['male']['obese']++;
+                        $bmi_summary['total']['obese']++;
+                    }
+                } elseif ($sex == 'F') {
+                    $bmi_summary['female']['total']++;
+                    $bmi_summary['total']['total']++;
+                    
+                    if ($nutritional_status == 'severely wasted') {
+                        $bmi_summary['female']['severely_wasted']++;
+                        $bmi_summary['total']['severely_wasted']++;
+                    } elseif ($nutritional_status == 'wasted') {
+                        $bmi_summary['female']['wasted']++;
+                        $bmi_summary['total']['wasted']++;
+                    } elseif ($nutritional_status == 'normal') {
+                        $bmi_summary['female']['normal']++;
+                        $bmi_summary['total']['normal']++;
+                    } elseif ($nutritional_status == 'overweight') {
+                        $bmi_summary['female']['overweight']++;
+                        $bmi_summary['total']['overweight']++;
+                    } elseif ($nutritional_status == 'obese') {
+                        $bmi_summary['female']['obese']++;
+                        $bmi_summary['total']['obese']++;
+                    }
+                }
+                
+                // Update HFA counters based on sex and height-for-age status
+                if ($sex == 'M') {
+                    $hfa_summary['male']['total']++;
+                    $hfa_summary['total']['total']++;
+                    
+                    if ($height_for_age == 'severely stunted') {
+                        $hfa_summary['male']['severely_stunted']++;
+                        $hfa_summary['total']['severely_stunted']++;
+                    } elseif ($height_for_age == 'stunted') {
+                        $hfa_summary['male']['stunted']++;
+                        $hfa_summary['total']['stunted']++;
+                    } elseif ($height_for_age == 'normal') {
+                        $hfa_summary['male']['normal']++;
+                        $hfa_summary['total']['normal']++;
+                    } elseif ($height_for_age == 'tall' || $height_for_age == 'above normal') {
+                        $hfa_summary['male']['tall']++;
+                        $hfa_summary['total']['tall']++;
+                    }
+                } elseif ($sex == 'F') {
+                    $hfa_summary['female']['total']++;
+                    $hfa_summary['total']['total']++;
+                    
+                    if ($height_for_age == 'severely stunted') {
+                        $hfa_summary['female']['severely_stunted']++;
+                        $hfa_summary['total']['severely_stunted']++;
+                    } elseif ($height_for_age == 'stunted') {
+                        $hfa_summary['female']['stunted']++;
+                        $hfa_summary['total']['stunted']++;
+                    } elseif ($height_for_age == 'normal') {
+                        $hfa_summary['female']['normal']++;
+                        $hfa_summary['total']['normal']++;
+                    } elseif ($height_for_age == 'tall' || $height_for_age == 'above normal') {
+                        $hfa_summary['female']['tall']++;
+                        $hfa_summary['total']['tall']++;
+                    }
+                }
+                
+                $counter++;
+            }
+
+            // ============================================
+            // CREATE BOTTOM SUMMARY TABLE WITH HEADERS AT ROW 76
+            // ============================================
+            
+            // HEADER ROW (Row 76)
+            $sheet->setCellValue('C76', 'Body Mass Index');
+            $sheet->setCellValue('D76', 'M');
+            $sheet->setCellValue('E76', 'F');
+            $sheet->setCellValue('F76', 'T');
+            $sheet->setCellValue('G76', 'HFA');
+            $sheet->setCellValue('I76', 'M');
+            $sheet->setCellValue('L76', 'F');
+            $sheet->setCellValue('M76', 'TOTAL');
+            
+            // Row 77: No. of Cases
+            $sheet->setCellValue('C77', 'No. of Cases');
+            $sheet->setCellValue('D77', $bmi_summary['male']['total'] ?: '0');
+            $sheet->setCellValue('E77', $bmi_summary['female']['total'] ?: '0');
+            $sheet->setCellValue('F77', $bmi_summary['total']['total'] ?: '0');
+            $sheet->setCellValue('G77', 'No. of Cases');
+            $sheet->setCellValue('I77', $hfa_summary['male']['total'] ?: '0');
+            $sheet->setCellValue('L77', $hfa_summary['female']['total'] ?: '0');
+            $sheet->setCellValue('M77', $hfa_summary['total']['total'] ?: '0');
+            
+            // Row 78: Severely Wasted / Sev. Stunted
+            $sheet->setCellValue('C78', 'Severely Wasted');
+            $sheet->setCellValue('D78', $bmi_summary['male']['severely_wasted'] ?: '0');
+            $sheet->setCellValue('E78', $bmi_summary['female']['severely_wasted'] ?: '0');
+            $sheet->setCellValue('F78', $bmi_summary['total']['severely_wasted'] ?: '0');
+            $sheet->setCellValue('G78', 'Sev. Stunted');
+            $sheet->setCellValue('I78', $hfa_summary['male']['severely_stunted'] ?: '0');
+            $sheet->setCellValue('L78', $hfa_summary['female']['severely_stunted'] ?: '0');
+            $sheet->setCellValue('M78', $hfa_summary['total']['severely_stunted'] ?: '0');
+            
+            // Row 79: Wasted / Stunted
+            $sheet->setCellValue('C79', 'Wasted');
+            $sheet->setCellValue('D79', $bmi_summary['male']['wasted'] ?: '0');
+            $sheet->setCellValue('E79', $bmi_summary['female']['wasted'] ?: '0');
+            $sheet->setCellValue('F79', $bmi_summary['total']['wasted'] ?: '0');
+            $sheet->setCellValue('G79', 'Stunted');
+            $sheet->setCellValue('I79', $hfa_summary['male']['stunted'] ?: '0');
+            $sheet->setCellValue('L79', $hfa_summary['female']['stunted'] ?: '0');
+            $sheet->setCellValue('M79', $hfa_summary['total']['stunted'] ?: '0');
+            
+            // Row 80: Normal (both)
+            $sheet->setCellValue('C80', 'Normal');
+            $sheet->setCellValue('D80', $bmi_summary['male']['normal'] ?: '0');
+            $sheet->setCellValue('E80', $bmi_summary['female']['normal'] ?: '0');
+            $sheet->setCellValue('F80', $bmi_summary['total']['normal'] ?: '0');
+            $sheet->setCellValue('G80', 'Normal');
+            $sheet->setCellValue('I80', $hfa_summary['male']['normal'] ?: '0');
+            $sheet->setCellValue('L80', $hfa_summary['female']['normal'] ?: '0');
+            $sheet->setCellValue('M80', $hfa_summary['total']['normal'] ?: '0');
+            
+            // Row 81: Overweight / Tall
+            $sheet->setCellValue('C81', 'Overweight');
+            $sheet->setCellValue('D81', $bmi_summary['male']['overweight'] ?: '0');
+            $sheet->setCellValue('E81', $bmi_summary['female']['overweight'] ?: '0');
+            $sheet->setCellValue('F81', $bmi_summary['total']['overweight'] ?: '0');
+            $sheet->setCellValue('G81', 'Tall');
+            $sheet->setCellValue('I81', $hfa_summary['male']['tall'] ?: '0');
+            $sheet->setCellValue('L81', $hfa_summary['female']['tall'] ?: '0');
+            $sheet->setCellValue('M81', $hfa_summary['total']['tall'] ?: '0');
+            
+            // Row 82: Obese
+            $sheet->setCellValue('C82', 'Obese');
+            $sheet->setCellValue('D82', $bmi_summary['male']['obese'] ?: '0');
+            $sheet->setCellValue('E82', $bmi_summary['female']['obese'] ?: '0');
+            $sheet->setCellValue('F82', $bmi_summary['total']['obese'] ?: '0');
+            $sheet->setCellValue('I82', 'Prepared by:');
+            $sheet->setCellValue('J82', '');
+
+            // Generate filename
+            $filename = 'nutritional_report_';
+            if ($assessment_type) {
+                $filename .= $assessment_type . '_';
+            }
+            if ($school_name) {
+                $schoolPart = preg_replace('/[^A-Za-z0-9]/', '_', $school_name);
+                $filename .= $schoolPart . '_';
+            }
+            $filename .= date('Y-m-d') . '.xlsx';
+
+            // Clear output buffers
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            // Set headers
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+            header('Pragma: public');
+
+            // Save to output
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save('php://output');
+            exit;
+
+        } catch (Exception $e) {
+            log_message('error', 'Export failed: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+            show_error('Export failed: ' . $e->getMessage());
         }
-
-        // Add data rows
-        $row = 2;
-        foreach ($reports as $report) {
-            $sheet->setCellValue('A' . $row, ucfirst($report->assessment_type ?? 'baseline'));
-            $sheet->setCellValue('B' . $row, $report->school_name);
-            $sheet->setCellValue('C' . $row, $report->school_id ?? '');
-            $sheet->setCellValue('D' . $row, $report->legislative_district);
-            $sheet->setCellValue('E' . $row, $report->school_district);
-            $sheet->setCellValue('F' . $row, $report->grade_level);
-            $sheet->setCellValue('G' . $row, $report->section);
-            $sheet->setCellValue('H' . $row, $report->name);
-            $sheet->setCellValue('I' . $row, $report->birthday);
-            $sheet->setCellValue('J' . $row, $report->sex);
-            $sheet->setCellValue('K' . $row, $report->weight);
-            $sheet->setCellValue('L' . $row, $report->height);
-            $sheet->setCellValue('M' . $row, $report->bmi);
-            $sheet->setCellValue('N' . $row, $report->nutritional_status);
-            $sheet->setCellValue('O' . $row, $report->sbfp_beneficiary);
-            $sheet->setCellValue('P' . $row, $report->height_for_age);
-            $sheet->setCellValue('Q' . $row, $report->date_of_weighing);
-            $sheet->setCellValue('R' . $row, $report->created_at);
-            $row++;
-        }
-
-        // Auto-size columns
-        foreach (range('A', 'R') as $column) {
-            $sheet->getColumnDimension($column)->setAutoSize(true);
-        }
-
-        // Set page layout
-        $sheet->getPageSetup()
-            ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE)
-            ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4);
-
-        $sheet->getPageMargins()
-            ->setTop(0.5)
-            ->setRight(0.25)
-            ->setLeft(0.25)
-            ->setBottom(0.5);
-
-        // Output file
-        $filename = 'nutritional_assessments_' . date('Y-m-d');
-        if ($assessment_type) {
-            $filename .= '_' . $assessment_type;
-        }
-        $filename .= '.xlsx';
-
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $writer->save('php://output');
-        exit;
     }
 
     /**
-     * View detailed report for a specific school/grade/section - UPDATED
+     * Export detailed report using nutritional_report_template.xlsx template
      */
-    public function view_detail()
-    {
-        $legislative_district = $this->input->get('legislative_district', TRUE);
-        $school_district = $this->input->get('school_district', TRUE);
-        $school_name = $this->input->get('school_name', TRUE);
-        $grade_level = $this->input->get('grade_level', TRUE);
-        $section = $this->input->get('section', TRUE);
-        $assessment_type = $this->input->get('assessment_type', TRUE) ?: 'baseline';
-
-        if (!$legislative_district || !$school_district || !$school_name || !$grade_level || !$section) {
-            show_error('Missing required parameters');
-        }
-
-        $data['assessments'] = $this->Nutritional_assessment_model->get_by_section(
-            $legislative_district,
-            $school_district,
-            $grade_level,
-            $section,
-            $assessment_type
-        );
-
-        $data['report_info'] = [
-            'school_name' => $school_name,
-            'legislative_district' => $legislative_district,
-            'school_district' => $school_district,
-            'grade_level' => $grade_level,
-            'section' => $section,
-            'assessment_type' => $assessment_type
-        ];
-
-        $this->load->view('reports/detail', $data);
-    }
-
-    /**
-     * Export detailed report to Excel with exact template format
-     */
-
     public function export_detail()
     {
-        $legislative_district = $this->input->get('legislative_district', TRUE);
-        $school_district = $this->input->get('school_district', TRUE);
-        $school_name = $this->input->get('school_name', TRUE);
-        $school_id = $this->input->get('school_id', TRUE);
-        $grade_level = $this->input->get('grade_level', TRUE);
-        $section = $this->input->get('section', TRUE);
-        $assessment_type = $this->input->get('assessment_type', TRUE) ?: 'baseline';
+        try {
+            $legislative_district = $this->input->get('legislative_district', TRUE);
+            $school_district = $this->input->get('school_district', TRUE);
+            $school_name = $this->input->get('school_name', TRUE);
+            $school_id = $this->input->get('school_id', TRUE);
+            $grade_level = $this->input->get('grade_level', TRUE);
+            $section = $this->input->get('section', TRUE);
+            $year = $this->input->get('year', TRUE);
+            $assessment_type = $this->input->get('assessment_type', TRUE) ?: 'baseline';
 
-        if (!$legislative_district || !$school_district || !$school_name || !$grade_level || !$section) {
-            show_error('Missing required parameters');
-        }
+            // Validate required parameters
+            if (!$legislative_district || !$school_district || !$school_name || !$grade_level || !$section) {
+                show_error('Missing required parameters. Please provide legislative_district, school_district, school_name, grade_level, and section.');
+            }
 
-        $assessments = $this->Nutritional_assessment_model->get_by_section(
-            $legislative_district,
-            $school_district,
-            $grade_level,
-            $section,
-            $assessment_type
-        );
+            // Get the data
+            $assessments = $this->nutritional_assessment_model->get_by_section(
+                $legislative_district,
+                $school_district,
+                $grade_level,
+                $section,
+                $year,
+                $assessment_type
+            );
 
-        if (empty($assessments)) {
-            show_error('No data found for the specified criteria');
-        }
+            if (empty($assessments)) {
+                log_message('error', 'No assessments found for: ' . $legislative_district . ', ' . $school_district . ', ' . $grade_level . ', ' . $section);
+                show_error('No data found for the specified criteria');
+            }
 
-        // Use PhpSpreadsheet to build a formatted Excel (.xlsx) report from template
-        require_once APPPATH . '../vendor/autoload.php';
+            // Get the actual year from the first record for display
+            $actual_year = $assessments[0]->year ?? $year;
 
-        // Load the template file
-        $templatePath = APPPATH . '../assets/templates/Book1.xlsx';
-        
-        if (!file_exists($templatePath)) {
-            show_error('Template file not found at: ' . $templatePath);
-        }
+            require_once APPPATH . '../vendor/autoload.php';
 
-        // Load template
-        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
-        $sheet = $spreadsheet->getActiveSheet();
-
-        // School Year calculation (June to March)
-        $currentYear = date('Y');
-        $currentMonth = date('n');
-        if ($currentMonth >= 6) { // June to December
-            $schoolYear = $currentYear . '-' . ($currentYear + 1);
-        } else { // January to May
-            $schoolYear = ($currentYear - 1) . '-' . $currentYear;
-        }
-
-        // Calculate date of weighing (use earliest date from assessments)
-        $dates = array_filter(array_map(function($a) {
-            return !empty($a->date_of_weighing) ? $a->date_of_weighing : null;
-        }, $assessments));
-        
-        if (!empty($dates)) {
-            sort($dates);
-            $date_of_weighing = date('F d, Y', strtotime($dates[0]));
-        } else {
-            $date_of_weighing = date('F d, Y');
-        }
-
-        // === POPULATE HEADER INFORMATION ===
-        
-        // ROW 2: School Name (centered, bold)
-        // Let's merge cells A2 through N2 and center the school name
-        $sheet->mergeCells('A2:N2');
-        $sheet->setCellValue('A2', $school_name);
-        $sheet->getStyle('A2')->getFont()->setBold(true);
-        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        
-        // ROW 3: School District (centered)
-        $sheet->mergeCells('A3:N3');
-        $sheet->setCellValue('A3', $school_district);
-        $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        
-        // ROW 4: Assessment Type and School Year (centered)
-        $assessmentDisplay = ucfirst($assessment_type);
-        // Merge cells to center the text
-        $sheet->mergeCells('A4:N4');
-        $sheet->setCellValue('A4', $assessmentDisplay . ' Assessment SY ' . $schoolYear);
-        $sheet->getStyle('A4')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        
-        // COLUMN D6: Date of Weighing
-        $sheet->setCellValue('D6', $date_of_weighing);
-        
-        // COLUMN M6: Grade Level
-        $sheet->setCellValue('M6', 'Grade: ' . $grade_level);
-        
-        // COLUMN N6: Section
-        $sheet->setCellValue('N6', 'Section: ' . $section);
-
-        // === POPULATE STUDENT DETAILS STARTING AT ROW 9 ===
-        
-        $startRow = 9; // Student data starts at row 9 as you specified
-        
-        foreach ($assessments as $index => $student) {
-            $currentRow = $startRow + $index;
+            // Load the template
+            $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
             
-            // A9: Student Number
-            $sheet->setCellValue('A' . $currentRow, $index + 1);
+            if (!file_exists($templatePath)) {
+                show_error('Template file not found at: ' . $templatePath);
+            }
+
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
+            $sheet = $spreadsheet->setActiveSheetIndex(0);
+
+            // Clear existing data rows
+            for ($row = 9; $row <= 200; $row++) {
+                $sheet->setCellValue('A' . $row, '');
+                $sheet->setCellValue('B' . $row, '');
+                $sheet->setCellValue('C' . $row, '');
+                $sheet->setCellValue('D' . $row, '');
+                $sheet->setCellValue('E' . $row, '');
+                $sheet->setCellValue('F' . $row, '');
+                $sheet->setCellValue('G' . $row, '');
+                $sheet->setCellValue('H' . $row, '');
+                $sheet->setCellValue('I' . $row, '');
+                $sheet->setCellValue('J' . $row, '');
+                $sheet->setCellValue('K' . $row, '');
+                $sheet->setCellValue('L' . $row, '');
+                $sheet->setCellValue('M' . $row, '');
+                $sheet->setCellValue('N' . $row, '');
+            }
+
+            // Calculate date of weighing
+            $dates = array_filter(array_map(function($a) {
+                return !empty($a->date_of_weighing) ? $a->date_of_weighing : null;
+            }, $assessments));
             
-            // B9: Period (You mentioned this is for period - what data goes here?)
-            // If you have period data, add it. Otherwise leave empty or add placeholder
-            $sheet->setCellValue('B' . $currentRow, ''); // Period placeholder
-            
-            // C9: Student Names
-            $sheet->setCellValue('C' . $currentRow, $student->name ?? '');
-            
-            // D9: Birthday (format: mm/dd/yyyy)
-            if (!empty($student->birthday)) {
-                $birthday = date('m/d/Y', strtotime($student->birthday));
-                $sheet->setCellValue('D' . $currentRow, $birthday);
+            if (!empty($dates)) {
+                sort($dates);
+                $date_of_weighing = date('m/d/y', strtotime($dates[0]));
             } else {
-                $sheet->setCellValue('D' . $currentRow, '');
+                $date_of_weighing = date('m/d/y');
+            }
+
+            // POPULATE HEADER INFORMATION
+            $sheet->setCellValue('A1', 'NUTRITIONAL STATUS REPORT');
+            $sheet->setCellValue('A2', $school_name);
+            $sheet->setCellValue('A3', 'School Year: ' . ($actual_year ?: 'N/A'));
+            $sheet->setCellValue('A4', 'Assessment Type: ' . ucfirst($assessment_type));
+            $sheet->setCellValue('A6', 'Date of Weighing: ' . $date_of_weighing);
+            $sheet->setCellValue('M6', 'Section: ' . $section);
+            $sheet->setCellValue('N6', $grade_level);
+
+            // Initialize counters
+            $bmi_summary = [
+                'male' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0],
+                'female' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0],
+                'total' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0]
+            ];
+
+            $hfa_summary = [
+                'male' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0],
+                'female' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0],
+                'total' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0]
+            ];
+
+            // POPULATE STUDENT DETAILS
+            $startRow = 9;
+            $counter = 1;
+            
+            foreach ($assessments as $assessment) {
+                $currentRow = $startRow + ($counter - 1);
+                
+                // A: Student Number
+                $sheet->setCellValue('A' . $currentRow, $counter);
+                $sheet->setCellValue('B' . $currentRow, '.');
+                $sheet->setCellValue('C' . $currentRow, $assessment->name ?? '');
+                
+                // D: Birthday
+                if (!empty($assessment->birthday) && $assessment->birthday != '0000-00-00') {
+                    $sheet->setCellValue('D' . $currentRow, date('m/d/Y', strtotime($assessment->birthday)));
+                }
+
+                // E: Weight
+                $sheet->setCellValue('E' . $currentRow, $assessment->weight ?? '');
+                
+                // F: Height
+                $height = $assessment->height ?? '';
+                if (!empty($height) && is_numeric($height)) {
+                    if ($height > 10) {
+                        $height = $height / 100;
+                    }
+                    $sheet->setCellValue('F' . $currentRow, number_format((float)$height, 2));
+                }
+                
+                // G: Sex
+                $sex = !empty($assessment->sex) ? strtoupper(substr(trim($assessment->sex), 0, 1)) : '';
+                $sheet->setCellValue('G' . $currentRow, $sex);
+                
+                // H: Height²
+                if (!empty($assessment->height_squared)) {
+                    $sheet->setCellValue('H' . $currentRow, $assessment->height_squared);
+                } elseif (!empty($height) && is_numeric($height)) {
+                    $height_m = ($height > 10) ? $height/100 : $height;
+                    $sheet->setCellValue('H' . $currentRow, round(pow((float)$height_m, 2), 4));
+                }
+                
+                // I-K: Age
+                if (!empty($assessment->birthday) && !empty($assessment->date_of_weighing)) {
+                    try {
+                        $birthDate = new DateTime($assessment->birthday);
+                        $weighingDate = new DateTime($assessment->date_of_weighing);
+                        $age = $birthDate->diff($weighingDate);
+                        
+                        $sheet->setCellValue('I' . $currentRow, $age->y);
+                        $sheet->setCellValue('J' . $currentRow, ',');
+                        $sheet->setCellValue('K' . $currentRow, $age->m);
+                    } catch (Exception $e) {
+                        log_message('error', 'Age calculation error: ' . $e->getMessage());
+                    }
+                }
+                
+                // L: BMI
+                $sheet->setCellValue('L' . $currentRow, $assessment->bmi ?? '');
+                
+                // M: Nutritional Status (BMI)
+                $nutritional_status = strtolower(trim($assessment->nutritional_status ?? ''));
+                $sheet->setCellValue('M' . $currentRow, $assessment->nutritional_status ?? '');
+                
+                // N: Height-For-Age
+                $height_for_age = strtolower(trim($assessment->height_for_age ?? ''));
+                $sheet->setCellValue('N' . $currentRow, $assessment->height_for_age ?? '');
+                
+                // Update BMI counters
+                if ($sex == 'M') {
+                    $bmi_summary['male']['total']++;
+                    $bmi_summary['total']['total']++;
+                    
+                    if ($nutritional_status == 'severely wasted') {
+                        $bmi_summary['male']['severely_wasted']++;
+                        $bmi_summary['total']['severely_wasted']++;
+                    } elseif ($nutritional_status == 'wasted') {
+                        $bmi_summary['male']['wasted']++;
+                        $bmi_summary['total']['wasted']++;
+                    } elseif ($nutritional_status == 'normal') {
+                        $bmi_summary['male']['normal']++;
+                        $bmi_summary['total']['normal']++;
+                    } elseif ($nutritional_status == 'overweight') {
+                        $bmi_summary['male']['overweight']++;
+                        $bmi_summary['total']['overweight']++;
+                    } elseif ($nutritional_status == 'obese') {
+                        $bmi_summary['male']['obese']++;
+                        $bmi_summary['total']['obese']++;
+                    }
+                } elseif ($sex == 'F') {
+                    $bmi_summary['female']['total']++;
+                    $bmi_summary['total']['total']++;
+                    
+                    if ($nutritional_status == 'severely wasted') {
+                        $bmi_summary['female']['severely_wasted']++;
+                        $bmi_summary['total']['severely_wasted']++;
+                    } elseif ($nutritional_status == 'wasted') {
+                        $bmi_summary['female']['wasted']++;
+                        $bmi_summary['total']['wasted']++;
+                    } elseif ($nutritional_status == 'normal') {
+                        $bmi_summary['female']['normal']++;
+                        $bmi_summary['total']['normal']++;
+                    } elseif ($nutritional_status == 'overweight') {
+                        $bmi_summary['female']['overweight']++;
+                        $bmi_summary['total']['overweight']++;
+                    } elseif ($nutritional_status == 'obese') {
+                        $bmi_summary['female']['obese']++;
+                        $bmi_summary['total']['obese']++;
+                    }
+                }
+                
+                // Update HFA counters
+                if ($sex == 'M') {
+                    $hfa_summary['male']['total']++;
+                    $hfa_summary['total']['total']++;
+                    
+                    if ($height_for_age == 'severely stunted') {
+                        $hfa_summary['male']['severely_stunted']++;
+                        $hfa_summary['total']['severely_stunted']++;
+                    } elseif ($height_for_age == 'stunted') {
+                        $hfa_summary['male']['stunted']++;
+                        $hfa_summary['total']['stunted']++;
+                    } elseif ($height_for_age == 'normal') {
+                        $hfa_summary['male']['normal']++;
+                        $hfa_summary['total']['normal']++;
+                    } elseif ($height_for_age == 'tall' || $height_for_age == 'above normal') {
+                        $hfa_summary['male']['tall']++;
+                        $hfa_summary['total']['tall']++;
+                    }
+                } elseif ($sex == 'F') {
+                    $hfa_summary['female']['total']++;
+                    $hfa_summary['total']['total']++;
+                    
+                    if ($height_for_age == 'severely stunted') {
+                        $hfa_summary['female']['severely_stunted']++;
+                        $hfa_summary['total']['severely_stunted']++;
+                    } elseif ($height_for_age == 'stunted') {
+                        $hfa_summary['female']['stunted']++;
+                        $hfa_summary['total']['stunted']++;
+                    } elseif ($height_for_age == 'normal') {
+                        $hfa_summary['female']['normal']++;
+                        $hfa_summary['total']['normal']++;
+                    } elseif ($height_for_age == 'tall' || $height_for_age == 'above normal') {
+                        $hfa_summary['female']['tall']++;
+                        $hfa_summary['total']['tall']++;
+                    }
+                }
+                
+                $counter++;
             }
             
-            // E9: Weight (kg)
-            $sheet->setCellValue('E' . $currentRow, $student->weight ?? '');
+            // row 76: Headers for summary table
+            $sheet->setCellValue('C76', 'Body Mass Index');
+            $sheet->setCellValue('D76', 'M');
+            $sheet->setCellValue('E76', 'F');
+            $sheet->setCellValue('F76', 'T');
+            $sheet->setCellValue('G76', 'HFA');
+            $sheet->setCellValue('I76', 'M');
+            $sheet->setCellValue('L76', 'F');
+            $sheet->setCellValue('M76', 'TOTAL');
             
-            // F9: Height (meters)
-            $sheet->setCellValue('F' . $currentRow, $student->height ?? '');
+            // row 77: No. of Cases
+            $sheet->setCellValue('C77', 'No. of Cases');
+            $sheet->setCellValue('D77', $bmi_summary['male']['total'] ?: '0');
+            $sheet->setCellValue('E77', $bmi_summary['female']['total'] ?: '0');
+            $sheet->setCellValue('F77', $bmi_summary['total']['total'] ?: '0');
+            $sheet->setCellValue('G77', 'No. of Cases');
+            $sheet->setCellValue('I77', $hfa_summary['male']['total'] ?: '0');
+            $sheet->setCellValue('L77', $hfa_summary['female']['total'] ?: '0');
+            $sheet->setCellValue('M77', $hfa_summary['total']['total'] ?: '0');
             
-            // G9: Sex (M/F)
-            $sex = strtoupper(substr(trim($student->sex ?? ''), 0, 1));
-            $sheet->setCellValue('G' . $currentRow, $sex);
+            // row 78: Severely Wasted / Sev. Stunted
+            $sheet->setCellValue('C78', 'Severely Wasted');
+            $sheet->setCellValue('D78', $bmi_summary['male']['severely_wasted'] ?: '0');
+            $sheet->setCellValue('E78', $bmi_summary['female']['severely_wasted'] ?: '0');
+            $sheet->setCellValue('F78', $bmi_summary['total']['severely_wasted'] ?: '0');
+            $sheet->setCellValue('G78', 'Sev. Stunted');
+            $sheet->setCellValue('I78', $hfa_summary['male']['severely_stunted'] ?: '0');
+            $sheet->setCellValue('L78', $hfa_summary['female']['severely_stunted'] ?: '0');
+            $sheet->setCellValue('M78', $hfa_summary['total']['severely_stunted'] ?: '0');
             
-            // H9: Height² (m²) - calculate if height exists
-            if (!empty($student->height) && is_numeric($student->height)) {
-                $heightSquared = pow(floatval($student->height), 2);
-                $sheet->setCellValue('H' . $currentRow, round($heightSquared, 4));
-            } else {
-                $sheet->setCellValue('H' . $currentRow, '');
+            // row 79: Wasted / Stunted
+            $sheet->setCellValue('C79', 'Wasted');
+            $sheet->setCellValue('D79', $bmi_summary['male']['wasted'] ?: '0');
+            $sheet->setCellValue('E79', $bmi_summary['female']['wasted'] ?: '0');
+            $sheet->setCellValue('F79', $bmi_summary['total']['wasted'] ?: '0');
+            $sheet->setCellValue('G79', 'Stunted');
+            $sheet->setCellValue('I79', $hfa_summary['male']['stunted'] ?: '0');
+            $sheet->setCellValue('L79', $hfa_summary['female']['stunted'] ?: '0');
+            $sheet->setCellValue('M79', $hfa_summary['total']['stunted'] ?: '0');
+            
+            // row 80: Normal / Tall
+            $sheet->setCellValue('C80', 'Normal');
+            $sheet->setCellValue('D80', $bmi_summary['male']['normal'] ?: '0');
+            $sheet->setCellValue('E80', $bmi_summary['female']['normal'] ?: '0');
+            $sheet->setCellValue('F80', $bmi_summary['total']['normal'] ?: '0');
+            $sheet->setCellValue('G80', 'Normal');
+            $sheet->setCellValue('I80', $hfa_summary['male']['normal'] ?: '0');
+            $sheet->setCellValue('L80', $hfa_summary['female']['normal'] ?: '0');
+            $sheet->setCellValue('M80', $hfa_summary['total']['normal'] ?: '0');
+            
+            // row 81: Overweight / Tall
+            $sheet->setCellValue('C81', 'Overweight');
+            $sheet->setCellValue('D81', $bmi_summary['male']['overweight'] ?: '0');
+            $sheet->setCellValue('E81', $bmi_summary['female']['overweight'] ?: '0');
+            $sheet->setCellValue('F81', $bmi_summary['total']['overweight'] ?: '0');
+            $sheet->setCellValue('G81', 'Tall');
+            $sheet->setCellValue('I81', $hfa_summary['male']['tall'] ?: '0');
+            $sheet->setCellValue('L81', $hfa_summary['female']['tall'] ?: '0');
+            $sheet->setCellValue('M81', $hfa_summary['total']['tall'] ?: '0');
+            
+            // row 82: Obese
+            $sheet->setCellValue('C82', 'Obese');
+            $sheet->setCellValue('D82', $bmi_summary['male']['obese'] ?: '0');
+            $sheet->setCellValue('E82', $bmi_summary['female']['obese'] ?: '0');
+            $sheet->setCellValue('F82', $bmi_summary['total']['obese'] ?: '0');
+            $sheet->setCellValue('I82', 'Prepared by:');
+            $sheet->setCellValue('J82', '');
+
+            // Generate filename
+            $filename = 'nutritional_report_' . preg_replace('/[^A-Za-z0-9]/', '_', $school_name) 
+                . '_Grade' . $grade_level 
+                . '_Section' . $section 
+                . '_' . $assessment_type 
+                . '_' . date('Y-m-d') . '.xlsx';
+
+            // Clear output buffers
+            while (ob_get_level()) {
+                ob_end_clean();
             }
-            
-            // I9: Age Years
-            // J9: Comma
-            // K9: Age Months
-            if (!empty($student->birthday) && !empty($date_of_weighing)) {
-                $birthDate = new DateTime($student->birthday);
-                $weighingDate = new DateTime($date_of_weighing);
-                $interval = $birthDate->diff($weighingDate);
-                
-                // I9: Years
-                $sheet->setCellValue('I' . $currentRow, $interval->y);
-                
-                // J9: Comma (literal comma)
-                $sheet->setCellValue('J' . $currentRow, ',');
-                
-                // K9: Months
-                $sheet->setCellValue('K' . $currentRow, $interval->m);
-            } else {
-                $sheet->setCellValue('I' . $currentRow, '');
-                $sheet->setCellValue('J' . $currentRow, '');
-                $sheet->setCellValue('K' . $currentRow, '');
-            }
-            
-            // L9: Body Mass Index (BMI)
-            $sheet->setCellValue('L' . $currentRow, $student->bmi ?? '');
-            
-            // M9: Nutritional Status
-            $sheet->setCellValue('M' . $currentRow, $student->nutritional_status ?? '');
-            
-            // N9: Height-for-Age
-            $sheet->setCellValue('N' . $currentRow, $student->height_for_age ?? '');
-            
-            // Apply borders to the row if your template has borders
-            $borderStyle = \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN;
-            $sheet->getStyle('A' . $currentRow . ':N' . $currentRow)
-                ->getBorders()
-                ->getAllBorders()
-                ->setBorderStyle($borderStyle);
+
+            // Set headers
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+            header('Pragma: public');
+
+            // Save to output
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save('php://output');
+            exit;
+
+        } catch (Exception $e) {
+            log_message('error', 'Export detail failed: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+            show_error('Export failed: ' . $e->getMessage());
         }
-
-        // === SET PAGE LAYOUT ===
-        
-        $sheet->getPageSetup()
-            ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE)
-            ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4)
-            ->setFitToWidth(1)
-            ->setFitToHeight(0);
-
-        $sheet->getPageMargins()
-            ->setTop(0.5)
-            ->setRight(0.25)
-            ->setLeft(0.25)
-            ->setBottom(0.5);
-
-        // === SAVE AND DOWNLOAD ===
-        
-        $filename = preg_replace('/[^A-Za-z0-9_\-]/', '_', $school_name) 
-            . '_Grade' . $grade_level 
-            . '_Section' . $section 
-            . '_' . $assessment_type 
-            . '_' . date('Y-m-d') . '.xlsx';
-
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-        header('Pragma: no-cache');
-
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $writer->save('php://output');
-        exit;
     }
 
+
     /**
-     * Get nutritional statistics summary - UPDATED VERSION
+     * Get nutritional statistics summary
      */
     public function statistics() {
         // Get filter values from GET request
@@ -477,31 +828,36 @@ class Nutritional_assessment_reports extends CI_Controller {
             'nutritional_status' => $this->input->get('nutritional_status')
         ];
 
-        // Get UNFILTERED aggregated statistics for the summary cards (always show all data)
-        $unfiltered_stats = $this->Nutritional_assessment_model->get_nutritional_statistics_summary([]);
+        $session_school = $this->session->userdata('school_name');
+        $role = $this->session->userdata('role');
         
-        // Get filtered detailed nutritional statistics for the overview section
-        $data['nutritional_stats'] = $this->Nutritional_assessment_model->get_detailed_nutritional_statistics($filters);
+        // For non-admin users, force filter to their school
+        if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
+            $filters['school_name'] = $session_school;
+        }
+
+        // Get UNFILTERED aggregated statistics for the summary cards
+        $unfiltered_stats = $this->nutritional_assessment_model->get_nutritional_statistics_summary([]);
+        
+        // Get filtered detailed nutritional statistics
+        $data['nutritional_stats'] = $this->nutritional_assessment_model->get_detailed_nutritional_statistics($filters);
         
         // Get students based on nutritional status filter
         $status_filter = $filters['nutritional_status'] ?? '';
         $data['filtered_students'] = [];
         
         if ($status_filter === '') {
-            // When "All Statuses" is selected (empty string), show ALL students
-            $data['filtered_students'] = $this->Nutritional_assessment_model->get_all_students_for_export($filters);
+            $data['filtered_students'] = $this->nutritional_assessment_model->get_all_students_for_export($filters);
         } else if ($status_filter === 'sbfp_beneficiary') {
-            // When "SBFP Beneficiary" is selected, show only SBFP beneficiaries
-            $data['filtered_students'] = $this->Nutritional_assessment_model->get_sbfp_beneficiaries($filters);
+            $data['filtered_students'] = $this->nutritional_assessment_model->get_sbfp_beneficiaries($filters);
         } else if (!empty($status_filter)) {
             if (in_array($status_filter, ['severely wasted', 'wasted', 'normal', 'overweight', 'obese'])) {
-                // Use the new method to get students by any nutritional status
-                $data['filtered_students'] = $this->Nutritional_assessment_model->get_students_by_nutritional_status($status_filter, $filters);
+                $data['filtered_students'] = $this->nutritional_assessment_model->get_students_by_nutritional_status($status_filter, $filters);
             }
         }
         
-        // For backward compatibility - still get wasted/severely wasted separately
-        $all_wasted = $this->Nutritional_assessment_model->get_all_wasted_students($filters);
+        // Get wasted students
+        $all_wasted = $this->nutritional_assessment_model->get_all_wasted_students($filters);
         $data['severely_wasted_students'] = [];
         $data['wasted_students'] = [];
         
@@ -514,7 +870,7 @@ class Nutritional_assessment_reports extends CI_Controller {
             }
         }
         
-        // Calculate totals for the statistics cards - USE UNFILTERED DATA
+        // Calculate totals
         $data['total_severely_wasted'] = $unfiltered_stats->severely_wasted ?? 0;
         $data['total_wasted'] = $unfiltered_stats->wasted ?? 0;
         $data['total_normal'] = $unfiltered_stats->normal ?? 0;
@@ -522,11 +878,18 @@ class Nutritional_assessment_reports extends CI_Controller {
         $data['total_overweight'] = $unfiltered_stats->overweight ?? 0;
         $data['total_obese'] = $unfiltered_stats->obese ?? 0;
 
-        // Get filter dropdown options
-        $data['legislative_districts'] = $this->Nutritional_assessment_model->get_unique_legislative_districts();
-        $data['school_districts'] = $this->Nutritional_assessment_model->get_unique_school_districts();
-        $data['school_names'] = $this->Nutritional_assessment_model->get_unique_school_names();
-        $data['grade_levels'] = $this->Nutritional_assessment_model->get_unique_grade_levels();
+        // Get filter dropdown options - FILTERED BY USER'S SCHOOL
+        if (in_array($role, ['admin', 'super_admin'])) {
+            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts();
+            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts();
+            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names();
+            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels();
+        } else {
+            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts_by_user($session_school);
+            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts_by_user($session_school);
+            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names_by_user($session_school, $role);
+            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels_by_user($session_school);
+        }
         
         // Add assessment types for filter
         $data['assessment_types'] = [
@@ -535,14 +898,14 @@ class Nutritional_assessment_reports extends CI_Controller {
             'endline' => 'Endline'
         ];
         
-        // Store current filters for form persistence
+        // Store current filters
         $data['current_filters'] = $filters;
 
         $this->load->view('view_statistics', $data);
     }
 
     /**
-     * Export statistics to CSV - UPDATED VERSION
+     * Export statistics to CSV
      */
     public function export_statistics() {
         // Get filter values from GET request
@@ -563,13 +926,13 @@ class Nutritional_assessment_reports extends CI_Controller {
         
         if ($status_filter === '') {
             // When "All Statuses" is selected, export all students
-            $students_to_export = $this->Nutritional_assessment_model->get_all_students_for_export($filters);
+            $students_to_export = $this->nutritional_assessment_model->get_all_students_for_export($filters);
         } else if ($status_filter === 'sbfp_beneficiary') {
             // When "SBFP Beneficiary" is selected, export only SBFP beneficiaries
-            $students_to_export = $this->Nutritional_assessment_model->get_sbfp_beneficiaries($filters);
+            $students_to_export = $this->nutritional_assessment_model->get_sbfp_beneficiaries($filters);
         } else if (!empty($status_filter)) {
             if (in_array($status_filter, ['severely wasted', 'wasted', 'normal', 'overweight', 'obese'])) {
-                $students_to_export = $this->Nutritional_assessment_model->get_students_by_nutritional_status($status_filter, $filters);
+                $students_to_export = $this->nutritional_assessment_model->get_students_by_nutritional_status($status_filter, $filters);
             }
         }
         
@@ -659,24 +1022,29 @@ class Nutritional_assessment_reports extends CI_Controller {
         $grade_level = $this->input->get('grade_level', TRUE);
         $section = $this->input->get('section', TRUE);
 
+        $session_school = $this->session->userdata('school_name');
+        $role = $this->session->userdata('role');
+
         $data = [];
         
         if ($legislative_district && $school_district && $school_name && $grade_level && $section) {
             // Get baseline data
-            $data['baseline'] = $this->Nutritional_assessment_model->get_by_section(
+            $data['baseline'] = $this->nutritional_assessment_model->get_by_section(
                 $legislative_district,
                 $school_district,
                 $grade_level,
                 $section,
+                null,
                 'baseline'
             );
             
             // Get endline data
-            $data['endline'] = $this->Nutritional_assessment_model->get_by_section(
+            $data['endline'] = $this->nutritional_assessment_model->get_by_section(
                 $legislative_district,
                 $school_district,
                 $grade_level,
                 $section,
+                null,
                 'endline'
             );
             
@@ -689,10 +1057,18 @@ class Nutritional_assessment_reports extends CI_Controller {
             ];
         }
 
-        $data['legislative_districts'] = $this->Nutritional_assessment_model->get_unique_legislative_districts();
-        $data['school_districts'] = $this->Nutritional_assessment_model->get_unique_school_districts();
-        $data['school_names'] = $this->Nutritional_assessment_model->get_unique_school_names();
-        $data['grade_levels'] = $this->Nutritional_assessment_model->get_unique_grade_levels();
+        // Get filter dropdown options - FILTERED BY USER'S SCHOOL
+        if (in_array($role, ['admin', 'super_admin'])) {
+            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts();
+            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts();
+            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names();
+            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels();
+        } else {
+            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts_by_user($session_school);
+            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts_by_user($session_school);
+            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names_by_user($session_school, $role);
+            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels_by_user($session_school);
+        }
 
         $this->load->view('reports/comparison', $data);
     }

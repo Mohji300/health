@@ -148,11 +148,6 @@ $(document).ready(function() {
         
         if (resetBtn.length) {
             resetBtn.on('click', function(e) {
-                // Optional: Add confirmation
-                // if (!confirm('Reset all filters?')) {
-                //     e.preventDefault();
-                //     return false;
-                // }
             });
         }
     }
