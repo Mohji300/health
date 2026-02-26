@@ -1,12 +1,12 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class AuthController extends CI_Controller {
+class authcontroller extends CI_Controller {
 
     public function __construct()
     {
         parent::__construct();
-        $this->load->model('User_model');
+        $this->load->model('user_model');
         $this->load->library('session');
         $this->load->helper(['url', 'form']);
     }
@@ -32,7 +32,7 @@ class AuthController extends CI_Controller {
                 $email = $this->input->post('email');
                 $password = $this->input->post('password');
 
-                $user = $this->User_model->get_by_email($email);
+                $user = $this->user_model->get_by_email($email);
 
                 if (!$user) {
                     $this->session->set_flashdata('error', 'Invalid email or password.');
@@ -88,7 +88,7 @@ class AuthController extends CI_Controller {
     private function redirect_based_on_role_and_school_info($user = null) {
         if (!$user) {
             $user_id = $this->session->userdata('user_id');
-            $user = $this->User_model->get_user_by_id($user_id);
+            $user = $this->user_model->get_user_by_id($user_id);
         }
 
         if (!$user) {
