@@ -50,35 +50,35 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |		my-controller/my-method	-> my_controller/my_method
 */
 
-$route['default_controller'] = 'SuperAdminController';
+$route['default_controller'] = 'superadmincontroller';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
 // ========================
 // AUTHENTICATION ROUTES
 // ========================
-$route['login'] = 'AuthController/login';
-$route['logout'] = 'AuthController/logout';
-$route['register'] = 'AuthController/register';
+$route['login'] = 'authcontroller/login';
+$route['logout'] = 'authcontroller/logout';
+$route['register'] = 'authcontroller/register';
 
 // ========================
 // SCHOOL INFO ROUTES
 // ========================
-$route['school-info/form'] = 'SchoolInfo/show_form';
-$route['school-info/store'] = 'SchoolInfo/store';
-$route['school-info/get_school_districts'] = 'SchoolInfo/get_school_districts';
-$route['school-info/get_schools'] = 'SchoolInfo/get_schools';
+$route['school-info/form'] = 'schoolinfo/show_form';
+$route['school-info/store'] = 'schoolinfo/store';
+$route['school-info/get_school_districts'] = 'schoolinfo/get_school_districts';
+$route['school-info/get_schools'] = 'schoolinfo/get_schools';
 
 // ========================
 // SUPER ADMIN ROUTES
 // ========================
-$route['superadmin'] = 'SuperAdminController/index';
-$route['superadmin/dashboard'] = 'SuperAdminController/index';
-$route['superadmin/add-user'] = 'SuperAdminController/add_user';
-$route['superadmin/edit-user/(:num)'] = 'SuperAdminController/edit_user/$1';
-$route['superadmin/update-role/(:num)'] = 'SuperAdminController/update_user_role/$1';
-$route['superadmin/update-all-roles'] = 'SuperAdminController/update_all_roles';
-$route['superadmin/delete-user/(:num)'] = 'SuperAdminController/delete_user/$1';
+$route['superadmin'] = 'superadmincontroller/index';
+$route['superadmin/dashboard'] = 'superadmincontroller/index';
+$route['superadmin/add-user'] = 'superadmincontroller/add_user';
+$route['superadmin/edit-user/(:num)'] = 'superadmincontroller/edit_user/$1';
+$route['superadmin/update-role/(:num)'] = 'superadmincontroller/update_user_role/$1';
+$route['superadmin/update-all-roles'] = 'superadmincontroller/update_all_roles';
+$route['superadmin/delete-user/(:num)'] = 'superadmincontroller/delete_user/$1';
 
 // ========================
 // USER DASHBOARD ROUTES
@@ -89,8 +89,8 @@ $route['user/dashboard'] = 'user_dashboard_controller/index';
 // ========================
 // USER PROFILE ROUTES  
 // ========================
-$route['profile'] = 'Profile_controller/index';
-$route['profile/update'] = 'Profile_controller/update';
+$route['profile'] = 'profile_controller/index';
+$route['profile/update'] = 'profile_controller/update';
 
 
 // ========================
@@ -115,15 +115,14 @@ $route['sbfp/get_existing_data'] = 'sbfp_dashboard_controller/get_existing_data'
 // ========================
 // BACKWARD COMPATIBILITY
 // ========================
-$route['dashboard'] = 'SuperAdminController/index';
-$route['dashboard/update_user_role/(:num)'] = 'SuperAdminController/update_user_role/$1';
-$route['dashboard/update_all_roles'] = 'SuperAdminController/update_all_roles';
-$route['dashboard/delete_user/(:num)'] = 'SuperAdminController/delete_user/$1';
+$route['dashboard'] = 'superadmincontroller/index';
+$route['dashboard/update_user_role/(:num)'] = 'superadmincontroller/update_user_role/$1';
+$route['dashboard/update_all_roles'] = 'superadmincontroller/update_all_roles';
+$route['dashboard/delete_user/(:num)'] = 'superadmincontroller/delete_user/$1';
 
 // ========================
 // OTHER MODULE ROUTES
 // ========================
-// District Management
 $route['admin/districts'] = 'DistrictController/index';
 $route['admin/districts/create'] = 'DistrictController/create';
 $route['admin/districts/edit/(:num)'] = 'DistrictController/edit/$1';
@@ -136,61 +135,63 @@ $route['settings/users'] = 'SettingsController/users';
 // ========================
 // NUTRITIONAL ASSESSMENT
 // ========================
-$route['assessments'] = 'NutritionalAssessment/index';
-$route['nutritional-assessment'] = 'NutritionalAssessment/index';
-$route['assessments/store'] = 'NutritionalAssessment/store';
-$route['assessments/bulk_store'] = 'NutritionalAssessment/bulk_store';
-$route['assessments/view_all'] = 'NutritionalAssessment/view_all';
+$route['assessments'] = 'nutritionalassessment/index';
+$route['nutritional-assessment'] = 'nutritionalassessment/index';
+$route['assessments/store'] = 'nutritionalassessment/store';
+$route['assessments/bulk_store'] = 'nutritionalassessment/bulk_store';
+$route['assessments/view_all'] = 'nutritionalassessment/view_all';
 
 // ========================
 // NUTRITIONAL ASSESSMENT REPORTS
 // ========================
-$route['admin/reports'] = 'Nutritional_assessment_reports/index';
-$route['admin/reports/export'] = 'Nutritional_assessment_reports/export';
-$route['admin/reports/export_detail'] = 'Nutritional_assessment_reports/export_detail';
-$route['admin/reports/comparison_report'] = 'Nutritional_assessment_reports/comparison_report';
-$route['admin/reports/view_detail'] = 'Nutritional_assessment_reports/view_detail';
-$route['admin/reports/statistics'] = 'Nutritional_assessment_reports/statistics';
-$route['admin/reports/export_statistics'] = 'Nutritional_assessment_reports/export_statistics';
-$route['admin/reports/export_all_students'] = 'Nutritional_assessment_reports/export_all_students';
+$route['admin/reports'] = 'nutritional_assessment_reports/index';   
+$route['admin/reports/export'] = 'nutritional_assessment_reports/export';
+$route['admin/reports/export_detail'] = 'nutritional_assessment_reports/export_detail';
+$route['admin/reports/comparison_report'] = 'nutritional_assessment_reports/comparison_report';
+$route['admin/reports/view_detail'] = 'nutritional_assessment_reports/view_detail';
+$route['admin/reports/statistics'] = 'nutritional_assessment_reports/statistics';
+$route['admin/reports/export_statistics'] = 'nutritional_assessment_reports/export_statistics';
+$route['admin/reports/export_all_students'] = 'nutritional_assessment_reports/export_all_students';
+$route['admin/reports/debug_template'] = 'nutritional_assessment_reports/debug_template';
+
 
 // ========================
 // EXCEL UPLOAD AND PROCESSING
 // ========================
-$route['excel_upload'] = 'Excel_upload/index';
-$route['excel_upload/upload_excel'] = 'Excel_upload/upload_excel';
-$route['excel_upload/clear_data'] = 'Excel_upload/clear_data';
+$route['excel_upload'] = 'excel_upload/index';
+$route['excel_upload/upload_excel'] = 'excel_upload/upload_excel';
+$route['excel_upload/clear_data'] = 'excel_upload/clear_data';
 
 // ========================
 // NUTRITIONAL UPLOAD
 // ========================
-$route['nutritional_upload'] = 'Nutritional_upload/index';
-$route['nutritional_upload/upload_nutritional_data'] = 'Nutritional_upload/upload_nutritional_data';
-$route['nutritional_upload/clear_nutritional_data'] = 'Nutritional_upload/clear_nutritional_data';
+$route['nutritional_upload'] = 'nutritional_upload/index';
+$route['nutritional_upload/upload_nutritional_data'] = 'nutritional_upload/upload_nutritional_data';
+$route['nutritional_upload/clear_nutritional_data'] = 'nutritional_upload/clear_nutritional_data';
 
 // ========================
 // USER NUTRITIONAL REPORTS
 // ========================
-$route['reports'] = 'Nutritional_assessment_reports/index';
-$route['reports/export'] = 'Nutritional_assessment_reports/export';     
-$route['reports/view_detail'] = 'Nutritional_assessment_reports/view_detail';
-$route['reports/statistics'] = 'Nutritional_assessment_reports/statistics';
+$route['reports'] = 'nutritional_assessment_reports/index';
+$route['reports/export'] = 'nutritional_assessment_reports/export';     
+$route['reports/view_detail'] = 'nutritional_assessment_reports/view_detail';
+$route['reports/statistics'] = 'nutritional_assessment_reports/statistics';
 
 // ========================
 // DISTRICT DASHBOARD ROUTES
 // ========================
-$route['district_dashboard'] = 'District_dashboard_controller/index';
-$route['district_dashboard/get_school_details/(:any)'] = 'District_dashboard_controller/get_school_details/$1';
+$route['district_dashboard'] = 'district_dashboard_controller/index';
+$route['district_dashboard/get_school_details/(:any)'] = 'district_dashboard_controller/get_school_details/$1';
 
 // ========================
 //   DISTRICT REPORTS ROUTES
 // ========================
-$route['district/reports'] = 'District_reports_controller/index';
-$route['district/reports/statistics'] = 'District_reports_controller/statistics';
-$route['district/reports/export'] = 'District_reports_controller/export';
-$route['district/reports/export_detail'] = 'District_reports_controller/export_detail';
-$route['district/reports/export_statistics'] = 'District_reports_controller/export_statistics';
-$route['district/reports/comparison_report'] = 'District_reports_controller/comparison_report';
+$route['district/reports'] = 'district_reports_controller/index';
+$route['district/reports/statistics'] = 'district_reports_controller/statistics';
+$route['district/reports/export'] = 'district_reports_controller/export';
+$route['district/reports/export_detail'] = 'district_reports_controller/export_detail';
+$route['district/reports/export_statistics'] = 'district_reports_controller/export_statistics';
+$route['district/reports/comparison_report'] = 'district_reports_controller/comparison_report';
 
 // ========================
 // DIVISION DASHBOARD ROUTES        
@@ -202,12 +203,12 @@ $route['division_dashboard/get_school_details/(:any)'] = 'division_dashboard_con
 // ========================
 //   DIVISION REPORTS ROUTES
 // ========================
-$route['division/reports'] = 'Division_reports_controller/index';
-$route['division/reports/statistics'] = 'Division_reports_controller/statistics';
-$route['division/reports/export'] = 'Division_reports_controller/export';
-$route['division/reports/export_detail'] = 'Division_reports_controller/export_detail';
-$route['division/reports/export_statistics'] = 'Division_reports_controller/export_statistics';
-$route['division/reports/comparison_report'] = 'Division_reports_controller/comparison_report';
+$route['division/reports'] = 'division_reports_controller/index';
+$route['division/reports/statistics'] = 'division_reports_controller/statistics';
+$route['division/reports/export'] = 'division_reports_controller/export';
+$route['division/reports/export_detail'] = 'division_reports_controller/export_detail';
+$route['division/reports/export_statistics'] = 'division_reports_controller/export_statistics';
+$route['division/reports/comparison_report'] = 'division_reports_controller/comparison_report';
 
 // ========================
 // SBFP BENEFICIARIES ROUTES
@@ -221,10 +222,10 @@ $route['sbfp-beneficiaries/set_school_level'] = 'sbfp_beneficiaries_controller/s
 // ========================
 // ARCHIVE ROUTES
 // ========================
-$route['archive'] = 'Archive_controller';
-$route['archive/get_school_details'] = 'Archive_controller/get_school_details';
-$route['archive/process_archive'] = 'Archive_controller/process_archive';
-$route['archive/get_record_details/(:num)'] = 'Archive_controller/get_record_details/$1';
-$route['archive/restore_record/(:num)'] = 'Archive_controller/restore_record/$1';
-$route['archive/export'] = 'Archive_controller/export_archive';
+$route['archive'] = 'archive_controller';
+$route['archive/get_school_details'] = 'archive_controller/get_school_details';
+$route['archive/process_archive'] = 'archive_controller/process_archive';
+$route['archive/get_record_details/(:num)'] = 'archive_controller/get_record_details/$1';
+$route['archive/restore_record/(:num)'] = 'archive_controller/restore_record/$1';
+$route['archive/export'] = 'archive_controller/export_archive';
 
