@@ -1,11 +1,11 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Archive_controller extends CI_Controller {
+class archive_controller extends CI_Controller {
     
     public function __construct() {
         parent::__construct();
-        $this->load->model('Archive_model');
+        $this->load->model('archive_model');
         $this->load->helper('url');
         $this->load->library('session');
         
@@ -31,10 +31,10 @@ class Archive_controller extends CI_Controller {
     public function index() {
         try {
             // Get archived summary for grouped view
-            $data['archived_summary'] = $this->Archive_model->get_archived_summary_by_year_school();
+            $data['archived_summary'] = $this->archive_model->get_archived_summary_by_year_school();
             
             // Get school years from nutritional_assessments table (for archive dropdown)
-            $data['school_years'] = $this->Archive_model->get_distinct_school_years();
+            $data['school_years'] = $this->archive_model->get_distinct_school_years();
             
             // Get user role from session
             $data['user_role'] = $this->session->userdata('role') ?: 'user';
@@ -79,7 +79,7 @@ class Archive_controller extends CI_Controller {
             $school = urldecode($school);
             
             // Get records for this school and year
-            $records = $this->Archive_model->get_archived_records_by_year_school($year, $school);
+            $records = $this->archive_model->get_archived_records_by_year_school($year, $school);
             
             if (empty($records)) {
                 $response = [
@@ -151,7 +151,7 @@ class Archive_controller extends CI_Controller {
             }
             
             // Check if there are records to archive
-            $record_count = $this->Archive_model->count_records_to_archive($school_year);
+            $record_count = $this->archive_model->count_records_to_archive($school_year);
             
             if ($record_count === 0) {
                 $response = [
@@ -160,7 +160,7 @@ class Archive_controller extends CI_Controller {
                 ];
             } else {
                 // Process archive
-                $result = $this->Archive_model->archive_records($school_year);
+                $result = $this->archive_model->archive_records($school_year);
                 
                 if ($result['success']) {
                     $response = [
@@ -210,7 +210,7 @@ class Archive_controller extends CI_Controller {
                 throw new Exception('Invalid record ID');
             }
             
-            $record = $this->Archive_model->get_archived_record($record_id);
+            $record = $this->archive_model->get_archived_record($record_id);
             
             if ($record) {
                 $response = [
@@ -272,7 +272,7 @@ class Archive_controller extends CI_Controller {
                 throw new Exception('Invalid record ID');
             }
             
-            $result = $this->Archive_model->restore_record($record_id);
+            $result = $this->archive_model->restore_record($record_id);
             
             if ($result['success']) {
                 $response = [

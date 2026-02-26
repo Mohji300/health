@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Archive_model extends CI_Model {
+class archive_model extends CI_Model {
     
     public function __construct() {
         parent::__construct();
