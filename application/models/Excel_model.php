@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Excel_model extends CI_Model {
+class excel_model extends CI_Model {
 
     public function __construct() {
         parent::__construct();
@@ -342,7 +342,7 @@ class Excel_model extends CI_Model {
         try {
             // Check if database connection is working
             if (!$this->db->conn_id) {
-                log_message('error', 'Database connection not available in Excel_model');
+                log_message('error', 'Database connection not available in excel_model');
                 return $summary;
             }
             
