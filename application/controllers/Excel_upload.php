@@ -1,38 +1,35 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Excel_upload extends CI_Controller {
+class excel_upload extends CI_Controller {
 
     public function __construct() {
         parent::__construct();
-        
-        // Load database and model
+
         $this->load->database();
-        $this->load->model('Excel_model');
+        $this->load->model('excel_model');
         $this->load->library(['upload', 'session']);
         $this->load->helper(['form', 'url']);
         
-        // Check if tables exist, if not create them
-        $this->Excel_model->check_tables();
+        $this->excel_model->check_tables();
     }
 
     public function index() {
         $data['title'] = 'CSV Data Upload';
-        $data['summary'] = $this->Excel_model->get_data_summary();
+        $data['summary'] = $this->excel_model->get_data_summary();
         $this->load->view('excel_upload_view', $data);
     }
 
     public function upload_excel() {
         if ($_FILES['excel_file']['name']) {
-            // Create uploads directory if it doesn't exist
             $upload_path = './uploads/';
             if (!is_dir($upload_path)) {
                 mkdir($upload_path, 0755, true);
             }
 
             $config['upload_path'] = $upload_path;
-            $config['allowed_types'] = 'csv'; // Changed to only accept CSV
-            $config['max_size'] = 5120; // 5MB
+            $config['allowed_types'] = 'csv'; 
+            $config['max_size'] = 5120; 
             $config['encrypt_name'] = TRUE;
 
             $this->upload->initialize($config);
@@ -167,7 +164,7 @@ class Excel_upload extends CI_Controller {
             }
 
             // Insert data into database
-            $insert_result = $this->Excel_model->insert_excel_data($legislative_districts, $school_districts, $processed_data);
+            $insert_result = $this->excel_model->insert_excel_data($legislative_districts, $school_districts, $processed_data);
 
             if (!$insert_result) {
                 throw new Exception('Failed to insert data into database. Please check if the database tables exist.');
@@ -206,7 +203,7 @@ class Excel_upload extends CI_Controller {
     }
 
     public function clear_data() {
-        $result = $this->Excel_model->clear_all_data();
+        $result = $this->excel_model->clear_all_data();
         
         if ($result) {
             $this->session->set_flashdata('success', 'All data cleared successfully!');
