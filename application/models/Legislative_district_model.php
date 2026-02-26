@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Legislative_district_model extends CI_Model {
+class legislative_district_model extends CI_Model {
     
     public function get_by_name($name){
         return $this->db->get_where('legislative_districts', ['name' => $name])->row();

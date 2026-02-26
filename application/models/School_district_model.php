@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class School_district_model extends CI_Model {
+class school_district_model extends CI_Model {
     public function get_by_name_and_ld($name, $legislative_district_id){
         return $this->db->get_where('school_districts', [
             'name' => $name,

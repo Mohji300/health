@@ -106,8 +106,8 @@ class section_model extends CI_Model {
     public function check_and_remove_sections_with_deleted_assessments($user_id)
     {
         // Get user info
-        $this->load->model('User_model');
-        $user = $this->User_model->get_user_by_id($user_id);
+        $this->load->model('user_model');
+        $user = $this->user_model->get_user_by_id($user_id);
         
         if (!$user) {
             return false;
