@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class nutritionalassessment extends CI_Controller {
+class Nutritionalassessment extends CI_Controller {
 
     public function __construct()
     {
