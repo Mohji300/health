@@ -50,7 +50,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |		my-controller/my-method	-> my_controller/my_method
 */
 
-$route['default_controller'] = 'superadmincontroller';
+$route['default_controller'] = 'authcontroller/login';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
@@ -123,14 +123,14 @@ $route['dashboard/delete_user/(:num)'] = 'superadmincontroller/delete_user/$1';
 // ========================
 // OTHER MODULE ROUTES
 // ========================
-$route['admin/districts'] = 'DistrictController/index';
-$route['admin/districts/create'] = 'DistrictController/create';
-$route['admin/districts/edit/(:num)'] = 'DistrictController/edit/$1';
+//$route['admin/districts'] = 'DistrictController/index';
+//$route['admin/districts/create'] = 'DistrictController/create';
+//$route['admin/districts/edit/(:num)'] = 'DistrictController/edit/$1';
 
 // System Settings
-$route['settings'] = 'SettingsController/index';
-$route['settings/general'] = 'SettingsController/general';
-$route['settings/users'] = 'SettingsController/users';
+//$route['settings'] = 'SettingsController/index';
+//$route['settings/general'] = 'SettingsController/general';
+//$route['settings/users'] = 'SettingsController/users';
 
 // ========================
 // NUTRITIONAL ASSESSMENT
@@ -222,7 +222,7 @@ $route['sbfp-beneficiaries/set_school_level'] = 'sbfp_beneficiaries_controller/s
 // ========================
 // ARCHIVE ROUTES
 // ========================
-$route['archive'] = 'archive_controller';
+$route['archive'] = 'archive_controller/index';
 $route['archive/get_school_details'] = 'archive_controller/get_school_details';
 $route['archive/process_archive'] = 'archive_controller/process_archive';
 $route['archive/get_record_details/(:num)'] = 'archive_controller/get_record_details/$1';
