@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class sbfp_dashboard_controller extends CI_Controller {
+class Sbfp_dashboard_controller extends CI_Controller {
 
     public function __construct()
     {
