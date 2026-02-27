@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class authcontroller extends CI_Controller {
+class Authcontroller extends CI_Controller {
 
     public function __construct()
     {
@@ -47,7 +47,6 @@ class authcontroller extends CI_Controller {
                 }
 
                 // Login successful — set session with all necessary data
-                // INCLUDING school_level
                 $session_data = [
                     'logged_in' => true,
                     'user_id' => $user->id,
@@ -147,7 +146,6 @@ class authcontroller extends CI_Controller {
      */
     public function register()
     {
-        // Your registration logic here
         redirect('login');
     }
 }
