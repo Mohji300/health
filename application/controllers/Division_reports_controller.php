@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class division_reports_controller extends CI_Controller {
+class Division_reports_controller extends CI_Controller {
 
     public function __construct()
     {
