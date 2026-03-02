@@ -182,8 +182,8 @@
 
         <!-- Show to Admin and Regular Users only -->
         <?php if ($is_admin || $is_regular_user): ?>
-        <a href="<?php echo site_url('user'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo is_active_page('user', $current_uri) ? 'active' : ''; ?>">
+        <a href="<?php echo site_url('users'); ?>"
+          class="nav-link rounded-2 mb-1 <?php echo is_active_page('users', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-user"></i>
           <span class="main-sidebar-text"> User Dashboard</span>
         </a>
@@ -235,8 +235,8 @@
           </a>
         <?php elseif ($is_regular_user): ?>
           <!-- Regular User sees User Reports -->
-          <a href="<?php echo site_url('reports'); ?>"
-             class="nav-link rounded-2 mb-1 <?php echo is_active_page('reports', $current_uri) ? 'active' : ''; ?>">
+          <a href="<?php echo site_url('user/reports'); ?>"
+             class="nav-link rounded-2 mb-1 <?php echo is_active_page('user/reports', $current_uri) ? 'active' : ''; ?>">
             <i class="fas fa-file-alt"></i>
             <span class="main-sidebar-text"> Reports</span>
           </a>
@@ -312,8 +312,8 @@
 
       <!-- SBFP Beneficiaries - Show to ALL ROLES (Admin, District, Division, Regular User) -->
       <li class="nav-item mb-2 px-2">
-        <a href="<?php echo site_url('sbfp-beneficiaries'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo is_active_page('sbfp-beneficiaries', $current_uri) ? 'active' : ''; ?>">
+        <a href="<?php echo site_url('sbfp_beneficiaries'); ?>"
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('sbfp_beneficiaries', $current_uri) ? 'active' : ''; ?>">
           <i class="fas fa-users"></i>
           <span class="main-sidebar-text"> SBFP Beneficiaries</span>
         </a>
