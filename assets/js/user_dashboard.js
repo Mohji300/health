@@ -1,19 +1,21 @@
-/* JS extracted from application/views/user_dashboard.php
-   Uses runtime config object provided by the view: window.user_dashboard_controllerConfig
-*/
 $(document).ready(function() {
     $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
     $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
     $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
     
-    // Get display mode from config
+    // Check if config exists
+    if (!window.user_dashboard_controllerConfig) {
+        console.error('Config object is undefined');
+        return;
+    }
+    
+    // Get display mode and school level from config
     var displayMode = window.user_dashboard_controllerConfig.display_mode || 'normal';
     var schoolLevel = window.user_dashboard_controllerConfig.school_level || 'all';
     
-    console.log('Display Mode:', displayMode); // For debugging
-    console.log('School Level:', schoolLevel); // For debugging
+
     
-    // Set initial table visibility based on display mode
+    // Set initial table visibility based on display mode and school level
     setInitialTableVisibility();
     
     // Initialize integrated submenu buttons
@@ -156,58 +158,71 @@ $(document).ready(function() {
         
         // Show the appropriate table based on display mode
         if (displayMode === 'elementary_only') {
-            console.log('Showing elementary table only');
-            if (elemTable) {
-                elemTable.classList.remove('d-none');
-            }
-        } else if (displayMode === 'secondary_only') {
-            console.log('Showing secondary table only');
-            if (secTable) {
-                secTable.classList.remove('d-none');
-            }
-        } else if (displayMode === 'shs_only') {
-            console.log('Showing SHS table only');
-            if (shsTable) {
-                shsTable.classList.remove('d-none');
-            }
-        } else if (displayMode === 'integrated') {
+            console.log('Showing elementary table only (elementary_only mode)');
+            if (elemTable) elemTable.classList.remove('d-none');
+        } 
+        else if (displayMode === 'secondary_only') {
+            console.log('Showing secondary table only (secondary_only mode)');
+            if (secTable) secTable.classList.remove('d-none');
+        } 
+        else if (displayMode === 'shs_only') {
+            console.log('Showing SHS table only (shs_only mode)');
+            if (shsTable) shsTable.classList.remove('d-none');
+        } 
+        else if (displayMode === 'integrated') {
             // For integrated, check the school level to determine which table to show
             console.log('Integrated mode, school level:', schoolLevel);
             if (schoolLevel === 'integrated_secondary') {
-                if (secTable) {
-                    secTable.classList.remove('d-none');
-                }
+                if (secTable) secTable.classList.remove('d-none');
                 // Update button states
                 $('#btnIntegratedSecondary').removeClass('btn-outline-primary').addClass('btn-primary');
                 $('#btnIntegratedElementary').removeClass('btn-primary').addClass('btn-outline-primary');
             } else {
                 // Default to elementary for integrated and integrated_elementary
-                if (elemTable) {
-                    elemTable.classList.remove('d-none');
-                }
+                if (elemTable) elemTable.classList.remove('d-none');
                 // Update button states
                 $('#btnIntegratedElementary').removeClass('btn-outline-primary').addClass('btn-primary');
                 $('#btnIntegratedSecondary').removeClass('btn-primary').addClass('btn-outline-primary');
             }
-        } else {
-            // Normal mode - check school level to determine which table to show
-            console.log('Normal mode, school level:', schoolLevel);
+        } 
+        else {
+            // Normal mode - check school level directly
+            console.log('Normal mode, checking school level:', schoolLevel);
             
-            // Handle Stand Alone SHS in normal mode (should not happen, but just in case)
-            if (schoolLevel === 'Stand Alone SHS' || schoolLevel === 'standalone_shs' || schoolLevel === 'shs_only') {
-                console.log('Showing SHS table (fallback)');
-                if (shsTable) {
-                    shsTable.classList.remove('d-none');
-                }
-            } else if (schoolLevel === 'secondary') {
-                if (secTable) {
-                    secTable.classList.remove('d-none');
-                }
-            } else {
-                // Default to elementary for all, elementary, and other cases
-                if (elemTable) {
-                    elemTable.classList.remove('d-none');
-                }
+            // Convert to lowercase for comparison
+            const levelLower = String(schoolLevel).toLowerCase();
+            
+            if (levelLower === 'elementary') {
+                console.log('Elementary school detected - showing only elementary table');
+                if (elemTable) elemTable.classList.remove('d-none');
+                if (secTable) secTable.classList.add('d-none');
+                if (shsTable) shsTable.classList.add('d-none');
+            }
+            else if (levelLower === 'secondary') {
+                console.log('Secondary school detected - showing only secondary table');
+                if (secTable) secTable.classList.remove('d-none');
+                if (elemTable) elemTable.classList.add('d-none');
+                if (shsTable) shsTable.classList.add('d-none');
+            }
+            else if (levelLower === 'stand alone shs' || levelLower === 'standalone_shs') {
+                console.log('Stand Alone SHS detected - showing only SHS table');
+                if (shsTable) shsTable.classList.remove('d-none');
+                if (elemTable) elemTable.classList.add('d-none');
+                if (secTable) secTable.classList.add('d-none');
+            }
+            else if (levelLower === 'all') {
+                console.log('All schools - showing all tables?');
+                // For 'all', you might want to show all tables or default to elementary
+                // For now, default to elementary
+                if (elemTable) elemTable.classList.remove('d-none');
+                if (secTable) secTable.classList.add('d-none');
+                if (shsTable) shsTable.classList.add('d-none');
+            }
+            else {
+                console.log('Default case - showing elementary table');
+                if (elemTable) elemTable.classList.remove('d-none');
+                if (secTable) secTable.classList.add('d-none');
+                if (shsTable) shsTable.classList.add('d-none');
             }
         }
     }
@@ -392,19 +407,18 @@ $(document).ready(function() {
                     tableHtml = elemTable ? elemTable.outerHTML : secTable.outerHTML;
                 }
             } else {
-                // Normal mode - check which table is visible
-                const elemTable = document.getElementById('elementaryTable');
-                const secTable = document.getElementById('secondaryTable');
-                const shsTable = document.getElementById('shsTable');
+                // Normal mode - check school level to determine which table to print
+                const levelLower = String(schoolLevel).toLowerCase();
                 
-                if (shsTable && !shsTable.classList.contains('d-none')) {
-                    tableHtml = shsTable.outerHTML;
-                } else if (secTable && !secTable.classList.contains('d-none')) {
-                    tableHtml = secTable.outerHTML;
-                } else if (elemTable && !elemTable.classList.contains('d-none')) {
-                    tableHtml = elemTable.outerHTML;
+                if (levelLower === 'elementary') {
+                    tableHtml = document.getElementById('elementaryTable').outerHTML;
+                } else if (levelLower === 'secondary') {
+                    tableHtml = document.getElementById('secondaryTable').outerHTML;
+                } else if (levelLower === 'stand alone shs' || levelLower === 'standalone_shs') {
+                    tableHtml = document.getElementById('shsTable').outerHTML;
                 } else {
-                    tableHtml = elemTable ? elemTable.outerHTML : secTable.outerHTML;
+                    // Default to elementary
+                    tableHtml = document.getElementById('elementaryTable').outerHTML;
                 }
             }
             
@@ -432,7 +446,7 @@ $(document).ready(function() {
             } else if (levelLower === 'integrated_secondary') {
                 schoolLevelDisplay = 'Integrated Schools (Secondary Only)';
             } else {
-                schoolLevelDisplay = schoolLevel; // Use original value
+                schoolLevelDisplay = schoolLevel;
             }
             
             const printCss = '<style>' +

@@ -169,7 +169,7 @@ class User_dashboard_controller extends CI_Controller {
         $this->output->set_content_type('application/json')->set_output(json_encode([
             'success' => true,
             'message' => 'School level filter updated',
-            'redirect' => site_url('userdashboard')
+            'redirect' => site_url('users')
         ]));
     }
         
@@ -199,7 +199,7 @@ class User_dashboard_controller extends CI_Controller {
         $this->output->set_content_type('application/json')->set_output(json_encode([
             'success' => true,
             'message' => 'Assessment type set to ' . $assessment_type,
-            'redirect' => site_url('userdashboard')
+            'redirect' => site_url('users')
         ]));
     }
     
@@ -258,7 +258,7 @@ class User_dashboard_controller extends CI_Controller {
                 echo "<pre>";
                 print_r($this->session->userdata());
                 echo "</pre>";
-                echo "<br><br><a href='" . site_url('userdashboard') . "'>Go to Dashboard</a>";
+                echo "<br><br><a href='" . site_url('users') . "'>Go to Dashboard</a>";
             } else {
                 echo "User not found in database";
             }

@@ -254,7 +254,7 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
 
             <div class="card-body p-0">
               <div id="tableContainer" class="table-responsive p-3">
-                <!-- Elementary Table - Always present, visibility controlled by JS -->
+                <!-- Elementary Table -->
                 <table id="elementaryTable" class="table table-bordered table-sm table-fixed small-cell mb-0">
                   <thead class="table-light">
                     <tr>
@@ -427,17 +427,17 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
                       <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
                     </tr>
                     <tr class="table-secondary">
-                      <th colspan="2" class="text-center th-red">Severely Wasted</th>
-                      <th colspan="2" class="text-center th-orange">Wasted</th>
-                      <th colspan="2" class="text-center th-green">Normal BMI</th>
-                      <th colspan="2" class="text-center th-orange">Overweight</th>
-                      <th colspan="2" class="text-center th-red">Obese</th>
+                      <th colspan="2" class="text-center th-red text-white">Severely Wasted</th>
+                      <th colspan="2" class="text-center th-orange text-white">Wasted</th>
+                      <th colspan="2" class="text-center th-green text-white">Normal BMI</th>
+                      <th colspan="2" class="text-center th-orange text-white">Overweight</th>
+                      <th colspan="2" class="text-center th-red text-white">Obese</th>
 
-                      <th colspan="2" class="text-center th-red">Severely Stunted</th>
-                      <th colspan="2" class="text-center th-orange">Stunted</th>
-                      <th colspan="2" class="text-center th-green">Normal HFA</th>
-                      <th colspan="2" class="text-center th-green">Tall</th>
-                      <th colspan="2" class="text-center">Students Height</th>
+                      <th colspan="2" class="text-center th-red text-white">Severely Stunted</th>
+                      <th colspan="2" class="text-center th-orange text-white">Stunted</th>
+                      <th colspan="2" class="text-center th-green text-white">Normal HFA</th>
+                      <th colspan="2" class="text-center th-green text-white">Tall</th>
+                      <th colspan="2" class="text-center th-gray">Students Height</th>
                     </tr>
                     <tr class="table-secondary">
                       <?php for ($i=0;$i<10;$i++): ?>
@@ -507,16 +507,23 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-    window.user_dashboard_controllerConfig = {
-      urls: {
-        set_assessment_type: '<?= site_url("user_dashboard_controller/set_assessment_type"); ?>',
-        set_school_level: '<?= site_url("user_dashboard_controller/set_school_level"); ?>',
-        base: '<?= site_url("user_dashboard_controller"); ?>'
-      },
-      school_level: '<?= isset($school_level) ? $school_level : ""; ?>',
-      assessment_type_display: '<?= ucfirst($assessment_type); ?>',
-      display_mode: '<?= $display_mode; ?>'
+    // Ensure the config object exists with default values
+    window.user_dashboard_controllerConfig = window.user_dashboard_controllerConfig || {};
+
+    // Set the configuration with fallback values
+    window.user_dashboard_controllerConfig.urls = {
+        set_assessment_type: '<?= site_url("users/set_assessment_type"); ?>',
+        set_school_level: '<?= site_url("users/set_school_level"); ?>',
+        base: '<?= site_url("users"); ?>'
     };
+
+    window.user_dashboard_controllerConfig.school_level = '<?= isset($school_level) ? addslashes($school_level) : ""; ?>';
+    window.user_dashboard_controllerConfig.user_actual_school_level = '<?= isset($user_actual_school_level) ? addslashes($user_actual_school_level) : ""; ?>';
+    window.user_dashboard_controllerConfig.assessment_type_display = '<?= ucfirst($assessment_type); ?>';
+    window.user_dashboard_controllerConfig.display_mode = '<?= isset($display_mode) ? $display_mode : "normal"; ?>';
+
+    // Add debug log
+    console.log('Config loaded:', window.user_dashboard_controllerConfig);
     </script>
     <script src="<?= base_url('assets/js/user_dashboard.js'); ?>"></script>
   </body>
