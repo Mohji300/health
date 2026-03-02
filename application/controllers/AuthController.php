@@ -117,7 +117,7 @@ class Authcontroller extends CI_Controller {
                     redirect('superadmin');
                     break;
                 case 'user':
-                    redirect('user');
+                    redirect('users');
                     break;
                 default:
                     redirect('superadmin');
