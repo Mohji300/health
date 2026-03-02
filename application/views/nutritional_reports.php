@@ -17,6 +17,14 @@
       <div id="page-content-wrapper" class="w-100">
         <div class="container-fluid py-4">
 
+          <?php 
+          // Determine the base URL based on user role
+          $role = $this->session->userdata('role');
+          $reports_base = (in_array($role, ['admin', 'super_admin', 'district', 'division'])) 
+              ? 'admin/reports' 
+              : 'user/reports';
+          ?>
+
           <!-- Reports Header -->
           <div class="card bg-gradient-primary text-white mb-4">
             <div class="card-body">
@@ -125,7 +133,7 @@
               <h6 class="m-0 font-weight-bold text-primary">
                 <i class="fas fa-filter me-1"></i> Filter Reports
               </h6>
-              <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-outline-secondary btn-sm" id="resetFiltersBtn">
+              <a href="<?php echo site_url($reports_base); ?>" class="btn btn-outline-secondary btn-sm" id="resetFiltersBtn">
                 <i class="fas fa-redo me-1"></i> Reset Filters
               </a>
             </div>
@@ -137,7 +145,7 @@
                   </h6>
                 </div>
                 <div class="card-body">
-                  <form method="get" action="<?php echo site_url('admin/reports'); ?>" class="row g-3" id="filterForm">
+                  <form method="get" action="<?php echo site_url($reports_base); ?>" class="row g-3" id="filterForm">
                     <div class="col-md-3">
                       <label class="form-label fw-bold text-dark">
                         <i class="fas fa-flag me-1"></i> Assessment Type
@@ -202,11 +210,11 @@
                           <?php echo number_format(count($reports)); ?> Reports
                       </span>
                       <div>
-                          <a href="<?php echo site_url('admin/reports/export?' . http_build_query($current_filters)); ?>" 
+                          <a href="<?php echo site_url($reports_base . '/export?' . http_build_query($current_filters)); ?>" 
                             class="btn btn-success btn-sm me-2 export-btn">
                               <i class="fas fa-file-export me-1"></i> Export to CSV
                           </a>
-                          <a href="<?php echo site_url('admin/reports/statistics?' . http_build_query($current_filters)); ?>" 
+                          <a href="<?php echo site_url($reports_base . '/statistics?' . http_build_query($current_filters)); ?>" 
                             class="btn btn-info btn-sm stats-btn">
                               <i class="fas fa-chart-pie me-1"></i> View Statistics
                           </a>
@@ -220,7 +228,7 @@
                           <i class="fas fa-inbox fa-4x text-gray-300 mb-3"></i>
                           <h5 class="text-gray-500 mb-2">No reports found</h5>
                           <p class="text-gray-500 mb-4">Try adjusting your filters or check back later for new submissions.</p>
-                          <a href="<?php echo site_url('admin/reports'); ?>" class="btn btn-primary" id="clearFiltersBtn">
+                          <a href="<?php echo site_url($reports_base); ?>" class="btn btn-primary" id="clearFiltersBtn">
                               <i class="fas fa-redo me-1"></i> Clear Filters
                           </a>
                       </div>
@@ -291,7 +299,7 @@
                                           <?php endif; ?>
                                       </td>
                                       <td class="text-center">
-                                          <a href="<?php echo site_url('admin/reports/export_detail?' . http_build_query([
+                                          <a href="<?php echo site_url($reports_base . '/export_detail?' . http_build_query([
                                               'legislative_district' => $report->legislative_district ?? '',
                                               'school_district' => $report->school_district ?? '',
                                               'school_name' => $report->school_name ?? '',
@@ -329,7 +337,7 @@
         const reportsConfig = {
             totalReports: <?php echo count($reports); ?>,
             currentFilters: <?php echo json_encode($current_filters); ?>,
-            baseUrl: '<?php echo site_url('admin/reports'); ?>',
+            baseUrl: '<?php echo site_url($reports_base); ?>',
             hasReports: <?php echo !empty($reports) ? 'true' : 'false'; ?>
         };
     </script>
