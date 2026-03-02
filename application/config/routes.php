@@ -83,8 +83,10 @@ $route['superadmin/delete-user/(:num)'] = 'superadmincontroller/delete_user/$1';
 // ========================
 // USER DASHBOARD ROUTES
 // ========================
-$route['user'] = 'user_dashboard_controller/index';
-$route['user/dashboard'] = 'user_dashboard_controller/index';
+$route['users'] = 'user_dashboard_controller/index';
+$route['users/dashboard'] = 'user_dashboard_controller/index';
+$route['users/set_assessment_type'] = 'user_dashboard_controller/set_assessment_type';
+$route['users/set_school_level'] = 'user_dashboard_controller/set_school_level';
 
 // ========================
 // USER PROFILE ROUTES  
@@ -172,10 +174,11 @@ $route['nutritional_upload/clear_nutritional_data'] = 'nutritional_upload/clear_
 // ========================
 // USER NUTRITIONAL REPORTS
 // ========================
-$route['reports'] = 'nutritional_assessment_reports/index';
-$route['reports/export'] = 'nutritional_assessment_reports/export';     
-$route['reports/view_detail'] = 'nutritional_assessment_reports/view_detail';
-$route['reports/statistics'] = 'nutritional_assessment_reports/statistics';
+$route['user/reports'] = 'nutritional_assessment_reports/index';
+$route['user/reports/export'] = 'nutritional_assessment_reports/export';  
+$route['user/reports/export_detail'] = 'nutritional_assessment_reports/export_detail';   
+$route['user/reports/view_detail'] = 'nutritional_assessment_reports/view_detail';
+$route['user/reports/statistics'] = 'nutritional_assessment_reports/statistics';
 
 // ========================
 // DISTRICT DASHBOARD ROUTES
@@ -213,11 +216,11 @@ $route['division/reports/comparison_report'] = 'division_reports_controller/comp
 // ========================
 // SBFP BENEFICIARIES ROUTES
 // ========================
-$route['sbfp-beneficiaries'] = 'sbfp_beneficiaries_controller/index';
-$route['sbfp-beneficiaries/export_excel'] = 'sbfp_beneficiaries_controller/export_excel';
-$route['sbfp-beneficiaries/print_report'] = 'sbfp_beneficiaries_controller/print_report';
-$route['sbfp-beneficiaries/set_assessment_type'] = 'sbfp_beneficiaries_controller/set_assessment_type';
-$route['sbfp-beneficiaries/set_school_level'] = 'sbfp_beneficiaries_controller/set_school_level';
+$route['sbfp_beneficiaries'] = 'sbfp_beneficiaries_controller/index';
+$route['sbfp_beneficiaries/export_excel'] = 'sbfp_beneficiaries_controller/export_excel';
+$route['sbfp_beneficiaries/print_report'] = 'sbfp_beneficiaries_controller/print_report';
+$route['sbfp_beneficiaries/set_assessment_type'] = 'sbfp_beneficiaries_controller/set_assessment_type';
+$route['sbfp_beneficiaries/set_school_level'] = 'sbfp_beneficiaries_controller/set_school_level';
 
 // ========================
 // ARCHIVE ROUTES
