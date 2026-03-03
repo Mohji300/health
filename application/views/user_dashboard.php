@@ -512,7 +512,6 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
 
     // Set the configuration with fallback values
     window.user_dashboard_controllerConfig.urls = {
-        set_assessment_type: '<?= site_url("users/set_assessment_type"); ?>',
         set_school_level: '<?= site_url("users/set_school_level"); ?>',
         base: '<?= site_url("users"); ?>'
     };

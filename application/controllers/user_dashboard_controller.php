@@ -29,25 +29,23 @@ class User_dashboard_controller extends CI_Controller {
 
     public function index()
     {
-        // Get current assessment type from session
-        $assessment_type = $this->session->userdata('assessment_type') ?: 'baseline';
+        $assessment_type = $this->input->get('assessment_type') ?: 
+            ($this->session->userdata('assessment_type') ?: 'baseline');
+    
+        $this->session->set_userdata('assessment_type', $assessment_type);
         
-        // Get the logged-in user's ID
         $user_id = $this->session->userdata('user_id');
-        
-        // IMPORTANT: Get the user's actual school level from the users table
+
         $user_school_level = $this->get_user_school_level($user_id);
-        
-        // Check if session already has school_level, if not, set it
+
         $session_school_level = $this->session->userdata('school_level');
-        
-        // School level filter - if coming from URL parameter, use that
+
         $filter_school_level = $this->input->get('school_level');
         
         if ($filter_school_level) {
-            // If filter is applied via URL, use that
+
             $school_level = $filter_school_level;
-            // Update session with filter
+  
             $this->session->set_userdata('school_level', $school_level);
         } else {
             // If session has school_level and it's not 'all', use it
@@ -169,36 +167,6 @@ class User_dashboard_controller extends CI_Controller {
         $this->output->set_content_type('application/json')->set_output(json_encode([
             'success' => true,
             'message' => 'School level filter updated',
-            'redirect' => site_url('users')
-        ]));
-    }
-        
-    /**
-     * AJAX: Set assessment type in session
-     */
-    public function set_assessment_type()
-    {
-        if (!$this->input->is_ajax_request()) {
-            show_404();
-            return;
-        }
-        
-        $assessment_type = $this->input->post('assessment_type', TRUE);
-        
-        if (!in_array($assessment_type, ['baseline', 'midline', 'endline'])) {
-            $this->output->set_content_type('application/json')->set_output(json_encode([
-                'success' => false,
-                'message' => 'Invalid assessment type'
-            ]));
-            return;
-        }
-
-        // Set assessment type in session
-        $this->session->set_userdata('assessment_type', $assessment_type);
-        
-        $this->output->set_content_type('application/json')->set_output(json_encode([
-            'success' => true,
-            'message' => 'Assessment type set to ' . $assessment_type,
             'redirect' => site_url('users')
         ]));
     }
