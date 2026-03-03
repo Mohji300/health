@@ -12,10 +12,16 @@ class sbfp_beneficiaries_model extends CI_Model {
      * Get beneficiaries with role-based filtering
      */
     public function get_beneficiaries($assessment_type = 'baseline', $school_name = '', $school_level = 'all', $user_role = 'school', $school_id = '', $district = '', $selected_school = '') {
+        
+        log_message('debug', '=== GET_BENEFICIARIES CALLED ===');
+        log_message('debug', 'Params: assessment_type=' . $assessment_type . ', school_name=' . $school_name . ', school_level=' . $school_level . ', user_role=' . $user_role . ', district=' . $district);
+        
         $this->db->select('n.*');
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
+
+        $this->db->where('n.sbfp_beneficiary', 'Yes');
         
         // Apply role-based filtering
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
@@ -28,13 +34,13 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->order_by('n.name', 'ASC');
         
         $query = $this->db->get();
+        
+        // Log the query for debugging
+        log_message('debug', 'SQL Query: ' . $this->db->last_query());
+        
         $results = $query->result_array();
         
-        // Log for debugging
-        log_message('debug', '=== MODEL GET_BENEFICIARIES ===');
-        log_message('debug', 'User Role: ' . $user_role);
-        log_message('debug', 'District Filter: ' . $district);
-        log_message('debug', 'Total Results: ' . count($results));
+        log_message('debug', 'Results found: ' . count($results));
         
         return $results;
     }
@@ -129,6 +135,7 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
+        $this->db->where('n.sbfp_beneficiary', 'Yes');
         
         // Apply role-based filtering
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
@@ -147,6 +154,7 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
+        $this->db->where('n.sbfp_beneficiary', 'Yes');  // ADD THIS LINE
         
         // Apply role-based filtering
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
