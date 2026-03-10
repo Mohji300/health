@@ -168,7 +168,7 @@ $route['excel_upload/clear_data'] = 'excel_upload/clear_data';
 // NUTRITIONAL UPLOAD
 // ========================
 $route['nutritional_upload'] = 'nutritional_upload/index';
-$route['nutritional_upload/upload_nutritional_data'] = 'nutritional_upload/upload_nutritional_data';
+$route['nutritional_upload/process_excel'] = 'nutritional_upload/process_excel';
 $route['nutritional_upload/clear_nutritional_data'] = 'nutritional_upload/clear_nutritional_data';
 
 // ========================
