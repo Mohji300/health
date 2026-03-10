@@ -101,6 +101,16 @@ class Nutritional_assessment_reports extends CI_Controller {
     public function export()
     {
         try {
+            // Load the PhpSpreadsheet library
+            $this->load->library('phpspreadsheet_lib');
+
+            // Define template path
+            $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
+            
+            // Load the template using the library
+            $spreadsheet = $this->phpspreadsheet_lib->loadTemplate($templatePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            
             // Get filter parameters
             $legislative_district = $this->input->get('legislative_district', TRUE);
             $school_district = $this->input->get('school_district', TRUE);
@@ -125,19 +135,6 @@ class Nutritional_assessment_reports extends CI_Controller {
                 show_error('No data found for the specified criteria');
             }
 
-            require_once APPPATH . '../vendor/autoload.php';
-
-            // Define template path
-            $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
-            
-            if (!file_exists($templatePath)) {
-                show_error('Template file not found. Please ensure nutritional_report_template.xlsx is in assets/templates/');
-            }
-
-            // Load the template
-            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
-            $sheet = $spreadsheet->setActiveSheetIndex(0);
-            
             // Clear existing data rows
             for ($row = 9; $row <= 200; $row++) {
                 $sheet->setCellValue('A' . $row, '');
@@ -438,21 +435,8 @@ class Nutritional_assessment_reports extends CI_Controller {
             }
             $filename .= date('Y-m-d') . '.xlsx';
 
-            // Clear output buffers
-            while (ob_get_level()) {
-                ob_end_clean();
-            }
-
-            // Set headers
-            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Cache-Control: max-age=0');
-            header('Pragma: public');
-
-            // Save to output
-            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-            $writer->save('php://output');
-            exit;
+            // Save to output using the library
+            $this->phpspreadsheet_lib->saveToOutput($spreadsheet, $filename);
 
         } catch (Exception $e) {
             log_message('error', 'Export failed: ' . $e->getMessage());
@@ -467,6 +451,9 @@ class Nutritional_assessment_reports extends CI_Controller {
     public function export_detail()
     {
         try {
+            // Load the PhpSpreadsheet library
+            $this->load->library('phpspreadsheet_lib');
+
             $legislative_district = $this->input->get('legislative_district', TRUE);
             $school_district = $this->input->get('school_district', TRUE);
             $school_name = $this->input->get('school_name', TRUE);
@@ -499,17 +486,16 @@ class Nutritional_assessment_reports extends CI_Controller {
             // Get the actual year from the first record for display
             $actual_year = $assessments[0]->year ?? $year;
 
-            require_once APPPATH . '../vendor/autoload.php';
-
-            // Load the template
+            // Define template path
             $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
             
             if (!file_exists($templatePath)) {
                 show_error('Template file not found at: ' . $templatePath);
             }
 
-            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
-            $sheet = $spreadsheet->setActiveSheetIndex(0);
+            // Load the template using the library
+            $spreadsheet = $this->phpspreadsheet_lib->loadTemplate($templatePath);
+            $sheet = $spreadsheet->getActiveSheet();
 
             // Clear existing data rows
             for ($row = 9; $row <= 200; $row++) {
@@ -788,21 +774,8 @@ class Nutritional_assessment_reports extends CI_Controller {
                 . '_' . $assessment_type 
                 . '_' . date('Y-m-d') . '.xlsx';
 
-            // Clear output buffers
-            while (ob_get_level()) {
-                ob_end_clean();
-            }
-
-            // Set headers
-            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Cache-Control: max-age=0');
-            header('Pragma: public');
-
-            // Save to output
-            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-            $writer->save('php://output');
-            exit;
+            // Save to output using the library
+            $this->phpspreadsheet_lib->saveToOutput($spreadsheet, $filename);
 
         } catch (Exception $e) {
             log_message('error', 'Export detail failed: ' . $e->getMessage());
@@ -816,7 +789,7 @@ class Nutritional_assessment_reports extends CI_Controller {
      * Get nutritional statistics summary
      */
     public function statistics() {
-        // Get filter values from GET request
+
         $filters = [
             'legislative_district' => $this->input->get('legislative_district'),
             'school_district' => $this->input->get('school_district'),
@@ -878,7 +851,6 @@ class Nutritional_assessment_reports extends CI_Controller {
         $data['total_overweight'] = $unfiltered_stats->overweight ?? 0;
         $data['total_obese'] = $unfiltered_stats->obese ?? 0;
 
-        // Get filter dropdown options - FILTERED BY USER'S SCHOOL
         if (in_array($role, ['admin', 'super_admin'])) {
             $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts();
             $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts();
@@ -890,8 +862,7 @@ class Nutritional_assessment_reports extends CI_Controller {
             $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names_by_user($session_school, $role);
             $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels_by_user($session_school);
         }
-        
-        // Add assessment types for filter
+
         $data['assessment_types'] = [
             '' => 'All Types',
             'baseline' => 'Baseline',
@@ -908,7 +879,7 @@ class Nutritional_assessment_reports extends CI_Controller {
      * Export statistics to CSV
      */
     public function export_statistics() {
-        // Get filter values from GET request
+
         $filters = [
             'legislative_district' => $this->input->get('legislative_district'),
             'school_district' => $this->input->get('school_district'),
@@ -955,8 +926,7 @@ class Nutritional_assessment_reports extends CI_Controller {
         header('Content-Disposition: attachment; filename=' . $filename);
         
         $output = fopen('php://output', 'w');
-        
-        // Add BOM for UTF-8
+
         fputs($output, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF)));
         
         // CSV headers

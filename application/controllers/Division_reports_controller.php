@@ -87,6 +87,9 @@ class Division_reports_controller extends CI_Controller {
     public function export()
     {
         try {
+            // Load Composer autoloader
+            require_once APPPATH . '../vendor/autoload.php';
+
             // Get filter parameters
             $legislative_district = $this->input->get('legislative_district', TRUE);
             $school_district = $this->input->get('school_district', TRUE);
@@ -110,8 +113,6 @@ class Division_reports_controller extends CI_Controller {
             if (empty($reports)) {
                 show_error('No data found for the specified criteria');
             }
-
-            require_once APPPATH . '../vendor/autoload.php';
 
             // Define template path
             $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
@@ -489,6 +490,9 @@ class Division_reports_controller extends CI_Controller {
     public function export_detail()
     {
         try {
+            // Load Composer autoloader
+            require_once APPPATH . '../vendor/autoload.php';
+
             $legislative_district = $this->input->get('legislative_district', TRUE);
             $school_district = $this->input->get('school_district', TRUE);
             $school_name = $this->input->get('school_name', TRUE);
@@ -520,8 +524,6 @@ class Division_reports_controller extends CI_Controller {
 
             // Get the actual year from the first record for display
             $actual_year = $assessments[0]->year ?? $year;
-
-            require_once APPPATH . '../vendor/autoload.php';
 
             // Load the template
             $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';

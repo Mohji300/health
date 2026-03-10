@@ -115,6 +115,9 @@ class District_reports_controller extends CI_Controller {
     public function export()
     {
         try {
+            // Load Composer autoloader
+            require_once APPPATH . '../vendor/autoload.php';
+
             // Get filter parameters
             $legislative_district = $this->input->get('legislative_district', TRUE);
             $school_district = $this->input->get('school_district', TRUE);
@@ -138,8 +141,6 @@ class District_reports_controller extends CI_Controller {
             if (empty($reports)) {
                 show_error('No data found for the specified criteria');
             }
-
-            require_once APPPATH . '../vendor/autoload.php';
 
             // Define template path
             $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
@@ -476,47 +477,14 @@ class District_reports_controller extends CI_Controller {
     }
 
     /**
-     * View detailed report for a specific school/grade/section - UPDATED
-     */
-    public function view_detail()
-    {
-        $legislative_district = $this->input->get('legislative_district', TRUE);
-        $school_district = $this->input->get('school_district', TRUE);
-        $school_name = $this->input->get('school_name', TRUE);
-        $grade_level = $this->input->get('grade_level', TRUE);
-        $section = $this->input->get('section', TRUE);
-        $assessment_type = $this->input->get('assessment_type', TRUE) ?: 'baseline';
-
-        if (!$legislative_district || !$school_district || !$school_name || !$grade_level || !$section) {
-            show_error('Missing required parameters');
-        }
-
-        $data['assessments'] = $this->district_reports_model->get_by_section(
-            $legislative_district,
-            $school_district,
-            $grade_level,
-            $section,
-            $assessment_type
-        );
-
-        $data['report_info'] = [
-            'school_name' => $school_name,
-            'legislative_district' => $legislative_district,
-            'school_district' => $school_district,
-            'grade_level' => $grade_level,
-            'section' => $section,
-            'assessment_type' => $assessment_type
-        ];
-
-        $this->load->view('reports/detail', $data);
-    }
-
-    /**
      * Export detailed report using nutritional_report_template.xlsx template
      */
     public function export_detail()
     {
         try {
+            // Load Composer autoloader
+            require_once APPPATH . '../vendor/autoload.php';
+
             $legislative_district = $this->input->get('legislative_district', TRUE);
             $school_district = $this->input->get('school_district', TRUE);
             $school_name = $this->input->get('school_name', TRUE);
@@ -548,8 +516,6 @@ class District_reports_controller extends CI_Controller {
 
             // Get the actual year from the first record for display
             $actual_year = $assessments[0]->year ?? $year;
-
-            require_once APPPATH . '../vendor/autoload.php';
 
             // Load the template
             $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
@@ -860,96 +826,6 @@ class District_reports_controller extends CI_Controller {
             show_error('Export failed: ' . $e->getMessage());
         }
     }
-
-/**
- * Get nutritional statistics summary - UPDATED VERSION
- */
-public function statistics() {
-    // Get filter values from GET request
-    $filters = [
-        'legislative_district' => $this->input->get('legislative_district'),
-        'school_district' => $this->input->get('school_district'),
-        'school_name' => $this->input->get('school_name'),
-        'grade_level' => $this->input->get('grade_level'),
-        'assessment_type' => $this->input->get('assessment_type'),
-        'date_from' => $this->input->get('date_from'),
-        'date_to' => $this->input->get('date_to'),
-        'nutritional_status' => $this->input->get('nutritional_status')
-    ];
-
-        // If district account, restrict filters to their district
-        $role = $this->session->userdata('role');
-        if ($role === 'district') {
-            $user_district = $this->session->userdata('school_district') ?? $this->session->userdata('district') ?? null;
-            $parsed = $user_district ? preg_replace('/\s+(District|Division)$/', '', $user_district) : null;
-            if ($parsed) {
-                $filters['school_district'] = $parsed;
-            }
-        }
-
-    // Get aggregated statistics for the summary cards (use $filters so district accounts get district-scoped totals)
-    $unfiltered_stats = $this->district_reports_model->get_nutritional_statistics_summary($filters);
-
-    // Get filtered detailed nutritional statistics for the overview section
-    $data['nutritional_stats'] = $this->district_reports_model->get_detailed_nutritional_statistics($filters);
-    
-    // Get students based on nutritional status filter
-    $status_filter = $filters['nutritional_status'] ?? '';
-    $data['filtered_students'] = [];
-    
-    if ($status_filter === '') {
-        // When "All Statuses" is selected (empty string), show ALL students
-        $data['filtered_students'] = $this->district_reports_model->get_all_students_for_export($filters);
-    } else if ($status_filter === 'sbfp_beneficiary') {
-        // When "SBFP Beneficiary" is selected, show only SBFP beneficiaries
-        $data['filtered_students'] = $this->district_reports_model->get_sbfp_beneficiaries($filters);
-    } else if (!empty($status_filter)) {
-        if (in_array($status_filter, ['severely wasted', 'wasted', 'normal', 'overweight', 'obese'])) {
-            // Use the new method to get students by any nutritional status
-            $data['filtered_students'] = $this->district_reports_model->get_students_by_nutritional_status($status_filter, $filters);
-        }
-    }
-    
-    // For backward compatibility - still get wasted/severely wasted separately
-    $all_wasted = $this->district_reports_model->get_all_wasted_students($filters);
-    $data['severely_wasted_students'] = [];
-    $data['wasted_students'] = [];
-    
-    foreach ($all_wasted as $student) {
-        $status = strtolower(trim($student->nutritional_status));
-        if ($status === 'severely wasted') {
-            $data['severely_wasted_students'][] = $student;
-        } elseif ($status === 'wasted') {
-            $data['wasted_students'][] = $student;
-        }
-    }
-    
-    // Calculate totals for the statistics cards - USE UNFILTERED DATA
-    $data['total_severely_wasted'] = $unfiltered_stats->severely_wasted ?? 0;
-    $data['total_wasted'] = $unfiltered_stats->wasted ?? 0;
-    $data['total_normal'] = $unfiltered_stats->normal ?? 0;
-    $data['total_students'] = $unfiltered_stats->total_students ?? 0;
-    $data['total_overweight'] = $unfiltered_stats->overweight ?? 0;
-    $data['total_obese'] = $unfiltered_stats->obese ?? 0;
-
-    // Get filter dropdown options
-    $data['legislative_districts'] = $this->district_reports_model->get_unique_legislative_districts();
-    $data['school_districts'] = $this->district_reports_model->get_unique_school_districts();
-    $data['school_names'] = $this->district_reports_model->get_unique_school_names();
-    $data['grade_levels'] = $this->district_reports_model->get_unique_grade_levels();
-    
-    // Add assessment types for filter
-    $data['assessment_types'] = [
-        '' => 'All Types',
-        'baseline' => 'Baseline',
-        'endline' => 'Endline'
-    ];
-    
-    // Store current filters for form persistence
-    $data['current_filters'] = $filters;
-
-    $this->load->view('view_statistics', $data);
-}
 
 /**
  * Export statistics to CSV - UPDATED VERSION
