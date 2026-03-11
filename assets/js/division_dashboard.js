@@ -1,4 +1,4 @@
-/* JS for division_dashboard — reads runtime config from window.DivisionDashboardConfig */
+/* JS for division_dashboard */
 $(document).ready(function() {
     let currentView = 'districts';
     let selectedDistrict = null;
@@ -45,72 +45,128 @@ $(document).ready(function() {
             }
         });
     }
-
-    // Filter buttons
-    $('#btnElementaryFilter').click(function() { 
-        $('#btnIntegratedFilter').removeClass('active');
-        $('#integratedSubMenu').addClass('d-none');
-        setSchoolLevelFilter('elementary'); 
-    });
-    $('#btnSecondaryFilter').click(function() { 
-        $('#btnIntegratedFilter').removeClass('active');
-        $('#integratedSubMenu').addClass('d-none');
-        setSchoolLevelFilter('secondary'); 
-    });
-    $('#btnIntegratedFilter').click(function(e) {
+    
+    // Handle school level dropdown selection
+    $('.dropdown-item[data-level]').on('click', function(e) {
         e.preventDefault();
-        $(this).toggleClass('active');
+        
+        const level = $(this).data('level');
+        const levelText = $(this).text().trim();
+        const assessmentType = window.DivisionDashboardConfig.assessment_type;
+        
         if ($(this).hasClass('active')) {
-            $('#integratedSubMenu').removeClass('d-none');
-            setSchoolLevelFilter('integrated');
-        } else {
-            $('#integratedSubMenu').addClass('d-none');
-            setSchoolLevelFilter('all');
+            return;
         }
-    });
-    $('#btnIntegratedElementary').click(function() { setSchoolLevelFilter('integrated_elementary'); });
-    $('#btnIntegratedSecondary').click(function() { setSchoolLevelFilter('integrated_secondary'); });
-
-    function setSchoolLevelFilter(level) {
-        $('.table-switcher .btn, #integratedSubMenu .btn').prop('disabled', true);
+        
+        // Update dropdown button text with icon and selected option
+        const selectedIcon = $(this).find('i').clone();
+        const button = $('#schoolLevelDropdown');
+        button.html('').append(selectedIcon).append(' ' + levelText);
+        
+        showLoading();
+        
+        $('.btn').prop('disabled', true);
+        
+        // Make AJAX request to update filter
         $.ajax({
             url: window.DivisionDashboardConfig.urls.set_school_level,
             method: 'POST',
-            data: { school_level: level },
+            data: { 
+                school_level: level,
+                assessment_type: assessmentType 
+            },
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
                     var url = window.DivisionDashboardConfig.urls.base;
-                    var assessmentType = window.DivisionDashboardConfig.assessment_type || '';
-                    url += '?assessment_type=' + encodeURIComponent(assessmentType) + '&school_level=' + encodeURIComponent(level);
+                    url += '?assessment_type=' + encodeURIComponent(assessmentType) + 
+                           '&school_level=' + encodeURIComponent(level);
                     window.location.href = url;
                 } else {
-                    alert('Error: ' + response.message);
-                    $('.table-switcher .btn, #integratedSubMenu .btn').prop('disabled', false);
+                    hideLoading();
+                    showNotification('Error updating filter: ' + response.message, 'error');
+                    $('.btn').prop('disabled', false);
                 }
             },
-            error: function() {
-                alert('Error applying filter. Please try again.');
-                $('.table-switcher .btn, #integratedSubMenu .btn').prop('disabled', false);
+            error: function(xhr, status, error) {
+                hideLoading();
+                showNotification('Error connecting to server. Please try again.', 'error');
+                console.error('School level update error:', error);
+                $('.btn').prop('disabled', false);
             }
         });
+    });
+    
+    function showLoading() {
+        if (!$('#loadingOverlay').length) {
+            $('body').append(`
+                <div id="loadingOverlay" class="loading-overlay">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `);
+        }
+    }
+    
+    function hideLoading() {
+        $('#loadingOverlay').remove();
+    }
+    
+    function showNotification(message, type) {
+        $('.notification-toast').remove();
+
+        const notification = $(`
+            <div class="alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show notification-toast" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+                <i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'check-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+        
+        $('body').append(notification);
+
+        setTimeout(() => {
+            notification.fadeOut(300, function() {
+                $(this).remove();
+            });
+        }, 5000);
+    }
+    
+    // Table visibility function
+    function updateTableVisibility(schoolLevel) {
+        const elemTable = document.getElementById('elementaryTable');
+        const secTable = document.getElementById('secondaryTable');
+        
+        if (!elemTable || !secTable) return;
+        
+        // Determine which table to show based on school level
+        switch(schoolLevel) {
+            case 'secondary':
+            case 'integrated_secondary':
+                elemTable.classList.add('d-none');
+                secTable.classList.remove('d-none');
+                break;
+                
+            case 'elementary':
+            case 'integrated_elementary':
+            case 'integrated':
+            case 'all':
+            default:
+                elemTable.classList.remove('d-none');
+                secTable.classList.add('d-none');
+                break;
+        }
     }
 
-    // Table visibility and print
+    // Update table visibility on page load
     var currentLevel = window.DivisionDashboardConfig.school_level || 'all';
+    updateTableVisibility(currentLevel);
+
+    
     const elemTable = document.getElementById('elementaryTable');
     const secTable = document.getElementById('secondaryTable');
     const btnPrint = document.getElementById('btnPrint');
-
-    if (elemTable && secTable) {
-        if (currentLevel === 'secondary' || currentLevel === 'integrated_secondary') {
-            secTable.classList.remove('d-none');
-            elemTable.classList.add('d-none');
-        } else {
-            elemTable.classList.remove('d-none');
-            secTable.classList.add('d-none');
-        }
-    }
 
     if (btnPrint) {
         btnPrint.addEventListener('click', () => {
@@ -133,7 +189,7 @@ $(document).ready(function() {
             win.document.close();
         });
     }
-
+    
     // District/schools UI
     $('#overallSummaryCard').click(function() { $('#schoolsBox').toggleClass('d-none'); });
     $('#closeSchoolsBox').click(function() { $('#schoolsBox').addClass('d-none'); });
@@ -178,7 +234,7 @@ $(document).ready(function() {
             updateSubmissionStats([]);
         }
     }
-
+    
     // Search functionality
     let searchTimeout;
     $('#schoolSearch').on('input', function() {
@@ -296,14 +352,12 @@ $(document).ready(function() {
             }
         });
     }
-
-    // IMPROVED: Helper function to check if a school has submitted for the current assessment type
+    
     function checkSchoolSubmissionStatus(school) {
         if (!school) return false;
         
         const assessmentType = window.DivisionDashboardConfig.assessment_type || 'baseline';
-        
-        // Log the school data for debugging (uncomment if needed)
+
         console.log(`Checking school ${school.name} for ${assessmentType}:`, {
             has_baseline: school.has_baseline,
             has_midline: school.has_midline,
@@ -311,8 +365,7 @@ $(document).ready(function() {
             has_submitted: school.has_submitted,
             raw_data: school
         });
-        
-        // CASE 1: Check if the school object has specific assessment flags
+
         if (assessmentType === 'baseline' && school.has_baseline !== undefined) {
             return isTruthy(school.has_baseline);
         }
@@ -322,8 +375,7 @@ $(document).ready(function() {
         if (assessmentType === 'endline' && school.has_endline !== undefined) {
             return isTruthy(school.has_endline);
         }
-        
-        // CASE 2: If the school has an assessments object with specific flags
+
         if (school.assessments) {
             if (assessmentType === 'baseline' && school.assessments.has_baseline !== undefined) {
                 return isTruthy(school.assessments.has_baseline);
@@ -335,8 +387,7 @@ $(document).ready(function() {
                 return isTruthy(school.assessments.has_endline);
             }
         }
-        
-        // CASE 3: Check if there's a submitted_assessments array/object
+
         if (school.submitted_assessments) {
             if (Array.isArray(school.submitted_assessments)) {
                 return school.submitted_assessments.includes(assessmentType);
@@ -345,23 +396,18 @@ $(document).ready(function() {
                 return isTruthy(school.submitted_assessments[assessmentType]);
             }
         }
-        
-        // CASE 4: Fallback to generic has_submitted (only for baseline since that's what your model returns)
+
         if (assessmentType === 'baseline' && school.has_submitted !== undefined) {
             return isTruthy(school.has_submitted);
         }
-        
-        // CASE 5: If we're on midline/endline and no specific flags, check if there are ANY assessments
-        // This is a fallback but might not be accurate
+
         if ((assessmentType === 'midline' || assessmentType === 'endline') && school.has_submitted !== undefined) {
-            // Don't use has_submitted for midline/endline as it might be from baseline
             return false;
         }
         
         return false;
     }
-    
-    // Helper function to check truthy values (handles boolean, 1, '1', 'true')
+
     function isTruthy(value) {
         if (value === true || value === 1 || value === '1' || value === 'true') {
             return true;
@@ -393,7 +439,7 @@ $(document).ready(function() {
         }
         $('#submissionText').text('Submission Progress:');
     }
-
+    
     function showSchoolDetails(schoolId, schoolName) {
         if (!schoolId) {
             $('#schoolModalBody').html(`

@@ -269,42 +269,48 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
                             <?php endif; ?>
                         </h6>
                         <div class="no-print d-flex flex-wrap align-items-center">
-                            <!-- School Level Filter Buttons -->
-                            <div class="btn-group me-2 mb-2 mb-sm-0" role="group">
-                                <button id="btnElementary" type="button" 
-                                        class="btn btn-outline-primary <?php echo ($school_level === 'all' || $school_level === 'elementary' || $school_level === 'integrated_elementary') ? 'active' : ''; ?>">
-                                    <i class="fas fa-child me-1"></i> Elementary
-                                    <span class="badge bg-info ms-1">K-6</span>
+                            <!-- School Level Filter Dropdown -->
+                            <div class="dropdown me-2 mb-2 mb-sm-0">
+                                <button class="btn btn-outline-primary dropdown-toggle" type="button" id="schoolLevelDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-filter me-1"></i>
+                                    School Level: 
+                                    <?php 
+                                        if ($school_level === 'all') echo 'All Schools';
+                                        elseif ($school_level === 'elementary') echo 'Elementary (K-6)';
+                                        elseif ($school_level === 'secondary') echo 'Secondary (7-12)';
+                                        elseif ($school_level === 'integrated') echo 'Integrated (K-12)';
+                                        elseif ($school_level === 'integrated_elementary') echo 'Integrated Elementary';
+                                        elseif ($school_level === 'integrated_secondary') echo 'Integrated Secondary';
+                                        else echo 'All Schools';
+                                    ?>
                                 </button>
-                                <button id="btnSecondary" type="button" 
-                                        class="btn btn-outline-primary <?php echo ($school_level === 'secondary' || $school_level === 'integrated_secondary') ? 'active' : ''; ?>">
-                                    <i class="fas fa-graduation-cap me-1"></i> Secondary
-                                    <span class="badge bg-info ms-1">7-12</span>
-                                </button>
-                                <button id="btnIntegrated" type="button" 
-                                        class="btn btn-outline-primary <?php echo (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) ? 'active' : ''; ?>">
-                                    <i class="fas fa-university me-1"></i> Integrated
-                                    <span class="badge bg-info ms-1">K-12</span>
-                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="schoolLevelDropdown">
+                                    <li><h6 class="dropdown-header">Filter by School Level</h6></li>
+                                    <li><a class="dropdown-item <?php echo ($school_level === 'all') ? 'active' : ''; ?>" href="#" data-level="all">
+                                        <i class="fas fa-school me-2"></i> All Schools
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item <?php echo ($school_level === 'elementary') ? 'active' : ''; ?>" href="#" data-level="elementary">
+                                        <i class="fas fa-child me-2"></i> Elementary Only <span class="badge bg-info ms-2">K-6</span>
+                                    </a></li>
+                                    <li><a class="dropdown-item <?php echo ($school_level === 'secondary') ? 'active' : ''; ?>" href="#" data-level="secondary">
+                                        <i class="fas fa-graduation-cap me-2"></i> Secondary Only <span class="badge bg-info ms-2">7-12</span>
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><h6 class="dropdown-header">Integrated Schools</h6></li>
+                                    <li><a class="dropdown-item <?php echo ($school_level === 'integrated') ? 'active' : ''; ?>" href="#" data-level="integrated">
+                                        <i class="fas fa-university me-2"></i> All Integrated <span class="badge bg-info ms-2">K-12</span>
+                                    </a></li>
+                                    <li><a class="dropdown-item <?php echo ($school_level === 'integrated_elementary') ? 'active' : ''; ?>" href="#" data-level="integrated_elementary">
+                                        <i class="fas fa-child me-2"></i> Integrated Elementary <span class="badge bg-info ms-2">K-6</span>
+                                    </a></li>
+                                    <li><a class="dropdown-item <?php echo ($school_level === 'integrated_secondary') ? 'active' : ''; ?>" href="#" data-level="integrated_secondary">
+                                        <i class="fas fa-graduation-cap me-2"></i> Integrated Secondary <span class="badge bg-info ms-2">7-12</span>
+                                    </a></li>
+                                </ul>
                             </div>
                             <button id="btnPrint" class="btn btn-success">
                                 <i class="fas fa-print me-1"></i> Print Report
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Integrated Sub-Menu -->
-                    <div id="integratedSubMenu" class="no-print <?php echo (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) ? '' : 'd-none'; ?>">
-                        <div class="btn-group" role="group">
-                            <button id="btnIntegratedElementary" type="button" 
-                                    class="btn btn-sm <?php echo (in_array($school_level, ['integrated', 'integrated_elementary'])) ? 'btn-primary' : 'btn-outline-primary'; ?>">
-                                <i class="fas fa-child me-1"></i> Integrated Elementary
-                                <span class="badge bg-info ms-1">K-6</span>
-                            </button>
-                            <button id="btnIntegratedSecondary" type="button" 
-                                    class="btn btn-sm <?php echo ($school_level === 'integrated_secondary') ? 'btn-primary' : 'btn-outline-primary'; ?>">
-                                <i class="fas fa-graduation-cap me-1"></i> Integrated Secondary
-                                <span class="badge bg-info ms-1">7-12</span>
                             </button>
                         </div>
                     </div>

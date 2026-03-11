@@ -1,4 +1,4 @@
-/* district_dashboard.js - Complete version with search functionality */
+/* district_dashboard.js */
 
 $(document).ready(function() {
     console.log('District dashboard JS loaded');
@@ -22,122 +22,82 @@ $(document).ready(function() {
         }
         window.location.href = url;
     }
+
     
-    // School level filtering
-    $('#btnElementary').click(function() {
-        $('#btnIntegrated').removeClass('active');
-        $('#integratedSubMenu').addClass('d-none');
-        enableTableSwitching();
-        setSchoolLevelFilter('elementary');
-    });
-    
-    $('#btnSecondary').click(function() {
-        $('#btnIntegrated').removeClass('active');
-        $('#integratedSubMenu').addClass('d-none');
-        enableTableSwitching();
-        setSchoolLevelFilter('secondary');
-    });
-    
-    $('#btnIntegrated').click(function(e) {
+    //school level dropdown selection
+    $('.dropdown-item[data-level]').on('click', function(e) {
         e.preventDefault();
-        $(this).toggleClass('active');
-        if ($(this).hasClass('active')) {
-            disableTableSwitching();
-            $('#integratedSubMenu').removeClass('d-none');
-            setSchoolLevelFilter('integrated');
-        } else {
-            enableTableSwitching();
-            $('#integratedSubMenu').addClass('d-none');
-            setSchoolLevelFilter('all');
-        }
-    });
-    
-    $('#btnIntegratedElementary').click(function() {
-        setSchoolLevelFilter('integrated_elementary');
-    });
-    
-    $('#btnIntegratedSecondary').click(function() {
-        setSchoolLevelFilter('integrated_secondary');
-    });
-
-    function enableTableSwitching() {
-        $('#btnElementary, #btnSecondary').css({
-            'pointerEvents': 'auto',
-            'opacity': '1'
-        });
-    }
-    
-    function disableTableSwitching() {
-        $('#btnElementary, #btnSecondary').css({
-            'pointerEvents': 'none',
-            'opacity': '0.5'
-        });
-    }
-
-    function setSchoolLevelFilter(level) {
-        // Show loading state
-        $('#btnElementary, #btnSecondary, #btnIntegrated').html('<i class="fas fa-spinner fa-spin"></i> Loading...');
-        $('#btnElementary, #btnSecondary, #btnIntegrated').prop('disabled', true);
         
+        const level = $(this).data('level');
+        const levelText = $(this).text().trim();
+        const assessmentType = window.DistrictDashboardConfig.assessment_type;
+
+        if ($(this).hasClass('active')) {
+            return;
+        }
+
+        const selectedIcon = $(this).find('i').clone();
+        const button = $('#schoolLevelDropdown');
+        button.html('').append(selectedIcon).append(' ' + levelText);
+
+        showLoading();
+
         $.ajax({
             url: window.DistrictDashboardConfig.urls.set_school_level,
             method: 'POST',
-            data: { 
-                school_level: level, 
-                assessment_type: window.DistrictDashboardConfig.assessment_type 
+            data: {
+                school_level: level,
+                assessment_type: assessmentType
             },
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    var url = window.DistrictDashboardConfig.urls.base + 
-                             '?assessment_type=' + encodeURIComponent(window.DistrictDashboardConfig.assessment_type);
-                    if (level !== 'all') {
-                        url += '&school_level=' + encodeURIComponent(level);
-                    }
-                    window.location.href = url;
+                    window.location.href = response.redirect;
                 } else {
-                    alert('Error: ' + response.message);
-                    resetButtonStates();
+                    hideLoading();
+                    showNotification('Error updating filter: ' + response.message, 'error');
                 }
             },
-            error: function() {
-                alert('Error applying filter. Please try again.');
-                resetButtonStates();
+            error: function(xhr, status, error) {
+                hideLoading();
+                showNotification('Error connecting to server. Please try again.', 'error');
+                console.error('School level update error:', error);
             }
         });
+    });
+    
+    function updateTableVisibility(schoolLevel) {
+        const elemTable = document.getElementById('elementaryTable');
+        const secTable = document.getElementById('secondaryTable');
+        
+        if (!elemTable || !secTable) return;
+
+        switch(schoolLevel) {
+            case 'secondary':
+            case 'integrated_secondary':
+                elemTable.classList.add('d-none');
+                secTable.classList.remove('d-none');
+                break;
+                
+            case 'elementary':
+            case 'integrated_elementary':
+            case 'integrated':
+            case 'all':
+            default:
+                elemTable.classList.remove('d-none');
+                secTable.classList.add('d-none');
+                break;
+        }
     }
 
-    function resetButtonStates() {
-        $('#btnElementary').html('<i class="fas fa-child me-1"></i> Elementary <span class="badge bg-info ms-1">K-6</span>');
-        $('#btnSecondary').html('<i class="fas fa-graduation-cap me-1"></i> Secondary <span class="badge bg-info ms-1">7-12</span>');
-        $('#btnIntegrated').html('<i class="fas fa-university me-1"></i> Integrated <span class="badge bg-info ms-1">K-12</span>');
-        $('#btnElementary, #btnSecondary, #btnIntegrated').prop('disabled', false);
-    }
+    const currentSchoolLevel = window.DistrictDashboardConfig.school_level || 'all';
+    updateTableVisibility(currentSchoolLevel);
 
-    // Table switching
-    const btnElem = document.getElementById('btnElementary');
-    const btnSec = document.getElementById('btnSecondary');
+    // print functionality
+    const btnPrint = document.getElementById('btnPrint');
     const elemTable = document.getElementById('elementaryTable');
     const secTable = document.getElementById('secondaryTable');
-    const btnPrint = document.getElementById('btnPrint');
 
-    if (btnElem && btnSec && elemTable && secTable) {
-        btnElem.addEventListener('click', function() {
-            btnElem.classList.add('active');
-            btnSec.classList.remove('active');
-            elemTable.classList.remove('d-none');
-            secTable.classList.add('d-none');
-        });
-        
-        btnSec.addEventListener('click', function() {
-            btnSec.classList.add('active');
-            btnElem.classList.remove('active');
-            secTable.classList.remove('d-none');
-            elemTable.classList.add('d-none');
-        });
-    }
-
-    // Print functionality
     if (btnPrint) {
         btnPrint.addEventListener('click', function() {
             const win = window.open('', '_blank');
@@ -151,11 +111,11 @@ $(document).ready(function() {
             let schoolLevelDisplay = 'All Schools (Elementary View)';
             switch(schoolLevel) {
                 case 'all': schoolLevelDisplay = 'All Schools (Elementary View)'; break;
-                case 'elementary': schoolLevelDisplay = 'Elementary Schools'; break;
-                case 'secondary': schoolLevelDisplay = 'Secondary Schools'; break;
-                case 'integrated': schoolLevelDisplay = 'Integrated Schools (Elementary View)'; break;
-                case 'integrated_elementary': schoolLevelDisplay = 'Integrated Schools (Elementary Only)'; break;
-                case 'integrated_secondary': schoolLevelDisplay = 'Integrated Schools (Secondary Only)'; break;
+                case 'elementary': schoolLevelDisplay = 'Elementary Schools Only'; break;
+                case 'secondary': schoolLevelDisplay = 'Secondary Schools Only'; break;
+                case 'integrated': schoolLevelDisplay = 'Integrated Schools (All Grades)'; break;
+                case 'integrated_elementary': schoolLevelDisplay = 'Integrated Schools (Elementary Grades Only)'; break;
+                case 'integrated_secondary': schoolLevelDisplay = 'Integrated Schools (Secondary Grades Only)'; break;
             }
             
             const printCss = `
@@ -180,52 +140,42 @@ $(document).ready(function() {
         });
     }
 
-    // ==================== SCHOOL SEARCH FUNCTIONALITY ====================
-    
-    // Cache DOM elements
     const $schoolSearch = $('#schoolSearch');
     const $clearSearch = $('#clearSearch');
     const $schoolsList = $('#schoolsList');
     const $schoolItems = $('.school-item');
     const $noSearchResults = $('#noSearchResults');
     const $noSchoolsMessage = $('#noSchoolsMessage');
-    
-    // Initialize search - hide no results message initially
+
     if ($noSearchResults.length) {
         $noSearchResults.addClass('d-none');
     }
-    
-    // Live search as user types
+
     $schoolSearch.on('keyup', function() {
         performSearch();
     });
-    
-    // Clear search button
+
     $clearSearch.on('click', function() {
         $schoolSearch.val('');
         performSearch();
         $schoolSearch.focus();
     });
-    
-    // Search function
+
     function performSearch() {
         const searchTerm = $schoolSearch.val().toLowerCase().trim();
-        
-        // If search is empty, show all schools
+
         if (searchTerm === '') {
             $schoolItems.each(function() {
                 $(this).show();
             });
             $noSearchResults.addClass('d-none');
-            
-            // Show "no schools" message if there are no schools at all
+
             if ($schoolItems.length === 0 && $noSchoolsMessage.length) {
                 $noSchoolsMessage.removeClass('d-none');
             }
             return;
         }
-        
-        // Perform search
+
         let visibleCount = 0;
         
         $schoolItems.each(function() {
@@ -233,8 +183,7 @@ $(document).ready(function() {
             const schoolName = $item.data('school')?.toLowerCase() || '';
             const schoolCode = $item.data('code')?.toLowerCase() || '';
             const itemText = $item.text().toLowerCase();
-            
-            // Check if search term matches name, code, or any text in the item
+
             const matches = schoolName.includes(searchTerm) || 
                            schoolCode.includes(searchTerm) || 
                            itemText.includes(searchTerm);
@@ -242,15 +191,13 @@ $(document).ready(function() {
             if (matches) {
                 $item.show();
                 visibleCount++;
-                
-                // Highlight matching text (optional)
+
                 highlightText($item, searchTerm);
             } else {
                 $item.hide();
             }
         });
-        
-        // Show/hide no results message
+
         if (visibleCount === 0) {
             $noSearchResults.removeClass('d-none');
             if ($noSchoolsMessage.length) {
@@ -260,10 +207,9 @@ $(document).ready(function() {
             $noSearchResults.addClass('d-none');
         }
     }
-    
-    // Optional: Highlight matching text
+
     function highlightText($element, searchTerm) {
-        if (searchTerm.length < 2) return; // Don't highlight very short terms
+        if (searchTerm.length < 2) return;
         
         const nameElement = $element.find('.fw-medium');
         if (nameElement.length) {
@@ -278,13 +224,12 @@ $(document).ready(function() {
     function escapeRegExp(string) {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
-    
-    // Reset highlighting when search is cleared
+
     $clearSearch.on('click', function() {
         $schoolItems.each(function() {
             const $nameElement = $(this).find('.fw-medium');
             if ($nameElement.length) {
-                $nameElement.html($nameElement.text()); // Remove highlights
+                $nameElement.html($nameElement.text());
             }
         });
     });
@@ -388,5 +333,43 @@ $(document).ready(function() {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+    
+    // Loading overlay functions
+    function showLoading() {
+        if (!$('#loadingOverlay').length) {
+            $('body').append(`
+                <div id="loadingOverlay" class="loading-overlay">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `);
+        }
+    }
+    
+    function hideLoading() {
+        $('#loadingOverlay').remove();
+    }
+    
+    // Notification function
+    function showNotification(message, type) {
+        $('.notification-toast').remove();
+
+        const notification = $(`
+            <div class="alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show notification-toast" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+                <i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'check-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+        
+        $('body').append(notification);
+
+        setTimeout(() => {
+            notification.fadeOut(300, function() {
+                $(this).remove();
+            });
+        }, 5000);
     }
 });
