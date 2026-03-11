@@ -82,10 +82,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Pass PHP variables to JavaScript
-        const uploadConfig = {
+        window.uploadConfig = {
             processUrl: '<?php echo site_url("nutritional_upload/process_excel"); ?>',
-            maxFileSize: 5 * 1024 * 1024, // 5MB
+            maxFileSize: 5 * 1024 * 1024,
             allowedExtensions: ['xlsx', 'xls', 'csv']
         };
     </script>

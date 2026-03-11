@@ -24,9 +24,9 @@
     
     // Configuration
     const config = {
-        maxFileSize: uploadConfig?.maxFileSize || 5 * 1024 * 1024, // 5MB default
-        allowedExtensions: uploadConfig?.allowedExtensions || ['xlsx', 'xls', 'csv'],
-        processUrl: uploadConfig?.processUrl || ''
+        maxFileSize: window.uploadConfig?.maxFileSize || 5 * 1024 * 1024,
+        allowedExtensions: window.uploadConfig?.allowedExtensions || ['xlsx', 'xls', 'csv'],
+        processUrl: window.uploadConfig?.processUrl || ''
     };
     
     /**
@@ -154,6 +154,7 @@
         fetch(config.processUrl, {
             method: 'POST',
             body: formData,
+            credentials: 'include',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
@@ -234,6 +235,8 @@
             errorMessage = 'Server error. Please try again later.';
         } else if (error.message.includes('Failed to fetch')) {
             errorMessage = 'Network error. Please check your connection.';
+        } else if (error.message.includes('Unexpected end of JSON input')) {
+            errorMessage = 'Server returned an invalid response. The file may be too large or corrupted.';
         }
         
         showModal('Error', errorMessage, 'danger');
