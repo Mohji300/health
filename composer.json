@@ -12,7 +12,12 @@
 	},
 	"require": {
 		"php": ">=5.3.7",
-		"phpoffice/phpspreadsheet": "1.28.0"
+		"phpoffice/phpspreadsheet": "1.24.*"
+	},
+	"config": {
+		"platform": {
+			"php": "7.4.33"
+		}
 	},
 	"suggest": {
 		"paragonie/random_compat": "Provides better randomness in PHP 5.x"
