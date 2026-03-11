@@ -72,7 +72,7 @@ class User_dashboard_controller extends CI_Controller {
         // Set display mode based on school level
         $display_mode = 'normal'; // default
         
-        if ($school_level === 'Stand Alone SHS') {
+        if ($school_level === 'stand alone shs') {
             $display_mode = 'shs_only';
         } elseif ($school_level === 'elementary') {
             $display_mode = 'elementary_only';
@@ -131,7 +131,7 @@ class User_dashboard_controller extends CI_Controller {
                           strtolower($school_level) === 'standalone_shs' || 
                           strtolower($school_level) === 'shs' || 
                           strtolower($school_level) === 'senior high school') {
-                    return 'Stand Alone SHS'; // Return with proper capitalization and spaces
+                    return 'stand alone shs';
                 } else {
                     return 'all';
                 }
