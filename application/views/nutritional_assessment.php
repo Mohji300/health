@@ -28,7 +28,6 @@
             </div>
           </div>
 
-
           <!-- Assessment Details Info Box -->
           <?php if (!empty($legislative_district) && !empty($school_district) && !empty($grade) && !empty($section)): ?>
           <div class="alert alert-info mb-4 no-print">
@@ -196,24 +195,24 @@
 
               <div class="table-responsive">
                 <table class="table table-sm table-striped" id="studentTable">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Birthday</th>
-            <th>Grade</th>
-            <th>School Year</th>
-            <th>Weight (kg)</th>
-            <th>Height (m)</th>
-            <th>Sex</th>
-            <th>Height² (m²)</th>
-            <th>Age (y|m)</th>
-            <th>BMI</th>
-            <th>Nutritional Status</th>
-            <th>Height-For-Age</th>
-            <th>SBFP Beneficiary</th>
-            <th>Action</th>
-        </tr>
-    </thead>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Birthday</th>
+                      <th>Grade</th>
+                      <th>School Year</th>
+                      <th>Weight (kg)</th>
+                      <th>Height (m)</th>
+                      <th>Sex</th>
+                      <th>Height² (m²)</th>
+                      <th>Age (y|m)</th>
+                      <th>BMI</th>
+                      <th>Nutritional Status</th>
+                      <th>Height-For-Age</th>
+                      <th>SBFP Beneficiary</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
                   <tbody id="studentTableBody">
                     <tr><td colspan="14" class="text-center text-muted">No student records yet. Add some students above.</td></tr>
                   </tbody>
@@ -326,38 +325,17 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-  <script>
-    window.nutritionalassessmentConfig = {
-      urls: {
-        process_excel: '<?= site_url("nutritional_upload/process_excel"); ?>',
-        bulk_store: '<?= site_url("nutritionalassessment/bulk_store"); ?>'
-      },
-      redirect_after: '<?= site_url("sbfp/dashboard"); ?>'
-    };
-  </script>
-  
-  <script>
-    window.addEventListener('error', function(e) {
-        if (e.target.tagName === 'SCRIPT' && e.target.src.includes('nutritional_assessment.js')) {
-            console.error('External JS failed to load, using inline fallback');
-        }
-    }, true);
-  </script>
-  
-  <script src="<?= base_url('assets/js/nutritional_assessment.js'); ?>"></script>
-  
-  <script>
-    window.showAlert = window.showAlert || function(title, message) {
-        const tEl = document.getElementById('alertTitle'); 
-        const bEl = document.getElementById('alertBody'); 
-        if (tEl) tEl.textContent = title; 
-        if (bEl) bEl.textContent = message; 
-        const alertModal = bootstrap.Modal.getInstance(document.getElementById('alertModal')) || 
-                          new bootstrap.Modal(document.getElementById('alertModal'));
-        if (alertModal) alertModal.show(); 
-        else alert(title + '\n\n' + message); 
-    };
-  </script>
-  
+    <script>
+      window.nutritionalassessmentConfig = {
+        urls: {
+          process_excel: '<?= site_url("nutritional_upload/process_excel"); ?>',
+          bulk_store: '<?= site_url("nutritionalassessment/bulk_store"); ?>'
+        },
+        redirect_after: '<?= site_url("sbfp/dashboard"); ?>'
+      };
+    </script>
+    
+    <script src="<?= base_url('assets/js/nutritional_assessment.js'); ?>"></script>
+    
   </body>
 </html>

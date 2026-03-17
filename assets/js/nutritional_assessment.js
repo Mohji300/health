@@ -8,6 +8,7 @@
     let uploadLoadingModal = null;
     let confirmModal = null;
     let submitConfirmModal = null;
+    let editingIndex = -1; // Track which student is being edited
 
     function getStorageKey() {
         const ld = document.getElementById('legislative_district')?.value || 'na';
@@ -95,8 +96,8 @@
         };
     }
 
-    // Add a student to the list
-    function addStudent() {
+    // Add or update a student
+    function addOrUpdateStudent() {
         const form = document.getElementById('assessmentForm');
         if (!form.checkValidity()) { 
             form.classList.add('was-validated'); 
@@ -110,20 +111,130 @@
         const sex = document.getElementById('sex').value;
         
         const student = calculateStudentData(name, birthday, weight, height, sex);
-        students.push(student); 
-        saveStudents(); 
-        clearForm(); 
-        updateUI(); 
-        showAlert('Success', 'Student added to the list!');
+        
+        if (editingIndex >= 0 && editingIndex < students.length) {
+            // Update existing student
+            students[editingIndex] = student;
+            saveStudents();
+            cancelEdit();
+            showAlert('Success', 'Student record updated successfully!');
+        } else {
+            // Add new student
+            students.push(student);
+            saveStudents();
+            clearForm();
+            showAlert('Success', 'Student added to the list!');
+        }
+        
+        updateUI();
     }
 
-    // Remove a student by index
-    function removeStudent(idx) { 
-        if (confirm('Remove this student?')) { 
-            students.splice(idx, 1); 
-            saveStudents(); 
-            updateUI(); 
-        } 
+    // Edit a student
+    function editStudent(index) {
+        if (index < 0 || index >= students.length) return;
+        
+        const student = students[index];
+        editingIndex = index;
+        
+        // Populate the form with student data
+        document.getElementById('name').value = student.name || '';
+        document.getElementById('birthday').value = student.birthday || '';
+        document.getElementById('weight').value = student.weight || '';
+        document.getElementById('height').value = student.height || '';
+        document.getElementById('sex').value = student.sex || '';
+        document.getElementById('date').value = student.date || new Date().toISOString().split('T')[0];
+        
+        // Change submit button to Update mode
+        const submitBtn = document.querySelector('#assessmentForm button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Student';
+        submitBtn.classList.remove('btn-success');
+        submitBtn.classList.add('btn-warning');
+        
+        // Add cancel button if not exists
+        if (!document.getElementById('cancelEditBtn')) {
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.id = 'cancelEditBtn';
+            cancelBtn.className = 'btn btn-secondary ms-2';
+            cancelBtn.innerHTML = '<i class="fas fa-times"></i> Cancel';
+            cancelBtn.onclick = cancelEdit;
+            submitBtn.parentNode.appendChild(cancelBtn);
+        }
+        
+        // Scroll to form
+        document.querySelector('.card-header.bg-primary').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Cancel editing
+    function cancelEdit() {
+        editingIndex = -1;
+        clearForm();
+        
+        // Change button back to Add mode
+        const submitBtn = document.querySelector('#assessmentForm button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Student to List';
+        submitBtn.classList.remove('btn-warning');
+        submitBtn.classList.add('btn-success');
+        
+        // Remove cancel button
+        const cancelBtn = document.getElementById('cancelEditBtn');
+        if (cancelBtn) {
+            cancelBtn.remove();
+        }
+    }
+
+    // Confirm delete student
+    function confirmDeleteStudent(index) {
+        if (index < 0 || index >= students.length) return;
+        
+        const studentName = students[index].name || 'this student';
+        
+        // Use existing confirm modal
+        const confirmBody = document.getElementById('confirmBody');
+        const confirmTitle = document.getElementById('confirmTitle');
+        const confirmYesBtn = document.getElementById('confirmYesBtn');
+        
+        if (confirmTitle) confirmTitle.textContent = 'Delete Student';
+        if (confirmBody) confirmBody.innerHTML = `Are you sure you want to delete <strong>${escapeHtml(studentName)}</strong>? This action cannot be undone.`;
+        
+        // Store the index to delete
+        confirmYesBtn.setAttribute('data-delete-index', index);
+        
+        // Remove existing event listeners and add new one
+        const newConfirmYesBtn = confirmYesBtn.cloneNode(true);
+        confirmYesBtn.parentNode.replaceChild(newConfirmYesBtn, confirmYesBtn);
+        
+        newConfirmYesBtn.addEventListener('click', function() {
+            const deleteIndex = this.getAttribute('data-delete-index');
+            if (deleteIndex !== null) {
+                performDeleteStudent(parseInt(deleteIndex));
+            }
+            if (confirmModal) confirmModal.hide();
+        });
+        
+        if (confirmModal) confirmModal.show();
+    }
+
+    // Perform the actual delete
+    function performDeleteStudent(index) {
+        if (index < 0 || index >= students.length) return;
+        
+        const studentName = students[index].name || 'Student';
+        
+        // If we're editing this student, cancel edit mode
+        if (editingIndex === index) {
+            cancelEdit();
+        } else if (editingIndex > index) {
+            // If we deleted a student before the editing index, update the editing index
+            editingIndex--;
+        }
+        
+        // Remove the student
+        students.splice(index, 1);
+        saveStudents();
+        updateUI();
+        
+        showAlert('Success', `${escapeHtml(studentName)} has been deleted successfully!`);
     }
 
     // Clear the input form
@@ -144,9 +255,20 @@
         }
         
         const confirmBody = document.getElementById('confirmBody');
-        if (confirmBody) {
-            confirmBody.textContent = `Clear all ${students.length} student record(s)? This action cannot be undone.`;
-        }
+        const confirmTitle = document.getElementById('confirmTitle');
+        const confirmYesBtn = document.getElementById('confirmYesBtn');
+        
+        if (confirmTitle) confirmTitle.textContent = 'Clear All Records';
+        if (confirmBody) confirmBody.innerHTML = `Clear all <strong>${students.length}</strong> student record(s)? This action cannot be undone.`;
+        
+        // Reset the confirm button for clear all
+        const newConfirmYesBtn = confirmYesBtn.cloneNode(true);
+        confirmYesBtn.parentNode.replaceChild(newConfirmYesBtn, confirmYesBtn);
+        
+        newConfirmYesBtn.addEventListener('click', function() {
+            performClearAll();
+            if (confirmModal) confirmModal.hide();
+        });
         
         if (confirmModal) confirmModal.show();
     }
@@ -154,8 +276,10 @@
     // Perform the actual clear all
     function performClearAll() {
         students = [];
+        editingIndex = -1; // Reset editing state
         saveStudents();
         updateUI();
+        cancelEdit(); // Cancel any active edit
         showAlert('Cleared', 'All student records have been cleared.');
     }
 
@@ -192,7 +316,16 @@
                 <td>${escapeHtml(s.nutritionalStatus)}</td>
                 <td>${escapeHtml(s.heightForAge)}</td>
                 <td>${escapeHtml(s.sbfpBeneficiary)}</td>
-                <td><button type="button" class="btn btn-sm btn-danger" onclick="removeStudent(${idx})"><i class="fas fa-trash"></i></button></td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-warning" onclick="editStudent(${idx})" title="Edit Student">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="confirmDeleteStudent(${idx})" title="Delete Student">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
             </tr>
         `).join('');
     }
@@ -218,12 +351,32 @@
 
     // Submit the report
     async function submitReport() {
+        console.log('submitReport function called');
+        
         if (!loadingModal) {
             console.error('Loading modal not initialized');
-            return;
+            // Try to initialize it again
+            try {
+                const loadingModalEl = document.getElementById('loadingModal');
+                if (loadingModalEl) {
+                    loadingModal = new bootstrap.Modal(loadingModalEl, { keyboard: false, backdrop: 'static' });
+                } else {
+                    showAlert('Error', 'Loading modal not found');
+                    return;
+                }
+            } catch (e) {
+                console.error('Error initializing loading modal:', e);
+                showAlert('Error', 'Could not initialize loading modal');
+                return;
+            }
         }
         
-        loadingModal.show();
+        // Show loading modal
+        try {
+            loadingModal.show();
+        } catch (e) {
+            console.error('Error showing loading modal:', e);
+        }
         
         try {
             const urlParams = new URLSearchParams(window.location.search);
@@ -237,6 +390,9 @@
                 throw new Error('Bulk store URL not configured');
             }
             
+            console.log('Submitting to:', bulkStoreUrl);
+            console.log('Students count:', students.length);
+            
             const response = await fetch(bulkStoreUrl, {
                 method: 'POST', 
                 headers: { 
@@ -248,13 +404,23 @@
             });
             
             const result = await response.json();
+            console.log('Submit result:', result);
             
             if (result.success) {
                 students = []; 
+                editingIndex = -1; // Reset editing state
                 saveStudents(); 
                 clearStoredStudents(); 
                 updateUI(); 
-                loadingModal.hide(); 
+                cancelEdit(); // Cancel any active edit
+                
+                // Hide loading modal
+                try {
+                    loadingModal.hide();
+                } catch (e) {
+                    console.error('Error hiding loading modal:', e);
+                }
+                
                 showAlert('Success', result.message || 'Records submitted successfully!'); 
                 
                 // Redirect after success
@@ -267,12 +433,24 @@
                     console.warn('No redirect URL configured');
                 }
             } else { 
-                loadingModal.hide(); 
+                // Hide loading modal
+                try {
+                    loadingModal.hide();
+                } catch (e) {
+                    console.error('Error hiding loading modal:', e);
+                }
+                
                 showAlert('Error', result.message || 'Error submitting records. Check console for details.'); 
                 console.error('Submission errors:', result.errors); 
             }
         } catch (e) { 
-            loadingModal.hide(); 
+            // Hide loading modal
+            try {
+                if (loadingModal) loadingModal.hide();
+            } catch (err) {
+                console.error('Error hiding loading modal:', err);
+            }
+            
             console.error('Network error:', e); 
             showAlert('Network Error', 'Error communicating with server: ' + e.message); 
         }
@@ -280,6 +458,8 @@
 
     // Show submit confirmation modal
     function showSubmitConfirmation() {
+        console.log('showSubmitConfirmation called');
+        
         if (students.length === 0) {
             showAlert('No Records', 'There are no student records to submit.');
             return;
@@ -293,24 +473,57 @@
         if (submitConfirmModal) {
             submitConfirmModal.show();
         } else {
-            // Fallback if modal not initialized
-            if (confirm(`Submit ${students.length} student record(s)?`)) {
-                submitReport();
+            // Try to initialize submit confirm modal
+            try {
+                const submitConfirmModalEl = document.getElementById('submitConfirmModal');
+                if (submitConfirmModalEl) {
+                    submitConfirmModal = new bootstrap.Modal(submitConfirmModalEl);
+                    submitConfirmModal.show();
+                } else {
+                    // Fallback if modal not initialized
+                    if (confirm(`Submit ${students.length} student record(s)?`)) {
+                        submitReport();
+                    }
+                }
+            } catch (e) {
+                console.error('Error showing submit confirm modal:', e);
+                if (confirm(`Submit ${students.length} student record(s)?`)) {
+                    submitReport();
+                }
             }
         }
     }
 
     // Show alert modal
     function showAlert(title, message) { 
+        console.log('showAlert:', title, message);
+        
         const tEl = document.getElementById('alertTitle'); 
         const bEl = document.getElementById('alertBody'); 
         if (tEl) tEl.textContent = title; 
         if (bEl) bEl.textContent = message; 
         
         if (alertModal) { 
-            alertModal.show(); 
+            try {
+                alertModal.show(); 
+            } catch (e) {
+                console.error('Error showing alert modal:', e);
+                window.alert(title + '\n\n' + message);
+            }
         } else { 
-            window.alert(title + '\n\n' + message); 
+            // Try to initialize alert modal
+            try {
+                const alertModalEl = document.getElementById('alertModal');
+                if (alertModalEl) {
+                    alertModal = new bootstrap.Modal(alertModalEl);
+                    alertModal.show();
+                } else {
+                    window.alert(title + '\n\n' + message);
+                }
+            } catch (e) {
+                console.error('Error initializing alert modal:', e);
+                window.alert(title + '\n\n' + message);
+            }
         } 
     }
 
@@ -322,8 +535,10 @@
             }
             // Clear students if user confirms
             students = [];
+            editingIndex = -1;
             saveStudents();
             updateUI();
+            cancelEdit();
         }
         
         // Redirect to the same page with new assessment type
@@ -491,27 +706,44 @@
         loadStudents(); 
         updateUI();
 
-        // Event listeners
+        // Event listeners - using named functions to avoid conflicts
         const assessmentForm = document.getElementById('assessmentForm');
         if (assessmentForm) {
-            assessmentForm.addEventListener('submit', (e) => { 
-                e.preventDefault(); 
-                addStudent(); 
+            // Remove any existing listeners and add new one
+            assessmentForm.removeEventListener('submit', addOrUpdateStudent);
+            assessmentForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                addOrUpdateStudent();
             });
         }
         
         const clearFormBtn = document.getElementById('clearFormBtn');
-        if (clearFormBtn) clearFormBtn.addEventListener('click', clearForm);
+        if (clearFormBtn) {
+            clearFormBtn.removeEventListener('click', clearForm);
+            clearFormBtn.addEventListener('click', clearForm);
+        }
         
         const clearAllBtn = document.getElementById('clearAllBtn');
-        if (clearAllBtn) clearAllBtn.addEventListener('click', clearAllStudents);
+        if (clearAllBtn) {
+            clearAllBtn.removeEventListener('click', clearAllStudents);
+            clearAllBtn.addEventListener('click', clearAllStudents);
+        }
         
         const submitBtn = document.getElementById('submitBtn');
-        if (submitBtn) submitBtn.addEventListener('click', showSubmitConfirmation);
+        if (submitBtn) {
+            console.log('Submit button found, adding event listener');
+            submitBtn.removeEventListener('click', showSubmitConfirmation);
+            submitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Submit button clicked');
+                showSubmitConfirmation();
+            });
+        }
 
         // File upload handlers
         const chooseFileBtn = document.getElementById('chooseFileBtn');
         if (chooseFileBtn) {
+            chooseFileBtn.removeEventListener('click', function() {});
             chooseFileBtn.addEventListener('click', function() { 
                 document.getElementById('excelFile')?.click(); 
             });
@@ -519,25 +751,20 @@
         
         const excelFile = document.getElementById('excelFile');
         if (excelFile) {
+            excelFile.removeEventListener('change', function() {});
             excelFile.addEventListener('change', function(event) { 
                 if (event.target.files.length > 0) extractFromExcel(); 
             });
         }
 
-        // Modal confirmation handlers
-        const confirmYesBtn = document.getElementById('confirmYesBtn');
-        if (confirmYesBtn) {
-            confirmYesBtn.addEventListener('click', function() { 
-                if (confirmModal) confirmModal.hide(); 
-                performClearAll(); 
-            });
-        }
-        
+        // Submit confirm modal button
         const submitConfirmYesBtn = document.getElementById('submitConfirmYesBtn');
         if (submitConfirmYesBtn) {
-            submitConfirmYesBtn.addEventListener('click', function() { 
-                if (submitConfirmModal) submitConfirmModal.hide(); 
-                submitReport(); 
+            submitConfirmYesBtn.removeEventListener('click', function() {});
+            submitConfirmYesBtn.addEventListener('click', function() {
+                console.log('Submit confirm button clicked');
+                if (submitConfirmModal) submitConfirmModal.hide();
+                submitReport();
             });
         }
 
@@ -546,7 +773,25 @@
         const switchToEndline = document.getElementById('switchToEndline');
         const switchToMidline = document.getElementById('switchToMidline');
         
-        if (switchToBaseline) switchToBaseline.addEventListener('click', function() { switchAssessmentType('baseline'); });
-        if (switchToEndline) switchToEndline.addEventListener('click', function() { switchAssessmentType('endline'); });
-        if (switchToMidline) switchToMidline.addEventListener('click', function() { switchAssessmentType('midline'); });
+        if (switchToBaseline) {
+            switchToBaseline.removeEventListener('click', function() {});
+            switchToBaseline.addEventListener('click', function() { switchAssessmentType('baseline'); });
+        }
+        if (switchToEndline) {
+            switchToEndline.removeEventListener('click', function() {});
+            switchToEndline.addEventListener('click', function() { switchAssessmentType('endline'); });
+        }
+        if (switchToMidline) {
+            switchToMidline.removeEventListener('click', function() {});
+            switchToMidline.addEventListener('click', function() { switchAssessmentType('midline'); });
+        }
     });
+
+    // Make functions globally available
+    window.editStudent = editStudent;
+    window.confirmDeleteStudent = confirmDeleteStudent;
+    window.removeStudent = removeStudent;
+    window.cancelEdit = cancelEdit;
+    window.addOrUpdateStudent = addOrUpdateStudent;
+    window.showSubmitConfirmation = showSubmitConfirmation;
+    window.submitReport = submitReport;
