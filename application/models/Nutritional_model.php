@@ -42,7 +42,7 @@ class nutritional_model extends CI_Model {
                 // For elementary, get schools with school_level = 'elementary' from users table
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'elementary')");
                 // Also filter by grade levels K-6
-                $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
+                $this->db->where_in('grade_level', ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
             }
             elseif ($school_level === 'integrated') {
                 // All grades from integrated schools
@@ -51,7 +51,7 @@ class nutritional_model extends CI_Model {
             elseif ($school_level === 'integrated_elementary') {
                 // Only elementary grades (K-6) from integrated schools
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
-                $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
+                $this->db->where_in('grade_level', ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
             }
             elseif ($school_level === 'integrated_secondary') {
                 // Only secondary grades (7-12) from integrated schools
