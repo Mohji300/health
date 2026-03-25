@@ -93,9 +93,19 @@
                           <label for="date" class="form-label fw-bold">Date of Weighing:</label>
                           <input type="date" id="date" name="date" class="form-control" required>
                       </div>
-                      <div class="mb-3">
-                          <label for="name" class="form-label fw-bold">Name:</label>
-                          <input type="text" id="name" name="name" class="form-control" placeholder="Last Name, First Name" required>
+                      <div class="row mb-3">
+                      <div class="col-md-5">
+                          <label for="first_name" class="form-label fw-bold">First Name:</label>
+                          <input type="text" id="first_name" name="first_name" class="form-control text-uppercase" placeholder="First Name" required style="text-transform: uppercase;">
+                      </div>
+                      <div class="col-md-2">
+                          <label for="middle_initial" class="form-label fw-bold">M.I.:</label>
+                          <input type="text" id="middle_initial" name="middle_initial" class="form-control text-uppercase" placeholder="M.I." maxlength="2" style="text-transform: uppercase;">
+                      </div>
+                      <div class="col-md-5">
+                          <label for="last_name" class="form-label fw-bold">Last Name:</label>
+                          <input type="text" id="last_name" name="last_name" class="form-control text-uppercase" placeholder="Last Name" required style="text-transform: uppercase;">
+                      </div>
                       </div>
                       <div class="mb-3">
                           <label for="birthday" class="form-label fw-bold">Birthday:</label>
@@ -238,7 +248,7 @@
     <!-- Loading Modal -->
     <div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 bg-transparent shadow-none">
+        <div class="modal-content border-0 bg-white shadow-none">
           <div class="modal-body text-center p-4">
             <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
               <span class="visually-hidden">Loading...</span>

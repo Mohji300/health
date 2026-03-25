@@ -80,14 +80,27 @@ class Nutritionalassessment extends CI_Controller {
         // Set JSON response header
         $this->output->set_content_type('application/json');
         
+        // Combine first name, middle initial, and last name into full name
+        $first_name = trim($this->input->post('first_name', TRUE));
+        $middle_initial = trim($this->input->post('middle_initial', TRUE));
+        $last_name = trim($this->input->post('last_name', TRUE));
+        
+        // Build full name
+        $full_name = $first_name;
+        if (!empty($middle_initial)) {
+            $full_name .= ' ' . $middle_initial . '.';
+        }
+        $full_name .= ' ' . $last_name;
+        
         // Validation rules
-        $this->form_validation->set_rules('name', 'Name', 'required|trim');
+        $this->form_validation->set_rules('first_name', 'First Name', 'required|trim');
+        $this->form_validation->set_rules('last_name', 'Last Name', 'required|trim');
         $this->form_validation->set_rules('birthday', 'Birthday', 'required|valid_date[Y-m-d]');
         $this->form_validation->set_rules('weight', 'Weight', 'required|numeric|greater_than[0]');
         $this->form_validation->set_rules('height', 'Height', 'required|numeric|greater_than[0]');
         $this->form_validation->set_rules('sex', 'Sex', 'required|in_list[M,F]');
         $this->form_validation->set_rules('grade', 'Grade', 'required|trim');
-        $this->form_validation->set_rules('date_of_weighing', 'Date of Weighing', 'required|valid_date[Y-m-d]');
+        $this->form_validation->set_rules('date', 'Date of Weighing', 'required|valid_date[Y-m-d]');
         $this->form_validation->set_rules('assessment_type', 'Assessment Type', 'required|in_list[baseline,midline,endline]');
 
         if ($this->form_validation->run() == FALSE) {
@@ -114,14 +127,17 @@ class Nutritionalassessment extends CI_Controller {
         }
 
         $assessment_data = [
-            'name' => $this->input->post('name'),
+            'name' => $full_name,
+            'first_name' => $first_name,
+            'middle_initial' => $middle_initial,
+            'last_name' => $last_name,
             'birthday' => $this->input->post('birthday'),
             'weight' => $this->input->post('weight'),
             'height' => $this->input->post('height'),
             'sex' => $this->input->post('sex'),
             'grade_level' => $this->input->post('grade'),
             'section' => $this->input->post('section'),
-            'date_of_weighing' => $this->input->post('date_of_weighing'),
+            'date_of_weighing' => $this->input->post('date'),
             'legislative_district' => $this->input->post('legislative_district'),
             'school_district' => $this->input->post('school_district'),
             'school_id' => $this->input->post('school_id'),
@@ -226,11 +242,20 @@ class Nutritionalassessment extends CI_Controller {
         $grade = $first_student['grade'] ?? '';
         $section = $first_student['section'] ?? '';
 
-        log_message('info', "Bulk store attempt: {$school_id}, {$grade}, {$section}, Type: {$assessment_type}, Count: " . count($students));
-
         foreach ($students as $idx => $student) {
             try {
-                // Map the JavaScript object properties to your database columns
+                // Get the name - use the combined name from frontend
+                $full_name = isset($student['name']) ? trim($student['name']) : '';
+                
+                // If name is empty but we have separate fields, combine them
+                if (empty($full_name) && isset($student['first_name']) && isset($student['last_name'])) {
+                    $full_name = $student['first_name'];
+                    if (!empty($student['middle_initial'])) {
+                        $full_name .= ' ' . $student['middle_initial'] . '.';
+                    }
+                    $full_name .= ' ' . $student['last_name'];
+                }
+
                 $assessment_data = [
                     'school_district' => isset($student['school_district']) ? $student['school_district'] : '',
                     'legislative_district' => isset($student['legislative_district']) ? $student['legislative_district'] : '',
@@ -240,13 +265,13 @@ class Nutritionalassessment extends CI_Controller {
                     'grade_level' => isset($student['grade']) ? $student['grade'] : '',
                     'section' => isset($student['section']) ? $student['section'] : '',
                     'year' => isset($student['school_year']) ? $student['school_year'] : (isset($student['year']) ? $student['year'] : ''),
-                    'name' => isset($student['name']) ? trim($student['name']) : '',
+                    'name' => $full_name,
                     'birthday' => isset($student['birthday']) ? $student['birthday'] : '',
                     'weight' => isset($student['weight']) ? floatval($student['weight']) : 0,
                     'height' => isset($student['height']) ? floatval($student['height']) : 0,
                     'sex' => isset($student['sex']) ? strtoupper($student['sex']) : '',
                     'height_squared' => isset($student['heightSquared']) ? floatval($student['heightSquared']) : 0,
-                    'age' => isset($student['age']) ? $student['age'] : (isset($student['ageDisplay']) ? $student['ageDisplay'] : (isset($student['ageYears']) && isset($student['ageMonths']) ? $student['ageYears'] . '|' . $student['ageMonths'] : '0|0')),
+                    'age' => isset($student['age']) ? $student['age'] : (isset($student['ageDisplay']) ? $student['ageDisplay'] : '0|0'),
                     'bmi' => isset($student['bmi']) ? floatval($student['bmi']) : 0,
                     'nutritional_status' => isset($student['nutritionalStatus']) ? $student['nutritionalStatus'] : 'Normal',
                     'height_for_age' => isset($student['heightForAge']) ? $student['heightForAge'] : 'Normal',
@@ -270,7 +295,8 @@ class Nutritionalassessment extends CI_Controller {
                     if ($this->db->update('nutritional_assessments', $assessment_data)) {
                         $updated_count++;
                     } else {
-                        $errors[] = "Row " . ($idx + 1) . ": " . $student['name'] . " - Failed to update existing record";
+                        $db_error = $this->db->error();
+                        $errors[] = "Row " . ($idx + 1) . ": " . $student['name'] . " - Failed to update existing record: " . $db_error['message'];
                     }
                 } else {
                     if ($this->nutritional_assessment_model->create($assessment_data)) {
@@ -297,8 +323,6 @@ class Nutritionalassessment extends CI_Controller {
                         ucfirst($assessment_type) . " assessment(s). " .
                         (!empty($errors) ? " Encountered " . count($errors) . " error(s)." : "")
         ];
-
-        log_message('info', "Bulk store result: " . json_encode($response));
 
         return $this->output
             ->set_output(json_encode($response));
