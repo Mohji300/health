@@ -328,44 +328,39 @@
     </ul>
   </nav>
 
-    <!-- Profile -->
-  <div class="px-3 py-3 border-bottom border-gray-700 d-flex align-items-center">
+  <!-- Profile -->
+  <div class="px-3 py-3 border-bottom border-gray-700">
+    <button class="profile-button w-100 mb-3" onclick="window.location.href='<?php echo site_url('profile'); ?>'" style="background: none; border: none; text-align: left; padding: 0;">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="main-sidebar-text">
+          <h6 class="mb-0 text-black fw-medium">
+            <?php 
+              $school_name = '';
+              if (isset($auth_user) && isset($auth_user['school_name'])) {
+                $school_name = $auth_user['school_name'];
+              } elseif ($this->session->userdata('school_name')) {
+                $school_name = $this->session->userdata('school_name');
+              } elseif (isset($school) && isset($school->name)) {
+                $school_name = $school->name;
+              }
+              
+              echo htmlspecialchars($school_name ?: 'School');
+            ?>
+          </h6>
+          <small class="text-gray-400 d-block">
+            <?php echo ucfirst(str_replace('_',' ',$this->session->userdata('role') ?? 'user')); ?>
+          </small>
+        </div>
+        <i class="fas fa-chevron-right text-gray-400"></i>
+      </div>
+    </button>
 
-    <div class="flex-grow-1 main-sidebar-text">
-      <h6 class="mb-0 text-black fw-medium">
-        <?php 
-          // Get school name from auth_user data or session
-          $school_name = '';
-          if (isset($auth_user) && isset($auth_user['school_name'])) {
-            $school_name = $auth_user['school_name'];
-          } elseif ($this->session->userdata('school_name')) {
-            $school_name = $this->session->userdata('school_name');
-          } elseif (isset($school) && isset($school->name)) {
-            $school_name = $school->name;
-          }
-          
-          echo htmlspecialchars($school_name ?: 'School');
-        ?>
-      </h6>
-      <small class="text-gray-400 d-block">
-        <?php echo ucfirst(str_replace('_',' ',$this->session->userdata('role') ?? 'user')); ?>
-      </small>
-    </div>
-
-    <div class="dropdown main-sidebar-text">
-      <button class="btn btn-sm btn-link text-gray-400 p-0" data-bs-toggle="dropdown">
-        <i class="fas fa-ellipsis-v"></i>
-      </button>
-      <ul class="dropdown-menu dropdown-menu-dark border border-gray-700 shadow">
-        <li><a class="dropdown-item" href="<?php echo site_url('profile'); ?>"><i class="fas fa-user me-2"></i>Profile</a></li>
-        <li><hr class="dropdown-divider border-gray-700"></li>
-        <li><a class="dropdown-item text-danger" href="<?php echo site_url('logout'); ?>"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-      </ul>
-    </div>
+    <a class="btn btn-outline-danger w-100 text-start" href="<?php echo site_url('logout'); ?>" style="border-radius: 8px;">
+      <i class="fas fa-sign-out-alt me-2"></i>Logout
+    </a>
   </div>
 </div>
 
-<!-- Spacer for main content -->
 <div id="sidebarSpacer"></div>
 
 <!-- Minimal JS -->
