@@ -183,7 +183,7 @@ class Schoolinfo extends CI_Controller {
                 redirect('district_dashboard');
                 break;
             case 'user':
-                redirect('user');
+                redirect('users/dashboard');
                 break;
             default:
                 redirect('dashboard');
