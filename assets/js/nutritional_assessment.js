@@ -28,7 +28,6 @@
             try { 
                 students = JSON.parse(stored); 
             } catch (e) { 
-                console.error('Error loading students:', e); 
                 students = []; 
             }
         }
@@ -104,13 +103,37 @@
             return; 
         }
         
-        const name = document.getElementById('name').value;
+        // Get the new separate name fields
+        const firstName = document.getElementById('first_name').value.trim();
+        const middleInitial = document.getElementById('middle_initial').value.trim();
+        const lastName = document.getElementById('last_name').value.trim();
         const birthday = document.getElementById('birthday').value;
         const weight = document.getElementById('weight').value;
         const height = document.getElementById('height').value;
         const sex = document.getElementById('sex').value;
+        const date = document.getElementById('date').value;
         
-        const student = calculateStudentData(name, birthday, weight, height, sex);
+        // Validate required fields
+        if (!firstName || !lastName || !birthday || !weight || !height || !sex || !date) {
+            showAlert('Please fill in all required fields', 'warning');
+            form.classList.add('was-validated');
+            return;
+        }
+        
+        // Combine name for display
+        let fullName = firstName;
+        if (middleInitial) {
+            fullName += ' ' + middleInitial + '.';
+        }
+        fullName += ' ' + lastName;
+        
+        const student = calculateStudentData(fullName, birthday, weight, height, sex);
+        
+        // Add the additional name fields to the student object
+        student.first_name = firstName;
+        student.middle_initial = middleInitial;
+        student.last_name = lastName;
+        student.date = date;
         
         if (editingIndex >= 0 && editingIndex < students.length) {
             // Update existing student
@@ -136,8 +159,10 @@
         const student = students[index];
         editingIndex = index;
         
-        // Populate the form with student data
-        document.getElementById('name').value = student.name || '';
+        // Populate the form with student data using separate name fields
+        document.getElementById('first_name').value = student.first_name || '';
+        document.getElementById('middle_initial').value = student.middle_initial || '';
+        document.getElementById('last_name').value = student.last_name || '';
         document.getElementById('birthday').value = student.birthday || '';
         document.getElementById('weight').value = student.weight || '';
         document.getElementById('height').value = student.height || '';
@@ -146,9 +171,11 @@
         
         // Change submit button to Update mode
         const submitBtn = document.querySelector('#assessmentForm button[type="submit"]');
-        submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Student';
-        submitBtn.classList.remove('btn-success');
-        submitBtn.classList.add('btn-warning');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Student';
+            submitBtn.classList.remove('btn-success');
+            submitBtn.classList.add('btn-warning');
+        }
         
         // Add cancel button if not exists
         if (!document.getElementById('cancelEditBtn')) {
@@ -162,7 +189,8 @@
         }
         
         // Scroll to form
-        document.querySelector('.card-header.bg-primary').scrollIntoView({ behavior: 'smooth' });
+        const header = document.querySelector('.card-header.bg-primary');
+        if (header) header.scrollIntoView({ behavior: 'smooth' });
     }
 
     // Cancel editing
@@ -239,11 +267,14 @@
 
     // Clear the input form
     function clearForm() { 
-        document.getElementById('name').value = ''; 
+        document.getElementById('first_name').value = ''; 
+        document.getElementById('middle_initial').value = ''; 
+        document.getElementById('last_name').value = ''; 
         document.getElementById('birthday').value = ''; 
         document.getElementById('weight').value = ''; 
         document.getElementById('height').value = ''; 
         document.getElementById('sex').value = ''; 
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
         document.getElementById('assessmentForm')?.classList.remove('was-validated'); 
     }
 
@@ -301,33 +332,45 @@
             return; 
         }
         
-        tbody.innerHTML = students.map((s, idx) => `
-            <tr class="${getRowClass(s.nutritionalStatus)}">
-                <td>${escapeHtml(s.name)}</td>
-                <td>${s.birthday}</td>
-                <td>${escapeHtml(s.grade)}</td>
-                <td>${escapeHtml(s.school_year || s.year || 'N/A')}</td>
-                <td>${s.weight}</td>
-                <td>${s.height}</td>
-                <td>${s.sex}</td>
-                <td>${s.heightSquared}</td>
-                <td>${s.ageDisplay}</td>
-                <td>${s.bmi}</td>
-                <td>${escapeHtml(s.nutritionalStatus)}</td>
-                <td>${escapeHtml(s.heightForAge)}</td>
-                <td>${escapeHtml(s.sbfpBeneficiary)}</td>
-                <td>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-warning" onclick="editStudent(${idx})" title="Edit Student">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button type="button" class="btn btn-danger" onclick="confirmDeleteStudent(${idx})" title="Delete Student">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = students.map((s, idx) => {
+            // Display name properly (use first_name, middle_initial, last_name if available)
+            let displayName = s.name;
+            if (s.first_name && s.last_name) {
+                displayName = s.first_name;
+                if (s.middle_initial) {
+                    displayName += ' ' + s.middle_initial + '.';
+                }
+                displayName += ' ' + s.last_name;
+            }
+            
+            return `
+                <tr class="${getRowClass(s.nutritionalStatus)}">
+                    <td>${escapeHtml(displayName)}</td>
+                    <td>${s.birthday}</td>
+                    <td>${escapeHtml(s.grade)}</td>
+                    <td>${escapeHtml(s.school_year || s.year || 'N/A')}</td>
+                    <td>${s.weight}</td>
+                    <td>${s.height}</td>
+                    <td>${s.sex}</td>
+                    <td>${s.heightSquared}</td>
+                    <td>${s.ageDisplay}</td>
+                    <td>${s.bmi}</td>
+                    <td>${escapeHtml(s.nutritionalStatus)}</td>
+                    <td>${escapeHtml(s.heightForAge)}</td>
+                    <td>${escapeHtml(s.sbfpBeneficiary)}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-warning" onclick="editStudent(${idx})" title="Edit Student">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger" onclick="confirmDeleteStudent(${idx})" title="Delete Student">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
     // Helper function to prevent XSS attacks
@@ -351,11 +394,7 @@
 
     // Submit the report
     async function submitReport() {
-        console.log('submitReport function called');
-        
         if (!loadingModal) {
-            console.error('Loading modal not initialized');
-            // Try to initialize it again
             try {
                 const loadingModalEl = document.getElementById('loadingModal');
                 if (loadingModalEl) {
@@ -365,7 +404,6 @@
                     return;
                 }
             } catch (e) {
-                console.error('Error initializing loading modal:', e);
                 showAlert('Error', 'Could not initialize loading modal');
                 return;
             }
@@ -375,7 +413,7 @@
         try {
             loadingModal.show();
         } catch (e) {
-            console.error('Error showing loading modal:', e);
+            // Silent fail
         }
         
         try {
@@ -384,14 +422,70 @@
             const validTypes = ['baseline','midline','endline']; 
             if (!validTypes.includes(assessmentType)) assessmentType = 'baseline';
             
+            // Prepare students data for submission - combine name fields into single name
+            const studentsToSubmit = students.map(student => {
+                // Create a copy and only keep the fields the server expects
+                const studentData = {};
+                
+                // Combine first_name, middle_initial, last_name into name
+                let fullName = '';
+                if (student.first_name) {
+                    fullName = student.first_name;
+                    if (student.middle_initial) {
+                        fullName += ' ' + student.middle_initial + '.';
+                    }
+                    fullName += ' ' + (student.last_name || '');
+                } else if (student.name) {
+                    fullName = student.name;
+                }
+                
+                // Only send the fields that exist in the database
+                studentData.name = fullName;
+                studentData.birthday = student.birthday || '';
+                studentData.weight = parseFloat(student.weight) || 0;
+                studentData.height = parseFloat(student.height) || 0;
+                studentData.sex = student.sex || '';
+                studentData.grade = student.grade || document.getElementById('grade')?.value || '';
+                studentData.section = student.section || document.getElementById('section')?.value || '';
+                studentData.school_year = student.school_year || document.getElementById('school_year')?.value || '';
+                studentData.date = student.date || document.getElementById('date')?.value || new Date().toISOString().split('T')[0];
+                studentData.legislative_district = student.legislative_district || document.getElementById('legislative_district')?.value || '';
+                studentData.school_district = student.school_district || document.getElementById('school_district')?.value || '';
+                studentData.school_id = student.school_id || document.getElementById('school_id')?.value || '';
+                studentData.school_name = student.school_name || document.getElementById('school_name')?.value || '';
+                
+                // Calculate derived values if not present
+                if (!studentData.bmi && studentData.weight && studentData.height) {
+                    const heightSquared = studentData.height * studentData.height;
+                    studentData.bmi = parseFloat((studentData.weight / heightSquared).toFixed(2));
+                } else {
+                    studentData.bmi = student.bmi || 0;
+                }
+                
+                if (!studentData.nutritionalStatus) {
+                    if (studentData.bmi < 16) studentData.nutritionalStatus = 'Severely Wasted';
+                    else if (studentData.bmi < 18.5) studentData.nutritionalStatus = 'Wasted';
+                    else if (studentData.bmi < 25) studentData.nutritionalStatus = 'Normal';
+                    else if (studentData.bmi < 30) studentData.nutritionalStatus = 'Overweight';
+                    else studentData.nutritionalStatus = 'Obese';
+                } else {
+                    studentData.nutritionalStatus = student.nutritionalStatus;
+                }
+                
+                studentData.heightSquared = student.heightSquared || (studentData.height * studentData.height).toFixed(4);
+                studentData.age = student.age || '0|0';
+                studentData.ageDisplay = student.ageDisplay || student.age || '0|0';
+                studentData.heightForAge = student.heightForAge || 'Normal';
+                studentData.sbfpBeneficiary = student.sbfpBeneficiary || ((studentData.nutritionalStatus === 'Severely Wasted' || studentData.nutritionalStatus === 'Wasted') ? 'Yes' : 'No');
+                
+                return studentData;
+            });
+            
             // Get the bulk_store URL from config
             const bulkStoreUrl = window.nutritionalassessmentConfig?.urls?.bulk_store;
             if (!bulkStoreUrl) {
                 throw new Error('Bulk store URL not configured');
             }
-            
-            console.log('Submitting to:', bulkStoreUrl);
-            console.log('Students count:', students.length);
             
             const response = await fetch(bulkStoreUrl, {
                 method: 'POST', 
@@ -399,67 +493,71 @@
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: 'students=' + encodeURIComponent(JSON.stringify(students)) + 
+                body: 'students=' + encodeURIComponent(JSON.stringify(studentsToSubmit)) + 
                     '&assessment_type=' + encodeURIComponent(assessmentType)
             });
             
+            // Check if response is OK
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Server error (${response.status}): ${errorText.substring(0, 200)}`);
+            }
+            
             const result = await response.json();
-            console.log('Submit result:', result);
+            
+            // Hide loading modal
+            try {
+                loadingModal.hide();
+            } catch (e) {
+                // Silent fail
+            }
             
             if (result.success) {
                 students = []; 
-                editingIndex = -1; // Reset editing state
+                editingIndex = -1;
                 saveStudents(); 
                 clearStoredStudents(); 
                 updateUI(); 
-                cancelEdit(); // Cancel any active edit
+                cancelEdit();
                 
-                // Hide loading modal
-                try {
-                    loadingModal.hide();
-                } catch (e) {
-                    console.error('Error hiding loading modal:', e);
+                let successMessage = result.message || 'Records submitted successfully!';
+                if (result.created_count !== undefined && result.updated_count !== undefined) {
+                    successMessage = `Submitted successfully!\n\nNew records: ${result.created_count}\nUpdated records: ${result.updated_count}\nTotal: ${result.total_count}`;
                 }
+                showAlert('Success', successMessage); 
                 
-                showAlert('Success', result.message || 'Records submitted successfully!'); 
-                
-                // Redirect after success
                 const redirectUrl = window.nutritionalassessmentConfig?.redirect_after;
                 if (redirectUrl) {
                     setTimeout(() => { 
                         window.location.href = redirectUrl; 
-                    }, 1500);
+                    }, 2000);
                 } else {
-                    console.warn('No redirect URL configured');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
                 }
             } else { 
-                // Hide loading modal
-                try {
-                    loadingModal.hide();
-                } catch (e) {
-                    console.error('Error hiding loading modal:', e);
+                let errorMessage = result.message || 'Error submitting records.';
+                if (result.errors && result.errors.length > 0) {
+                    errorMessage += '\n\nErrors:\n' + result.errors.slice(0, 5).join('\n');
+                    if (result.errors.length > 5) {
+                        errorMessage += `\n... and ${result.errors.length - 5} more errors.`;
+                    }
                 }
-                
-                showAlert('Error', result.message || 'Error submitting records. Check console for details.'); 
-                console.error('Submission errors:', result.errors); 
+                showAlert('Error', errorMessage); 
             }
         } catch (e) { 
-            // Hide loading modal
             try {
                 if (loadingModal) loadingModal.hide();
             } catch (err) {
-                console.error('Error hiding loading modal:', err);
+                // Silent fail
             }
-            
-            console.error('Network error:', e); 
             showAlert('Network Error', 'Error communicating with server: ' + e.message); 
         }
     }
 
     // Show submit confirmation modal
     function showSubmitConfirmation() {
-        console.log('showSubmitConfirmation called');
-        
         if (students.length === 0) {
             showAlert('No Records', 'There are no student records to submit.');
             return;
@@ -486,7 +584,6 @@
                     }
                 }
             } catch (e) {
-                console.error('Error showing submit confirm modal:', e);
                 if (confirm(`Submit ${students.length} student record(s)?`)) {
                     submitReport();
                 }
@@ -496,8 +593,6 @@
 
     // Show alert modal
     function showAlert(title, message) { 
-        console.log('showAlert:', title, message);
-        
         const tEl = document.getElementById('alertTitle'); 
         const bEl = document.getElementById('alertBody'); 
         if (tEl) tEl.textContent = title; 
@@ -507,7 +602,6 @@
             try {
                 alertModal.show(); 
             } catch (e) {
-                console.error('Error showing alert modal:', e);
                 window.alert(title + '\n\n' + message);
             }
         } else { 
@@ -521,7 +615,6 @@
                     window.alert(title + '\n\n' + message);
                 }
             } catch (e) {
-                console.error('Error initializing alert modal:', e);
                 window.alert(title + '\n\n' + message);
             }
         } 
@@ -636,8 +729,32 @@
                 return; 
             }
             
+            // Parse the full name into separate components
+            let firstName = extractedStudent.name;
+            let middleInitial = '';
+            let lastName = '';
+            
+            // Try to split the name
+            const nameParts = extractedStudent.name.trim().split(' ');
+            if (nameParts.length >= 2) {
+                firstName = nameParts[0];
+                // Check if the second part looks like a middle initial (single letter or letter with period)
+                if (nameParts.length >= 3 && (nameParts[1].length === 1 || (nameParts[1].length === 2 && nameParts[1].endsWith('.')))) {
+                    middleInitial = nameParts[1].replace('.', '');
+                    lastName = nameParts.slice(2).join(' ');
+                } else {
+                    lastName = nameParts.slice(1).join(' ');
+                }
+            } else {
+                firstName = extractedStudent.name;
+                lastName = '';
+            }
+            
             const student = {
-                name: extractedStudent.name, 
+                name: extractedStudent.name,
+                first_name: firstName,
+                middle_initial: middleInitial,
+                last_name: lastName,
                 birthday: extractedStudent.birthday, 
                 weight: extractedStudent.weight, 
                 height: extractedStudent.height, 
@@ -645,7 +762,7 @@
                 grade: document.getElementById('grade')?.value || '', 
                 section: document.getElementById('section')?.value || '', 
                 school_year: document.getElementById('school_year')?.value || '',
-                date: document.getElementById('date')?.value || '', 
+                date: document.getElementById('date')?.value || new Date().toISOString().split('T')[0], 
                 legislative_district: document.getElementById('legislative_district')?.value || '', 
                 school_district: document.getElementById('school_district')?.value || '',
                 school_id: document.getElementById('school_id')?.value || '', 
@@ -672,10 +789,12 @@
         showAlert('Excel Import Complete', successMessage);
     }
 
+    function removeStudent(index) {
+        confirmDeleteStudent(index);
+    }
+
     // Initialize everything when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('Nutritional Assessment JS initialized');
-        
         // Initialize Bootstrap modals with error handling
         try {
             const alertModalEl = document.getElementById('alertModal');
@@ -693,7 +812,7 @@
             const submitConfirmModalEl = document.getElementById('submitConfirmModal');
             if (submitConfirmModalEl) submitConfirmModal = new bootstrap.Modal(submitConfirmModalEl);
         } catch (e) {
-            console.error('Error initializing modals:', e);
+            // Silent fail
         }
 
         // Set default date to today
@@ -731,11 +850,9 @@
         
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
-            console.log('Submit button found, adding event listener');
             submitBtn.removeEventListener('click', showSubmitConfirmation);
             submitBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                console.log('Submit button clicked');
                 showSubmitConfirmation();
             });
         }
@@ -762,7 +879,6 @@
         if (submitConfirmYesBtn) {
             submitConfirmYesBtn.removeEventListener('click', function() {});
             submitConfirmYesBtn.addEventListener('click', function() {
-                console.log('Submit confirm button clicked');
                 if (submitConfirmModal) submitConfirmModal.hide();
                 submitReport();
             });
@@ -795,3 +911,5 @@
     window.addOrUpdateStudent = addOrUpdateStudent;
     window.showSubmitConfirmation = showSubmitConfirmation;
     window.submitReport = submitReport;
+    window.clearForm = clearForm;
+    window.clearAllStudents = clearAllStudents;
