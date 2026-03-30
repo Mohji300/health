@@ -57,6 +57,11 @@
     background: linear-gradient(45deg, #1cc88a, #13855c);
 }
 
+.bg-gradient-mid {
+    background: linear-gradient(45deg, #0dcaf0, #0a9ebd);
+}
+
+
 .bg-gradient-warning {
     background: linear-gradient(45deg, #f6c23e, #dda20a);
 }
@@ -85,6 +90,10 @@
 
 .border-left-success {
     border-left: 0.25rem solid #1cc88a !important;
+}
+
+.border-left-mid {
+    border-left: 0.25rem solid #0dcaf0 !important;
 }
 
 .border-left-info {
@@ -138,6 +147,11 @@
     color: white;
 }
 
+.badge-midline {
+    background: linear-gradient(45deg, #0dcaf0, #13855c);
+    color: white;
+}
+
 .badge-endline {
     background: linear-gradient(45deg, #1cc88a, #13855c);
     color: white;
@@ -150,6 +164,11 @@
 
 .badge-success {
     background-color: #1cc88a;
+    color: white;
+}
+
+.badge-mid {
+    background-color: #0dcaf0;
     color: white;
 }
 

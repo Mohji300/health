@@ -54,6 +54,7 @@ class Division_reports_controller extends CI_Controller {
         $data['assessment_types'] = [
             '' => 'All Types',
             'baseline' => 'Baseline',
+            'midline' => 'Midline',
             'endline' => 'Endline'
         ];
 
@@ -64,6 +65,7 @@ class Division_reports_controller extends CI_Controller {
         
         // Get counts by assessment type
         $data['baseline_count'] = $this->division_reports_model->get_assessment_type_count('baseline');
+        $data['midline_count'] = $this->division_reports_model->get_assessment_type_count('midline');
         $data['endline_count'] = $this->division_reports_model->get_assessment_type_count('endline');
 
         // Pass filter values back to view - ADD ASSESSMENT TYPE
