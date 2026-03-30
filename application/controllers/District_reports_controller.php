@@ -64,6 +64,7 @@ class District_reports_controller extends CI_Controller {
         $data['assessment_types'] = [
             '' => 'All Types',
             'baseline' => 'Baseline',
+            'midline' => 'Midline',
             'endline' => 'Endline'
         ];
 
@@ -75,6 +76,7 @@ class District_reports_controller extends CI_Controller {
         // Count unique schools
         $unique_schools = [];
         $baseline_count = 0;
+        $midline_count = 0;
         $endline_count = 0;
 
         foreach ($reports_for_totals as $r) {
@@ -85,6 +87,8 @@ class District_reports_controller extends CI_Controller {
             $atype = strtolower(trim($r->assessment_type ?? ''));
             if ($atype === 'baseline' || $atype === '') {
                 $baseline_count++;
+            } elseif ($atype === 'midline') {  
+                $midline_count++;
             } elseif ($atype === 'endline') {
                 $endline_count++;
             }
@@ -92,9 +96,10 @@ class District_reports_controller extends CI_Controller {
 
         $data['total_schools'] = count($unique_schools);
         $data['baseline_count'] = $baseline_count;
+        $data['midline_count'] = $midline_count;
         $data['endline_count'] = $endline_count;
 
-        // Pass filter values back to view - ADD ASSESSMENT TYPE
+        // Pass filter values back to view to maintain state in the UI
         $data['current_filters'] = [
             'legislative_district' => $legislative_district,
             'school_district' => $school_district,
