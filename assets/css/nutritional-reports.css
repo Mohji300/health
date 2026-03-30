@@ -87,6 +87,10 @@
     border-left: 0.25rem solid #1cc88a !important;
 }
 
+.border-left-mid {
+    border-left: 0.25rem solid #0dcaf0 !important;
+}
+
 .border-left-info {
     border-left: 0.25rem solid #36b9cc !important;
 }
@@ -135,6 +139,11 @@
     color: white;
 }
 
+.badge-midline {
+    background:  #0dcaf0;
+    color: white;
+}
+
 .badge-endline {
     background: linear-gradient(45deg, #1cc88a, #13855c);
     color: white;
@@ -147,6 +156,11 @@
 
 .badge-success {
     background-color: #1cc88a;
+    color: white;
+}
+
+.badge-warning {
+    background-color: #0dcaf0;
     color: white;
 }
 

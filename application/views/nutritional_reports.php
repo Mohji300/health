@@ -105,6 +105,7 @@
           if ($use_filtered_stats) {
             $filtered_total_assessments = 0;
             $filtered_baseline_count = 0;
+            $filtered_midline_count = 0;
             $filtered_endline_count = 0;
             $unique_schools = [];
 
@@ -113,6 +114,7 @@
                 $filtered_total_assessments++;
                 $type = strtolower(trim($r->assessment_type ?? ''));
                 if ($type === 'baseline') $filtered_baseline_count++;
+                if ($type === 'midline') $filtered_midline_count++;
                 if ($type === 'endline') $filtered_endline_count++;
                 if (!empty($r->school_name)) $unique_schools[$r->school_name] = true;
               }
@@ -166,6 +168,28 @@
             </div>
 
             <div class="col-xl-3 col-md-6 mb-4">
+              <div class="card border-left-mid shadow h-100 py-2">
+                <div class="card-body">
+                  <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                      <div class="text-xs font-weight-bold text-mid text-uppercase mb-1">
+                        Midline Assessments
+                      </div>
+                      <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        <?php echo number_format($use_filtered_stats ? ($filtered_midline_count ?? 0) : ($midline_count ?? 0)); ?>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <span class="badge badge-midline rounded-pill px-3 py-2">
+                        <i class="fas fa-flag"></i>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
               <div class="card border-left-info shadow h-100 py-2">
                 <div class="card-body">
                   <div class="row no-gutters align-items-center">
@@ -179,7 +203,7 @@
                     </div>
                     <div class="col-auto">
                       <span class="badge badge-endline rounded-pill px-3 py-2">
-                        <i class="fas fa-flag-checkered"></i>
+                        <i class="fas fa-flag"></i>
                       </span>
                     </div>
                   </div>
@@ -330,8 +354,8 @@
                     <tbody>
                       <?php foreach ($reports as $report): ?>
                         <?php 
-                          $assessment_type_class = ($report->assessment_type == 'baseline') ? 'badge-baseline' : 'badge-endline';
-                          $assessment_icon = ($report->assessment_type == 'baseline') ? 'flag' : 'flag-checkered';
+                          $assessment_type_class = ($report->assessment_type == 'baseline') ? 'badge-baseline' : (($report->assessment_type == 'midline') ? 'badge-midline' : 'badge-endline');
+                          $assessment_icon = ($report->assessment_type == 'baseline') ? 'flag' : 'flag';
                         ?>
                         <tr>
                           <td class="fw-bold text-primary">
