@@ -157,6 +157,105 @@ $school_year = isset($school_year) ? $school_year : '';
               </div>
           </div>
 
+          <!-- Filter Section -->
+          <div class="card shadow mb-4">
+              <div class="card-header py-3">
+                  <h6 class="m-0 font-weight-bold text-primary">
+                      <i class="fas fa-filter me-2"></i>Filters
+                  </h6>
+              </div>
+              <div class="card-body">
+                  <div class="row">
+                      <!-- Grade Level Filter - Visible to all roles -->
+                      <div class="col-md-4 mb-3">
+                          <label class="form-label fw-bold">
+                              <i class="fas fa-graduation-cap me-1"></i>Grade Level
+                          </label>
+                          <select id="gradeLevelFilter" class="form-select">
+                              <option value="">All Grade Levels</option>
+                              <?php foreach ($available_grade_levels as $grade): ?>
+                                  <option value="<?= htmlspecialchars($grade['grade_level']) ?>" 
+                                      <?= ($grade_level_filter == $grade['grade_level']) ? 'selected' : '' ?>>
+                                      <?= htmlspecialchars($grade['grade_level']) ?>
+                                  </option>
+                              <?php endforeach; ?>
+                          </select>
+                      </div>
+                      
+                      <!-- School Name Filter - For district, division, and admin roles -->
+                      <?php if (in_array($user_role, ['district', 'division', 'admin'])): ?>
+                      <div class="col-md-4 mb-3">
+                          <label class="form-label fw-bold">
+                              <i class="fas fa-school me-1"></i>School Name
+                          </label>
+                          <select id="schoolNameFilter" class="form-select">
+                              <option value="">All Schools</option>
+                              <?php foreach ($available_schools as $school): ?>
+                                  <option value="<?= htmlspecialchars($school['school_name']) ?>" 
+                                      <?= ($school_name_filter == $school['school_name']) ? 'selected' : '' ?>>
+                                      <?= htmlspecialchars($school['school_name']) ?>
+                                  </option>
+                              <?php endforeach; ?>
+                          </select>
+                      </div>
+                      <?php endif; ?>
+                      
+                      <!-- District Filter - Only for division and admin roles -->
+                      <?php if (in_array($user_role, ['division', 'admin'])): ?>
+                      <div class="col-md-4 mb-3">
+                          <label class="form-label fw-bold">
+                              <i class="fas fa-map-marker-alt me-1"></i>District
+                          </label>
+                          <select id="districtFilter" class="form-select">
+                              <option value="">All Districts</option>
+                              <?php foreach ($available_districts as $district_item): ?>
+                                  <option value="<?= htmlspecialchars($district_item['school_district']) ?>" 
+                                      <?= ($district_filter == $district_item['school_district']) ? 'selected' : '' ?>>
+                                      <?= htmlspecialchars($district_item['school_district']) ?>
+                                  </option>
+                              <?php endforeach; ?>
+                          </select>
+                      </div>
+                      <?php endif; ?>
+                      
+                      <!-- Filter Buttons -->
+                      <div class="col-md-12 mt-2">
+                          <button type="button" id="applyFiltersBtn" class="btn btn-primary btn-sm">
+                              <i class="fas fa-search me-1"></i> Apply Filters
+                          </button>
+                          <button type="button" id="clearFiltersBtn" class="btn btn-secondary btn-sm">
+                              <i class="fas fa-eraser me-1"></i> Clear Filters
+                          </button>
+                      </div>
+                  </div>
+                  
+                  <!-- Active Filters Display -->
+                  <?php if (!empty($grade_level_filter) || !empty($school_name_filter) || !empty($district_filter)): ?>
+                  <div class="mt-3">
+                      <span class="text-muted small">Active filters:</span>
+                      <?php if (!empty($grade_level_filter)): ?>
+                          <span class="badge bg-primary ms-1">
+                              Grade: <?= htmlspecialchars($grade_level_filter) ?>
+                              <button type="button" class="btn-close btn-close-white btn-sm ms-1" onclick="removeFilter('grade')" style="font-size: 8px;"></button>
+                          </span>
+                      <?php endif; ?>
+                      <?php if (!empty($school_name_filter) && in_array($user_role, ['district', 'division', 'admin'])): ?>
+                          <span class="badge bg-info ms-1">
+                              School: <?= htmlspecialchars($school_name_filter) ?>
+                              <button type="button" class="btn-close btn-close-white btn-sm ms-1" onclick="removeFilter('school')" style="font-size: 8px;"></button>
+                          </span>
+                      <?php endif; ?>
+                      <?php if (!empty($district_filter) && in_array($user_role, ['division', 'admin'])): ?>
+                          <span class="badge bg-success ms-1">
+                              District: <?= htmlspecialchars($district_filter) ?>
+                              <button type="button" class="btn-close btn-close-white btn-sm ms-1" onclick="removeFilter('district')" style="font-size: 8px;"></button>
+                          </span>
+                      <?php endif; ?>
+                  </div>
+                  <?php endif; ?>
+              </div>
+          </div>
+
           <!-- Main Content Card -->
           <div class="card shadow">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
@@ -378,6 +477,10 @@ $school_year = isset($school_year) ? $school_year : '';
             set_assessment_type: '<?= site_url("sbfp_beneficiaries_controller/set_assessment_type"); ?>',
             set_school_level: '<?= site_url("sbfp_beneficiaries_controller/set_school_level"); ?>',
             set_selected_school: '<?= site_url("sbfp_beneficiaries_controller/set_selected_school"); ?>',
+            set_grade_level_filter: '<?= site_url("sbfp_beneficiaries_controller/set_grade_level_filter"); ?>',
+            set_school_name_filter: '<?= site_url("sbfp_beneficiaries_controller/set_school_name_filter"); ?>',
+            set_district_filter: '<?= site_url("sbfp_beneficiaries_controller/set_district_filter"); ?>',
+            clear_filters: '<?= site_url("sbfp_beneficiaries_controller/clear_filters"); ?>',
             export_excel: '<?= site_url("sbfp_beneficiaries_controller/export_excel"); ?>',
             print_report: '<?= site_url("sbfp_beneficiaries_controller/print_report"); ?>'
         },
@@ -387,7 +490,8 @@ $school_year = isset($school_year) ? $school_year : '';
         school_id: '<?= isset($school_id) ? $school_id : ''; ?>',
         district: '<?= isset($district) ? $district : ''; ?>',
         school_name: '<?= isset($school_name) ? $school_name : ''; ?>',
-        school_level: '<?= isset($school_level) ? $school_level : 'all'; ?>'
+        school_level: '<?= isset($school_level) ? $school_level : 'all'; ?>',
+        available_schools: <?= json_encode($available_schools); ?>
     };
     </script>
     <script src="<?= base_url('assets/js/sbfp_beneficiaries.js'); ?>"></script>
