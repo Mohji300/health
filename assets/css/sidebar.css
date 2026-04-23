@@ -1,0 +1,115 @@
+/* SIDEBAR + TOGGLE (separated from sidebar.php) */
+
+/* --- Sidebar base --- */
+#mainSidebar {
+  background: #ffffff !important;
+  color: #1f2937 !important; /* dark gray text */
+  z-index: 1100;
+  width: 260px;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform .25s ease, width .25s ease;
+}
+
+/* collapse (desktop) */
+#mainSidebar.collapsed {
+  transform: translateX(-100%);
+}
+
+/* main content spacer */
+#sidebarSpacer {
+  width: 260px;
+  flex-shrink: 0;
+  transition: width .25s ease;
+}
+#sidebarSpacer.collapsed {
+  width: 0 !important;
+}
+
+/* text fade on collapse */
+.main-sidebar-text {
+  transition: opacity .15s ease;
+}
+#mainSidebar.collapsed .main-sidebar-text {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* NAV LINKS */
+#mainSidebar .nav-link {
+  color: #4b5563; /* slate-600 */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: 8px;
+  transition: all .15s ease;
+}
+
+#mainSidebar .nav-link:hover {
+  background: #f3f4f6; /* light hover */
+  color: #111827; /* dark hover text */
+  transform: translateX(4px);
+}
+
+#mainSidebar .nav-link.active {
+  background: #e0e7ff; /* light indigo */
+  color: #4338ca; /* indigo-700 */
+  border-left: 3px solid #6366f1;
+}
+
+/* section titles */
+#mainSidebar h6 {
+  color: #6b7280 !important; /* gray-500 */
+}
+
+/* header avatar badge */
+.bg-gradient-primary {
+  background: linear-gradient(135deg,#6366f1,#4f46e5) !important;
+}
+
+/* avatar circle for header image */
+.avatar-circle { width:150px; height:150px; border-radius:50%; object-fit:cover; display:inline-block; }
+
+/* bottom profile */
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 14px 18px;
+  border-top: 1px solid #e5e7eb; /* gray-200 */
+}
+
+/* profile text colors */
+.sidebar-bottom h6 {
+  color: #1f2937 !important;
+}
+.sidebar-bottom small {
+  color: #6b7280 !important;
+}
+
+/* scrollbar */
+#mainSidebar nav::-webkit-scrollbar {
+  width: 5px;
+}
+#mainSidebar nav::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 8px;
+}
+
+/* Mobile */
+@media (max-width: 767.98px) {
+  #mainSidebar {
+    transform: translateX(-100%);
+  }
+  #mainSidebar.show {
+    transform: translateX(0);
+  }
+  #sidebarSpacer {
+    display: none;
+  }
+}

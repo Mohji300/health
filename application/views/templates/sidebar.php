@@ -1,122 +1,6 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed'); ?>
 
-<!-- SIDEBAR + TOGGLE (self-contained) -->
-<style>
-/* --- Sidebar base --- */
-#mainSidebar {
-  background: #ffffff !important;
-  color: #1f2937 !important; /* dark gray text */
-  z-index: 1100;
-  width: 260px;
-  height: 100vh;
-  position: fixed;
-  left: 0;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: transform .25s ease, width .25s ease;
-}
-
-/* collapse (desktop) */
-#mainSidebar.collapsed {
-  transform: translateX(-100%);
-}
-
-/* main content spacer */
-#sidebarSpacer {
-  width: 260px;
-  flex-shrink: 0;
-  transition: width .25s ease;
-}
-#sidebarSpacer.collapsed {
-  width: 0 !important;
-}
-
-/* text fade on collapse */
-.main-sidebar-text {
-  transition: opacity .15s ease;
-}
-#mainSidebar.collapsed .main-sidebar-text {
-  opacity: 0;
-  visibility: hidden;
-}
-
-/* NAV LINKS */
-#mainSidebar .nav-link {
-  color: #4b5563; /* slate-600 */
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 500;
-  padding: 10px 12px;
-  border-radius: 8px;
-  transition: all .15s ease;
-}
-
-#mainSidebar .nav-link:hover {
-  background: #f3f4f6; /* light hover */
-  color: #111827; /* dark hover text */
-  transform: translateX(4px);
-}
-
-#mainSidebar .nav-link.active {
-  background: #e0e7ff; /* light indigo */
-  color: #4338ca; /* indigo-700 */
-  border-left: 3px solid #6366f1;
-}
-
-/* section titles */
-#mainSidebar h6 {
-  color: #6b7280 !important; /* gray-500 */
-}
-
-/* header avatar badge */
-.bg-gradient-primary {
-  background: linear-gradient(135deg,#6366f1,#4f46e5) !important;
-}
-
-/* avatar circle for header image */
-.avatar-circle { width:150px; height:150px; border-radius:50%; object-fit:cover; display:inline-block; }
-
-/* bottom profile */
-.sidebar-bottom {
-  margin-top: auto;
-  padding: 14px 18px;
-  border-top: 1px solid #e5e7eb; /* gray-200 */
-}
-
-/* profile text colors */
-.sidebar-bottom h6 {
-  color: #1f2937 !important;
-}
-.sidebar-bottom small {
-  color: #6b7280 !important;
-}
-
-/* scrollbar */
-#mainSidebar nav::-webkit-scrollbar {
-  width: 5px;
-}
-#mainSidebar nav::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 8px;
-}
-
-/* Mobile */
-@media (max-width: 767.98px) {
-  #mainSidebar {
-    transform: translateX(-100%);
-  }
-  #mainSidebar.show {
-    transform: translateX(0);
-  }
-  #sidebarSpacer {
-    display: none;
-  }
-}
-</style>
-
+<link rel="stylesheet" href="<?php echo base_url('assets/css/sidebar.css'); ?>">
 
 <!-- Toggle Button -->
 <button id="sidebarToggle"
@@ -134,8 +18,7 @@
           alt="School Logo" 
           class="mb-3 avatar-circle">
     <div class="main-sidebar-text">
-      <h5 class="fw-semibold text-gray-400 mb-1">School System</h5>
-      <small class="text-gray-400">Academic Management</small>
+      <h5 class="fw-semibold text-gray-400 mb-1">School Health Management <br> Information System</h5>
     </div>
   </div>
 
@@ -146,11 +29,9 @@
   $is_division = ($user_role == 'division');
   $is_regular_user = ($user_role == 'user');
 
-  // Get the current URI segment for better active state detection
   $current_uri = $this->uri->uri_string();
   $current_url = current_url();
 
-  // FIX: Check if function already exists before declaring
   if (!function_exists('is_active_page')) {
       function is_active_page($uri_segment, $current_uri) {
           if (empty($uri_segment)) {
@@ -161,7 +42,6 @@
   }
   ?>
 
-  <!-- NAV -->
   <nav class="flex-grow-1 overflow-auto py-3">
     <ul class="nav flex-column px-2">
         
@@ -363,39 +243,4 @@
 
 <div id="sidebarSpacer"></div>
 
-<!-- Minimal JS -->
-<script>
-(function(){
-  const btn = document.getElementById('sidebarToggle');
-  const sidebar = document.getElementById('mainSidebar');
-  const spacer = document.getElementById('sidebarSpacer');
-
-  if(!btn || !sidebar) return;
-
-  btn.addEventListener('click', function(){
-
-    if(window.innerWidth < 768){
-      sidebar.classList.toggle('show');
-      return;
-    }
-
-    sidebar.classList.toggle('collapsed');
-    spacer.classList.toggle('collapsed');
-  });
-
-  document.addEventListener('click', function(ev){
-    if(window.innerWidth >= 768) return;
-    if(!sidebar.classList.contains('show')) return;
-
-    if(!sidebar.contains(ev.target) && !btn.contains(ev.target)){
-      sidebar.classList.remove('show');
-    }
-  });
-
-  window.addEventListener('resize', function(){
-    if(window.innerWidth >= 768){
-      sidebar.classList.remove('show');
-    }
-  });
-})();
-</script>
+<script src="<?php echo base_url('assets/js/sidebar.js'); ?>"></script>
