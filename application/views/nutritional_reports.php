@@ -290,12 +290,15 @@
                              value="<?php echo htmlspecialchars($current_filters['date_to'] ?? ''); ?>">
                     </div>
                     
-                    <!-- Submit Button -->
-                    <div class="col-md-3 d-flex align-items-end">
-                      <button type="submit" class="btn btn-primary w-100 py-2" id="applyFiltersBtn">
-                        <i class="fas fa-filter me-1"></i> Apply Filters
-                      </button>
-                    </div>
+                      <!-- Filter Buttons -->
+                      <div class="col-md-12 mt-2">
+                          <button type="button" id="applyFiltersBtn" class="btn btn-primary btn-sm">
+                              <i class="fas fa-search me-1"></i> Apply Filters
+                          </button>
+                          <button type="button" id="clearFiltersBtn" class="btn btn-secondary btn-sm">
+                              <i class="fas fa-eraser me-1"></i> Clear Filters
+                          </button>
+                      </div>
                   </form>
                 </div>
               </div>
