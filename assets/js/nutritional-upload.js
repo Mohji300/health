@@ -477,17 +477,41 @@ const NutritionalUploadUtils = {
      */
     parseStudentData: function(rawData) {
         if (!rawData || !Array.isArray(rawData)) return [];
-        
-        return rawData.map(row => ({
-            name: row.name || row.Name || '',
-            birthday: this.formatDate(row.birthday || row.Birthday || ''),
-            weight: parseFloat(row.weight || row.Weight || 0) || 0,
-            height: parseFloat(row.height || row.Height || 0) || 0,
-            sex: (row.sex || row.Sex || '').toUpperCase(),
-            bmi: parseFloat(row.bmi || row.BMI || 0) || 0,
-            nutritional_status: row.nutritional_status || row['Nutritional Status'] || '',
-            height_for_age: row.height_for_age || row['Height-for-Age'] || ''
-        })).filter(student => student.name);
+
+        return rawData.map(row => {
+            // Try various column names for full name and components
+            const rawName = row.name || row.Name || row['Name'] || row['Full Name'] || row['full_name'] || row.full_name || '';
+
+            const firstName = (row.first_name || row.FirstName || row['First Name'] || row.first || row.First || '').toString().trim();
+            const middleInitial = (row.middle_initial || row.MI || row['M.I.'] || row.middleInitial || row['Middle Initial'] || '').toString().trim();
+            const lastName = (row.last_name || row.LastName || row['Last Name'] || row.last || row.Last || '').toString().trim();
+
+            // Normalize name: prefer provided full name, otherwise build LastName MiddleInitial FirstName
+            let name = rawName.toString().trim();
+            if (!name) {
+                if (lastName || firstName || middleInitial) {
+                    name = lastName;
+                    if (middleInitial) {
+                        name += (name ? ' ' : '') + middleInitial.replace(/\.?$/, '.') ;
+                    }
+                    if (firstName) {
+                        name += (name ? ' ' : '') + firstName;
+                    }
+                    name = name.trim();
+                }
+            }
+
+            return {
+                name: name || '',
+                birthday: this.formatDate(row.birthday || row.Birthday || ''),
+                weight: parseFloat(row.weight || row.Weight || 0) || 0,
+                height: parseFloat(row.height || row.Height || 0) || 0,
+                sex: (row.sex || row.Sex || '').toUpperCase(),
+                bmi: parseFloat(row.bmi || row.BMI || 0) || 0,
+                nutritional_status: row.nutritional_status || row['Nutritional Status'] || '',
+                height_for_age: row.height_for_age || row['Height-for-Age'] || ''
+            };
+        }).filter(student => student.name);
     },
     
     /**
