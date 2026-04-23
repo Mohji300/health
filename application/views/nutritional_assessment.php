@@ -95,16 +95,16 @@
                       </div>
                       <div class="row mb-3">
                       <div class="col-md-5">
+                          <label for="last_name" class="form-label fw-bold">Last Name:</label>
+                          <input type="text" id="last_name" name="last_name" class="form-control text-uppercase" placeholder="Last Name" required style="text-transform: uppercase;">
+                      </div>
+                      <div class="col-md-5">
                           <label for="first_name" class="form-label fw-bold">First Name:</label>
                           <input type="text" id="first_name" name="first_name" class="form-control text-uppercase" placeholder="First Name" required style="text-transform: uppercase;">
                       </div>
                       <div class="col-md-2">
                           <label for="middle_initial" class="form-label fw-bold">M.I.:</label>
                           <input type="text" id="middle_initial" name="middle_initial" class="form-control text-uppercase" placeholder="M.I." maxlength="2" style="text-transform: uppercase;">
-                      </div>
-                      <div class="col-md-5">
-                          <label for="last_name" class="form-label fw-bold">Last Name:</label>
-                          <input type="text" id="last_name" name="last_name" class="form-control text-uppercase" placeholder="Last Name" required style="text-transform: uppercase;">
                       </div>
                       </div>
                       <div class="mb-3">

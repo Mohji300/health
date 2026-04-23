@@ -11,6 +11,8 @@ class Nutritionalassessment extends CI_Controller {
         $this->load->helper(['url', 'form']);
         $this->load->library('session');
         $this->load->database();
+
+        require_once APPPATH . 'helpers/WHO_Standards_helper.php';
     }
 
     /**
@@ -80,17 +82,15 @@ class Nutritionalassessment extends CI_Controller {
         // Set JSON response header
         $this->output->set_content_type('application/json');
         
-        // Combine first name, middle initial, and last name into full name
         $first_name = trim($this->input->post('first_name', TRUE));
         $middle_initial = trim($this->input->post('middle_initial', TRUE));
         $last_name = trim($this->input->post('last_name', TRUE));
-        
-        // Build full name
-        $full_name = $first_name;
+
+        $full_name = $last_name;
         if (!empty($middle_initial)) {
             $full_name .= ' ' . $middle_initial . '.';
         }
-        $full_name .= ' ' . $last_name;
+        $full_name .= ' ' . $first_name;
         
         // Validation rules
         $this->form_validation->set_rules('first_name', 'First Name', 'required|trim');
@@ -104,7 +104,6 @@ class Nutritionalassessment extends CI_Controller {
         $this->form_validation->set_rules('assessment_type', 'Assessment Type', 'required|in_list[baseline,midline,endline]');
 
         if ($this->form_validation->run() == FALSE) {
-            // Return validation errors as JSON
             return $this->output
                 ->set_output(json_encode([
                     'success' => false, 
@@ -126,29 +125,52 @@ class Nutritionalassessment extends CI_Controller {
             }
         }
 
+        // Get input values
+        $birthday = $this->input->post('birthday');
+        $weight = floatval($this->input->post('weight'));
+        $height = floatval($this->input->post('height'));
+        $sex = $this->input->post('sex');
+        $date_of_weighing = $this->input->post('date');
+        
+        // Calculate derived values using WHO standards
+        $heightSquared = number_format(($height * $height), 4);
+        $bmi = round($weight / ($height * $height), 1);
+        
+        // Calculate age in months using weighing date
+        $ageInMonths = $this->calculateAgeInMonths($birthday, $date_of_weighing);
+        
+        // Use WHO standards helper for classifications
+        $nutritional_status = getWHO_BMIClassification($bmi, $ageInMonths, $sex);
+        $heightForAge = $this->calculateHeightForAge($height, $ageInMonths, $sex);
+        
+        // Calculate age display
+        $ageDisplay = $this->calculateAgeDisplay($birthday, $date_of_weighing);
+        
+        $sbfpBeneficiary = ($nutritional_status === 'Severely Wasted' || $nutritional_status === 'Wasted') ? 'Yes' : 'No';
+
         $assessment_data = [
             'name' => $full_name,
             'first_name' => $first_name,
             'middle_initial' => $middle_initial,
             'last_name' => $last_name,
-            'birthday' => $this->input->post('birthday'),
-            'weight' => $this->input->post('weight'),
-            'height' => $this->input->post('height'),
-            'sex' => $this->input->post('sex'),
+            'birthday' => $birthday,
+            'weight' => $weight,
+            'height' => $height,
+            'sex' => $sex,
             'grade_level' => $this->input->post('grade'),
             'section' => $this->input->post('section'),
-            'date_of_weighing' => $this->input->post('date'),
+            'date_of_weighing' => $date_of_weighing,
             'legislative_district' => $this->input->post('legislative_district'),
             'school_district' => $this->input->post('school_district'),
             'school_id' => $this->input->post('school_id'),
             'school_name' => $this->input->post('school_name'),
             'school_level' => $school_level,
-            'height_squared' => $this->input->post('height_squared'),
-            'age' => $this->input->post('age'),
-            'bmi' => $this->input->post('bmi'),
-            'nutritional_status' => $this->input->post('nutritional_status'),
-            'sbfp_beneficiary' => $this->input->post('sbfp_beneficiary'),
-            'height_for_age' => $this->input->post('height_for_age') ?: 'Normal',
+            'height_squared' => $heightSquared,
+            'age' => $ageDisplay,
+            'bmi' => $bmi,
+            'nutritional_status' => $nutritional_status,
+            'sbfp_beneficiary' => $sbfpBeneficiary,
+            'height_for_age' => $heightForAge,
             'assessment_type' => $this->input->post('assessment_type'),
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s')
@@ -185,10 +207,8 @@ class Nutritionalassessment extends CI_Controller {
      */
     public function bulk_store()
     {
-        // Set JSON response header
         $this->output->set_content_type('application/json');
-        
-        // Get the raw POST data
+
         $students_json = $this->input->post('students');
         $assessment_type = $this->input->post('assessment_type', TRUE) ?: 'baseline';
         
@@ -244,17 +264,38 @@ class Nutritionalassessment extends CI_Controller {
 
         foreach ($students as $idx => $student) {
             try {
-                // Get the name - use the combined name from frontend
                 $full_name = isset($student['name']) ? trim($student['name']) : '';
-                
-                // If name is empty but we have separate fields, combine them
+
                 if (empty($full_name) && isset($student['first_name']) && isset($student['last_name'])) {
-                    $full_name = $student['first_name'];
+                    $full_name = trim($student['last_name']);
                     if (!empty($student['middle_initial'])) {
                         $full_name .= ' ' . $student['middle_initial'] . '.';
                     }
-                    $full_name .= ' ' . $student['last_name'];
+                    $full_name .= ' ' . trim($student['first_name']);
                 }
+
+                // Get input values
+                $birthday = isset($student['birthday']) ? $student['birthday'] : '';
+                $weight = isset($student['weight']) ? floatval($student['weight']) : 0;
+                $height = isset($student['height']) ? floatval($student['height']) : 0;
+                $sex = isset($student['sex']) ? strtoupper($student['sex']) : '';
+                $date_of_weighing = isset($student['date']) ? $student['date'] : date('Y-m-d');
+                
+                // Calculate derived values using WHO standards
+                $heightSquared = number_format(($height * $height), 4);
+                $bmi = round($weight / ($height * $height), 1);
+                
+                // Calculate age in months using weighing date
+                $ageInMonths = $this->calculateAgeInMonths($birthday, $date_of_weighing);
+                
+                // Use WHO standards helper for classifications
+                $nutritional_status = getWHO_BMIClassification($bmi, $ageInMonths, $sex);
+                $heightForAge = $this->calculateHeightForAge($height, $ageInMonths, $sex);
+                
+                // Calculate age display
+                $ageDisplay = $this->calculateAgeDisplay($birthday, $date_of_weighing);
+                
+                $sbfpBeneficiary = ($nutritional_status === 'Severely Wasted' || $nutritional_status === 'Wasted') ? 'Yes' : 'No';
 
                 $assessment_data = [
                     'school_district' => isset($student['school_district']) ? $student['school_district'] : '',
@@ -266,17 +307,17 @@ class Nutritionalassessment extends CI_Controller {
                     'section' => isset($student['section']) ? $student['section'] : '',
                     'year' => isset($student['school_year']) ? $student['school_year'] : (isset($student['year']) ? $student['year'] : ''),
                     'name' => $full_name,
-                    'birthday' => isset($student['birthday']) ? $student['birthday'] : '',
-                    'weight' => isset($student['weight']) ? floatval($student['weight']) : 0,
-                    'height' => isset($student['height']) ? floatval($student['height']) : 0,
-                    'sex' => isset($student['sex']) ? strtoupper($student['sex']) : '',
-                    'height_squared' => isset($student['heightSquared']) ? floatval($student['heightSquared']) : 0,
-                    'age' => isset($student['age']) ? $student['age'] : (isset($student['ageDisplay']) ? $student['ageDisplay'] : '0|0'),
-                    'bmi' => isset($student['bmi']) ? floatval($student['bmi']) : 0,
-                    'nutritional_status' => isset($student['nutritionalStatus']) ? $student['nutritionalStatus'] : 'Normal',
-                    'height_for_age' => isset($student['heightForAge']) ? $student['heightForAge'] : 'Normal',
-                    'sbfp_beneficiary' => isset($student['sbfpBeneficiary']) ? $student['sbfpBeneficiary'] : 'No',
-                    'date_of_weighing' => isset($student['date']) ? $student['date'] : date('Y-m-d'),
+                    'birthday' => $birthday,
+                    'weight' => $weight,
+                    'height' => $height,
+                    'sex' => $sex,
+                    'height_squared' => $heightSquared,
+                    'age' => $ageDisplay,
+                    'bmi' => $bmi,
+                    'nutritional_status' => $nutritional_status,
+                    'height_for_age' => $heightForAge,
+                    'sbfp_beneficiary' => $sbfpBeneficiary,
+                    'date_of_weighing' => $date_of_weighing,
                     'assessment_type' => $assessment_type, 
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
@@ -326,6 +367,68 @@ class Nutritionalassessment extends CI_Controller {
 
         return $this->output
             ->set_output(json_encode($response));
+    }
+
+    /**
+     * Calculate age in months using weighing date
+     */
+    private function calculateAgeInMonths($birthday, $weighing_date)
+    {
+        if (empty($birthday) || empty($weighing_date)) {
+            return 0;
+        }
+        
+        try {
+            $birthDate = new DateTime($birthday);
+            $weighingDate = new DateTime($weighing_date);
+            $interval = $birthDate->diff($weighingDate);
+            
+            $totalMonths = ($interval->y * 12) + $interval->m;
+            
+            if ($interval->invert == 1 || $interval->days < 0) {
+                return 0;
+            }
+            
+            return $totalMonths;
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+    
+    /**
+     * Calculate age display string (years|months)
+     */
+    private function calculateAgeDisplay($birthday, $weighing_date)
+    {
+        if (empty($birthday) || empty($weighing_date)) {
+            return '0|0';
+        }
+        
+        try {
+            $birthDate = new DateTime($birthday);
+            $weighingDate = new DateTime($weighing_date);
+            $interval = $birthDate->diff($weighingDate);
+            
+            return $interval->y . '|' . $interval->m;
+        } catch (Exception $e) {
+            return '0|0';
+        }
+    }
+    
+    /**
+     * Calculate Height-for-Age classification
+     */
+    private function calculateHeightForAge($height, $ageInMonths, $sex)
+    {
+        if ($height === null || $ageInMonths === null || empty($sex)) {
+            return 'Normal';
+        }
+        
+        // Convert height from meters to cm
+        $heightCm = $height * 100;
+        
+        // Use WHO standards helper
+        return getWHO_HeightForAgeClassification($heightCm, $ageInMonths, $sex);
     }
 
     /**

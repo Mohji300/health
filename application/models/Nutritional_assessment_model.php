@@ -103,7 +103,7 @@ class nutritional_assessment_model extends CI_Model {
         $this->db->where('school_district', $school_district);
         $this->db->where('grade_level', $grade_level);
         $this->db->where('section', $section);
-        $this->db->where('is_deleted', FALSE);
+        $this->db->where('is_deleted', 0);
         
         // Add school_year filter if provided
         if ($school_year && $school_year !== 'N/A' && $school_year !== '') {
@@ -291,7 +291,8 @@ class nutritional_assessment_model extends CI_Model {
         ');
 
         $this->db->from($this->table);
-        $this->db->where('is_deleted', FALSE);
+        $this->db->where('is_deleted', 0);
+        
         $this->db->group_by('school_id, school_name, legislative_district, school_district, grade_level, section, year, assessment_type');
 
         // Apply filters
@@ -680,6 +681,8 @@ class nutritional_assessment_model extends CI_Model {
      */
     private function apply_filters($filters = [])
     {
+        $this->db->where('is_deleted', 0);
+        
         if (!empty($filters['legislative_district'])) {
             $this->db->where('legislative_district', $filters['legislative_district']);
         }
@@ -821,7 +824,7 @@ class nutritional_assessment_model extends CI_Model {
     {
         $this->db->select('*');
         $this->db->from($this->table);
-        $this->db->where('is_deleted', FALSE);
+        $this->db->where('is_deleted', 0);
 
         // Apply filters
         if (!empty($legislative_district)) {
