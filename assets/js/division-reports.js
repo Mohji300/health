@@ -83,13 +83,37 @@ $(document).ready(function() {
     }
     
     /**
+     * Handle Apply Filters button click
+     */
+    function initializeFilterButtons() {
+        // Apply Filters button
+        $('#applyFiltersBtn').on('click', function(e) {
+            e.preventDefault();
+            submitFilterForm();
+        });
+        
+        // Clear Filters button
+        $('#clearFiltersBtn').on('click', function(e) {
+            e.preventDefault();
+            clearAllFilters();
+        });
+        
+        // Reset Filters button (if exists)
+        $('#resetFiltersBtn').on('click', function(e) {
+            e.preventDefault();
+            clearAllFilters();
+        });
+    }
+    
+    /**
      * Handle filter form submission
      */
     function initializeFilterForm() {
         const filterForm = $('#filterForm');
         
         if (filterForm.length) {
-            filterForm.on('submit', function() {
+            filterForm.on('submit', function(e) {
+                // Don't prevent default, let it submit normally
                 const btn = $('#applyFiltersBtn');
                 const originalText = btn.html();
                 
@@ -99,9 +123,109 @@ $(document).ready(function() {
                 // Store original text for potential recovery
                 btn.data('original-text', originalText);
                 
-                // Optional: Add loading overlay
+                // Add loading overlay
                 showLoadingOverlay();
             });
+        }
+    }
+    
+    /**
+     * Submit filter form
+     */
+    function submitFilterForm() {
+        const form = $('#filterForm');
+        const btn = $('#applyFiltersBtn');
+        const originalText = btn.html();
+        
+        btn.prop('disabled', true)
+           .html('<i class="fas fa-spinner fa-spin me-1"></i> Applying...');
+        
+        // Show loading overlay
+        showLoadingOverlay();
+        
+        // Get form data
+        const formData = form.serialize();
+        const actionUrl = form.attr('action');
+        
+        // Submit via regular form submission
+        window.location.href = actionUrl + '?' + formData;
+    }
+    
+    /**
+     * Clear all filters
+     */
+    function clearAllFilters() {
+        const btn = $('#clearFiltersBtn');
+        const originalText = btn.html();
+        
+        btn.prop('disabled', true)
+           .html('<i class="fas fa-spinner fa-spin me-1"></i> Clearing...');
+        
+        // Show loading overlay
+        showLoadingOverlay();
+        
+        // Redirect to base URL without filters
+        if (window.reportsConfig && window.reportsConfig.baseUrl) {
+            window.location.href = window.reportsConfig.baseUrl;
+        } else {
+            // Fallback: remove filter parameters from URL
+            const url = new URL(window.location.href);
+            const params = ['legislative_district', 'school_district', 'school_name', 'grade_level', 'assessment_type', 'date_from', 'date_to'];
+            params.forEach(param => url.searchParams.delete(param));
+            window.location.href = url.toString();
+        }
+    }
+    
+    /**
+     * Auto-submit when filters change (optional)
+     */
+    function initializeAutoSubmit() {
+        // Auto-submit on filter change for assessment type and grade level
+        $('select[name="assessment_type"], select[name="grade_level"]').on('change', function() {
+            submitFilterForm();
+        });
+        
+        // Date inputs - submit after user finishes typing (with debounce)
+        let dateTimer;
+        $('input[name="date_from"], input[name="date_to"]').on('input', function() {
+            clearTimeout(dateTimer);
+            dateTimer = setTimeout(function() {
+                submitFilterForm();
+            }, 800);
+        });
+    }
+    
+    /**
+     * Preserve filter values in form inputs
+     */
+    function preserveFilterValues() {
+        if (window.reportsConfig && window.reportsConfig.currentFilters) {
+            const filters = window.reportsConfig.currentFilters;
+            
+            // Set select values
+            if (filters.legislative_district) {
+                $('select[name="legislative_district"]').val(filters.legislative_district);
+            }
+            if (filters.school_district) {
+                $('select[name="school_district"]').val(filters.school_district);
+            }
+            if (filters.school_name) {
+                $('select[name="school_name"]').val(filters.school_name);
+            }
+            if (filters.grade_level) {
+                $('select[name="grade_level"]').val(filters.grade_level);
+            }
+            if (filters.assessment_type) {
+                $('select[name="assessment_type"]').val(filters.assessment_type);
+            }
+            
+            // Set date inputs
+            if (filters.date_from) {
+                $('input[name="date_from"]').val(filters.date_from);
+            }
+            if (filters.date_to) {
+                $('input[name="date_to"]').val(filters.date_to);
+            }
         }
     }
     
@@ -109,6 +233,9 @@ $(document).ready(function() {
      * Show loading overlay
      */
     function showLoadingOverlay() {
+        // Remove existing overlay
+        $('#loadingOverlay').remove();
+        
         const overlay = $(`
             <div id="loadingOverlay" style="
                 position: fixed;
@@ -116,7 +243,7 @@ $(document).ready(function() {
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(255, 255, 255, 0.8);
+                background: rgba(255, 255, 255, 0.9);
                 z-index: 9999;
                 display: flex;
                 align-items: center;
@@ -126,7 +253,7 @@ $(document).ready(function() {
                 <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <p class="mt-3 text-primary">Loading reports...</p>
+                <p class="mt-3 text-primary fw-bold">Loading reports...</p>
             </div>
         `);
         
@@ -144,17 +271,7 @@ $(document).ready(function() {
      * Handle reset filters button
      */
     function initializeResetButton() {
-        const resetBtn = $('a[href*="division/reports"]:not([href*="export"]):not([href*="statistics"])');
-        
-        if (resetBtn.length) {
-            resetBtn.on('click', function(e) {
-                // Optional: Add confirmation
-                // if (!confirm('Reset all filters?')) {
-                //     e.preventDefault();
-                //     return false;
-                // }
-            });
-        }
+        // This is handled by clearAllFilters now
     }
     
     /**
@@ -223,8 +340,11 @@ $(document).ready(function() {
      * Show notification message
      */
     function showNotification(message, type = 'info') {
+        // Remove existing notifications
+        $('.alert-notification').remove();
+        
         const alertDiv = $(`
-            <div class="alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3" 
+            <div class="alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3 alert-notification" 
                  role="alert" style="z-index: 9999; min-width: 300px;">
                 <div class="d-flex">
                     <div class="flex-shrink-0">
@@ -262,6 +382,10 @@ $(document).ready(function() {
                 if (fromDate && dateTo.val() && dateTo.val() < fromDate) {
                     dateTo.val(fromDate);
                     showNotification('"Date To" adjusted to match "Date From"', 'warning');
+                    // Auto-submit after date adjustment
+                    setTimeout(function() {
+                        submitFilterForm();
+                    }, 100);
                 }
             });
             
@@ -272,6 +396,10 @@ $(document).ready(function() {
                 if (fromDate && toDate && toDate < fromDate) {
                     dateFrom.val(toDate);
                     showNotification('"Date From" adjusted to match "Date To"', 'warning');
+                    // Auto-submit after date adjustment
+                    setTimeout(function() {
+                        submitFilterForm();
+                    }, 100);
                 }
             });
         }
@@ -293,14 +421,11 @@ $(document).ready(function() {
             
             console.log('Row clicked:', { schoolName, schoolId });
             
-            // Optional: Highlight the row briefly
+            // Highlight the row briefly
             $(this).addClass('table-active');
             setTimeout(() => {
                 $(this).removeClass('table-active');
             }, 200);
-            
-            // Optional: Show quick info popover
-            // You can implement a popover with school details here
         });
     }
     
@@ -308,6 +433,11 @@ $(document).ready(function() {
      * Export current table data to CSV
      */
     function exportTableToCSV() {
+        if (!window.reportsConfig || !window.reportsConfig.hasReports) {
+            showNotification('No data to export', 'warning');
+            return;
+        }
+        
         const table = $('#reportsTable').DataTable();
         const data = table.rows({ search: 'applied' }).data();
         const filename = `reports_export_${new Date().toISOString().slice(0,10)}.csv`;
@@ -325,7 +455,7 @@ $(document).ready(function() {
         // Add data
         data.each(function(row) {
             const rowData = [];
-            $(row).each(function(index, cell) {
+            $(row).find('td').each(function(index, cell) {
                 let text = $(cell).text().trim();
                 // Escape commas and quotes
                 if (text.includes(',') || text.includes('"')) {
@@ -338,7 +468,7 @@ $(document).ready(function() {
         
         // Download CSV
         const csvContent = csv.join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         
@@ -359,15 +489,17 @@ $(document).ready(function() {
      * Initialize all components
      */
     function initialize() {
+        preserveFilterValues();
         initializeDataTable();
         initializeTooltips();
         initializeFilterForm();
-        initializeResetButton();
+        initializeFilterButtons();
         initializeExportButtons();
         initializeStatsButton();
         handleWindowResize();
         validateDates();
         initializeTableRowClick();
+        initializeAutoSubmit();
         
         console.log('Division reports page initialized successfully');
     }
@@ -437,11 +569,26 @@ const DivisionReportsUtils = {
     },
     
     /**
+     * Reload page with new filters
+     */
+    applyFilters: function(filters) {
+        const url = new URL(window.location.href);
+        for (const [key, value] of Object.entries(filters)) {
+            if (value) {
+                url.searchParams.set(key, value);
+            } else {
+                url.searchParams.delete(key);
+            }
+        }
+        window.location.href = url.toString();
+    },
+    
+    /**
      * Get report count
      */
     getReportCount: function() {
         if (typeof reportsConfig !== 'undefined') {
-            return reportsConfig.totalReports;
+            return reportsConfig.totalReports || 0;
         }
         return 0;
     }
