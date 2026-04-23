@@ -21,6 +21,39 @@ class excel_model extends CI_Model {
         
         if (!$this->db->table_exists('schools')) {
             $this->create_schools_table();
+        } else {
+            // Check if new columns exist, if not add them
+            $this->add_missing_columns();
+        }
+        
+        // Check if users table has the additional columns needed
+        $this->check_users_table_columns();
+    }
+    
+    /**
+     * Check if users table has the required columns for school data
+     */
+    private function check_users_table_columns() {
+        if ($this->db->table_exists('users')) {
+            // Check for school_id column
+            if (!$this->db->field_exists('school_id', 'users')) {
+                $this->db->query("ALTER TABLE users ADD COLUMN school_id VARCHAR(100) NULL DEFAULT NULL");
+            }
+            
+            // Check for legislative_district column
+            if (!$this->db->field_exists('legislative_district', 'users')) {
+                $this->db->query("ALTER TABLE users ADD COLUMN legislative_district VARCHAR(255) NULL DEFAULT NULL");
+            }
+            
+            // Check for school_district column
+            if (!$this->db->field_exists('school_district', 'users')) {
+                $this->db->query("ALTER TABLE users ADD COLUMN school_district VARCHAR(255) NULL DEFAULT NULL");
+            }
+            
+            // Check for school_level column
+            if (!$this->db->field_exists('school_level', 'users')) {
+                $this->db->query("ALTER TABLE users ADD COLUMN school_level VARCHAR(50) NULL DEFAULT NULL");
+            }
         }
     }
 
@@ -89,8 +122,11 @@ class excel_model extends CI_Model {
         $this->dbforge->add_key('id', TRUE);
         $this->dbforge->create_table('school_districts', TRUE);
         
-        // Add foreign key constraint
-        $this->db->query('ALTER TABLE school_districts ADD CONSTRAINT fk_school_districts_legislative FOREIGN KEY (legislative_district_id) REFERENCES legislative_districts(id) ON DELETE CASCADE ON UPDATE CASCADE');
+        // Add foreign key constraint (check if it doesn't exist first)
+        $constraint_check = $this->db->query("SELECT * FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_NAME = 'fk_school_districts_legislative' AND TABLE_NAME = 'school_districts'");
+        if ($constraint_check->num_rows() == 0) {
+            $this->db->query('ALTER TABLE school_districts ADD CONSTRAINT fk_school_districts_legislative FOREIGN KEY (legislative_district_id) REFERENCES legislative_districts(id) ON DELETE CASCADE ON UPDATE CASCADE');
+        }
     }
 
     private function create_schools_table() {
@@ -119,6 +155,20 @@ class excel_model extends CI_Model {
                 'unsigned' => TRUE,
                 'null' => TRUE
             ),
+            'school_level' => array(
+                'type' => 'VARCHAR',
+                'constraint' => '50',
+                'null' => TRUE,
+                'default' => NULL,
+                'comment' => 'Elementary, Secondary, Private, Integrated'
+            ),
+            'school_size' => array(
+                'type' => 'INT',
+                'constraint' => 11,
+                'null' => TRUE,
+                'default' => NULL,
+                'comment' => 'Number of students (to be updated later)'
+            ),
             'created_at' => array(
                 'type' => 'TIMESTAMP',
                 'default' => 'CURRENT_TIMESTAMP'
@@ -133,73 +183,145 @@ class excel_model extends CI_Model {
         $this->dbforge->add_key('id', TRUE);
         $this->dbforge->create_table('schools', TRUE);
         
-        // Add foreign key constraint
-        $this->db->query('ALTER TABLE schools ADD CONSTRAINT fk_schools_school_district FOREIGN KEY (school_district_id) REFERENCES school_districts(id) ON DELETE CASCADE ON UPDATE CASCADE');
+        // Add foreign key constraint (check if it doesn't exist first)
+        $constraint_check = $this->db->query("SELECT * FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_NAME = 'fk_schools_school_district' AND TABLE_NAME = 'schools'");
+        if ($constraint_check->num_rows() == 0) {
+            $this->db->query('ALTER TABLE schools ADD CONSTRAINT fk_schools_school_district FOREIGN KEY (school_district_id) REFERENCES school_districts(id) ON DELETE CASCADE ON UPDATE CASCADE');
+        }
+    }
+    
+    private function add_missing_columns() {
+        // Check if school_level column exists
+        if (!$this->db->field_exists('school_level', 'schools')) {
+            $this->db->query("ALTER TABLE schools ADD COLUMN school_level VARCHAR(50) NULL DEFAULT NULL COMMENT 'Elementary, Secondary, Private, Integrated'");
+        }
+        
+        // Check if school_size column exists
+        if (!$this->db->field_exists('school_size', 'schools')) {
+            $this->db->query("ALTER TABLE schools ADD COLUMN school_size INT NULL DEFAULT NULL COMMENT 'Number of students (to be updated later)'");
+        }
     }
 
-    public function insert_excel_data($legislative_districts, $school_districts, $schools_data) {
+    /**
+     * Insert data WITHOUT clearing existing data (for appending)
+     * This method allows uploading multiple files without losing previous data
+     */
+    public function insert_excel_data_append($legislative_districts, $school_districts, $schools_data) {
         $this->db->trans_start();
 
         try {
-            // Step 1: Clear existing data
-            $this->clear_all_data();
-
-            // Step 2: Sort legislative districts in order (1ST, 2ND, 3RD)
-            $sorted_legislative_districts = $this->sort_legislative_districts($legislative_districts);
+            // Step 1: Get existing legislative districts to avoid duplicates
+            $existing_legislative = array();
+            $query = $this->db->select('name, id')->get('legislative_districts');
+            foreach ($query->result() as $row) {
+                $existing_legislative[$row->name] = $row->id;
+            }
             
-            // Step 3: Insert Legislative Districts in sorted order
-            $legislative_district_ids = [];
-            foreach ($sorted_legislative_districts as $district) {
+            // Step 2: Insert ONLY NEW Legislative Districts
+            $legislative_district_ids = $existing_legislative; // Start with existing ones
+            foreach ($legislative_districts as $district) {
                 if (empty($district)) continue;
                 
-                $this->db->insert('legislative_districts', [
-                    'name' => $district,
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s')
-                ]);
-                $legislative_district_ids[$district] = $this->db->insert_id();
+                // Check if district already exists
+                if (!isset($legislative_district_ids[$district])) {
+                    $this->db->insert('legislative_districts', array(
+                        'name' => $district,
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ));
+                    $legislative_district_ids[$district] = $this->db->insert_id();
+                    log_message('info', "Added new legislative district: $district");
+                }
             }
 
-            // Step 4: Sort school districts by legislative district order
-            $sorted_school_districts = $this->sort_school_districts($school_districts, $legislative_district_ids);
+            // Step 3: Get existing school districts to avoid duplicates
+            $existing_school_districts = array();
+            $query = $this->db->select('name, legislative_district_id, id')->get('school_districts');
+            foreach ($query->result() as $row) {
+                $key = $row->name . '_' . $row->legislative_district_id;
+                $existing_school_districts[$key] = $row->id;
+            }
             
-            // Step 5: Insert School Districts in sorted order
-            $school_district_ids = [];
-            foreach ($sorted_school_districts as $key => $district) {
+            // Step 4: Insert ONLY NEW School Districts
+            $school_district_ids = array();
+            foreach ($school_districts as $key => $district) {
                 if (empty($district['school_district'])) continue;
                 
                 $legislative_id = isset($legislative_district_ids[$district['legislative_district']]) ? 
                     $legislative_district_ids[$district['legislative_district']] : null;
                 
                 if ($legislative_id) {
-                    $this->db->insert('school_districts', [
-                        'name' => $district['school_district'],
-                        'legislative_district_id' => $legislative_id,
-                        'created_at' => date('Y-m-d H:i:s'),
-                        'updated_at' => date('Y-m-d H:i:s')
-                    ]);
-                    $school_district_ids[$key] = $this->db->insert_id();
+                    $check_key = $district['school_district'] . '_' . $legislative_id;
+                    
+                    // Check if school district already exists
+                    if (!isset($existing_school_districts[$check_key])) {
+                        $this->db->insert('school_districts', array(
+                            'name' => $district['school_district'],
+                            'legislative_district_id' => $legislative_id,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ));
+                        $school_district_ids[$key] = $this->db->insert_id();
+                        log_message('info', "Added new school district: " . $district['school_district']);
+                    } else {
+                        $school_district_ids[$key] = $existing_school_districts[$check_key];
+                    }
                 }
             }
 
-            // Step 6: Sort schools by school district order
-            $sorted_schools_data = $this->sort_schools_data($schools_data, $school_district_ids);
+            // Step 5: Get existing schools to avoid duplicates (by school_id)
+            $existing_schools = array();
+            $query = $this->db->select('school_id, id')->get('schools');
+            foreach ($query->result() as $row) {
+                if (!empty($row->school_id)) {
+                    $existing_schools[$row->school_id] = $row->id;
+                }
+            }
             
-            // Step 7: Insert Schools in sorted order
+            // Step 6: Insert ONLY NEW Schools
             $schools_inserted = 0;
-            foreach ($sorted_schools_data as $school) {
+            $schools_skipped = 0;
+            $schools_by_level = array(
+                'Elementary' => 0,
+                'Secondary' => 0,
+                'Private' => 0,
+                'Integrated' => 0,
+                'Unknown' => 0
+            );
+            
+            foreach ($schools_data as $school) {
+                // Check if school already exists (by school_id)
+                if (!empty($school['school_id']) && isset($existing_schools[$school['school_id']])) {
+                    $schools_skipped++;
+                    log_message('debug', "Skipping existing school: " . $school['school_id'] . " - " . $school['school_name']);
+                    continue;
+                }
+                
                 $district_key = $school['legislative_district'] . '_' . $school['school_district'];
                 $school_district_id = isset($school_district_ids[$district_key]) ? $school_district_ids[$district_key] : null;
                 
                 if ($school_district_id) {
-                    $this->db->insert('schools', [
+                    // Insert school with new fields
+                    $insert_data = array(
                         'school_id' => $school['school_id'],
                         'name' => $school['school_name'],
                         'school_district_id' => $school_district_id,
+                        'school_level' => isset($school['school_level']) ? $school['school_level'] : null,
+                        'school_size' => isset($school['school_size']) ? $school['school_size'] : null,
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
-                    ]);
+                    );
+                    
+                    $this->db->insert('schools', $insert_data);
                     $schools_inserted++;
+                    
+                    // Count by level for logging
+                    $level = isset($school['school_level']) ? $school['school_level'] : 'Unknown';
+                    if (isset($schools_by_level[$level])) {
+                        $schools_by_level[$level]++;
+                    } else {
+                        $schools_by_level['Unknown']++;
+                    }
                 }
             }
 
@@ -207,115 +329,27 @@ class excel_model extends CI_Model {
 
             if ($this->db->trans_status() === FALSE) {
                 $this->db->trans_rollback();
-                log_message('error', 'Database transaction failed in insert_excel_data');
+                log_message('error', 'Database transaction failed in insert_excel_data_append');
                 return false;
             }
 
-            log_message('info', "Successfully inserted: " . count($legislative_districts) . " legislative districts, " . count($school_districts) . " school districts, " . $schools_inserted . " schools");
+            log_message('info', "Appended data: " . count($legislative_districts) . " legislative districts, " . count($school_districts) . " school districts, " . $schools_inserted . " new schools, " . $schools_skipped . " skipped (duplicates)");
+            log_message('info', "Schools by level: " . json_encode($schools_by_level));
+            
             return true;
 
         } catch (Exception $e) {
             $this->db->trans_rollback();
-            log_message('error', 'Excel Model Error: ' . $e->getMessage());
+            log_message('error', 'Excel Model Error (Append): ' . $e->getMessage());
             return false;
         }
     }
 
     /**
-     * Sort legislative districts in order: 1ST DISTRICT, 2ND DISTRICT, 3RD DISTRICT
+     * Get total schools count
      */
-    private function sort_legislative_districts($districts) {
-        $sorted = [];
-        
-        // Look for 1ST DISTRICT
-        foreach ($districts as $district) {
-            if (strpos($district, '1ST DISTRICT') !== false) {
-                $sorted[] = $district;
-                break;
-            }
-        }
-        
-        // Look for 2ND DISTRICT
-        foreach ($districts as $district) {
-            if (strpos($district, '2ND DISTRICT') !== false) {
-                $sorted[] = $district;
-                break;
-            }
-        }
-        
-        // Look for 3RD DISTRICT
-        foreach ($districts as $district) {
-            if (strpos($district, '3RD DISTRICT') !== false) {
-                $sorted[] = $district;
-                break;
-            }
-        }
-        
-        return $sorted;
-    }
-
-    /**
-     * Sort school districts by legislative district order and then alphabetically
-     */
-    private function sort_school_districts($school_districts, $legislative_district_ids) {
-        $sorted = [];
-        
-        // Group school districts by legislative district
-        $grouped_districts = [];
-        foreach ($school_districts as $key => $district) {
-            $legislative_name = $district['legislative_district'];
-            $grouped_districts[$legislative_name][] = $district;
-        }
-        
-        // Sort each group alphabetically
-        foreach ($grouped_districts as &$districts) {
-            usort($districts, function($a, $b) {
-                return strcmp($a['school_district'], $b['school_district']);
-            });
-        }
-        
-        // Build sorted array based on legislative district order
-        foreach ($legislative_district_ids as $legislative_name => $id) {
-            if (isset($grouped_districts[$legislative_name])) {
-                foreach ($grouped_districts[$legislative_name] as $district) {
-                    $key = $district['legislative_district'] . '_' . $district['school_district'];
-                    $sorted[$key] = $district;
-                }
-            }
-        }
-        
-        return $sorted;
-    }
-
-    /**
-     * Sort schools by school district order and then by school name
-     */
-    private function sort_schools_data($schools_data, $school_district_ids) {
-        // Group schools by school district
-        $grouped_schools = [];
-        foreach ($schools_data as $school) {
-            $district_key = $school['legislative_district'] . '_' . $school['school_district'];
-            $grouped_schools[$district_key][] = $school;
-        }
-        
-        // Sort each group by school name
-        foreach ($grouped_schools as &$schools) {
-            usort($schools, function($a, $b) {
-                return strcmp($a['school_name'], $b['school_name']);
-            });
-        }
-        
-        // Build sorted array based on school district order
-        $sorted = [];
-        foreach ($school_district_ids as $district_key => $id) {
-            if (isset($grouped_schools[$district_key])) {
-                foreach ($grouped_schools[$district_key] as $school) {
-                    $sorted[] = $school;
-                }
-            }
-        }
-        
-        return $sorted;
+    public function get_total_schools_count() {
+        return $this->db->count_all('schools');
     }
 
     public function clear_all_data() {
@@ -333,11 +367,18 @@ class excel_model extends CI_Model {
     }
 
     public function get_data_summary() {
-        $summary = [
+        $summary = array(
             'legislative_districts' => 0,
             'school_districts' => 0,
-            'schools' => 0
-        ];
+            'schools' => 0,
+            'school_levels' => array(
+                'Elementary' => 0,
+                'Secondary' => 0,
+                'Private' => 0,
+                'Integrated' => 0,
+                'Unknown' => 0
+            )
+        );
         
         try {
             // Check if database connection is working
@@ -346,20 +387,35 @@ class excel_model extends CI_Model {
                 return $summary;
             }
             
-            // Use simple queries to avoid any issues
+            // Get legislative districts count
             $result = $this->db->query("SELECT COUNT(*) as count FROM legislative_districts");
             if ($result) {
                 $summary['legislative_districts'] = $result->row()->count;
             }
             
+            // Get school districts count
             $result = $this->db->query("SELECT COUNT(*) as count FROM school_districts");
             if ($result) {
                 $summary['school_districts'] = $result->row()->count;
             }
             
+            // Get schools count and breakdown by level
             $result = $this->db->query("SELECT COUNT(*) as count FROM schools");
             if ($result) {
                 $summary['schools'] = $result->row()->count;
+            }
+            
+            // Get school levels breakdown
+            $result = $this->db->query("SELECT school_level, COUNT(*) as count FROM schools GROUP BY school_level");
+            if ($result) {
+                foreach ($result->result() as $row) {
+                    $level = $row->school_level ? $row->school_level : 'Unknown';
+                    if (isset($summary['school_levels'][$level])) {
+                        $summary['school_levels'][$level] = $row->count;
+                    } else {
+                        $summary['school_levels']['Unknown'] += $row->count;
+                    }
+                }
             }
             
         } catch (Exception $e) {
@@ -373,7 +429,7 @@ class excel_model extends CI_Model {
      * Get ordered data for verification
      */
     public function get_ordered_data() {
-        $data = [];
+        $data = array();
         
         // Get legislative districts in order
         $data['legislative_districts'] = $this->db
@@ -391,7 +447,7 @@ class excel_model extends CI_Model {
             ->get()
             ->result();
             
-        // Get schools ordered by school district and name
+        // Get schools ordered by school district and name with new fields
         $data['schools'] = $this->db
             ->select('s.*, sd.name as school_district_name, ld.name as legislative_name')
             ->from('schools s')
@@ -403,6 +459,53 @@ class excel_model extends CI_Model {
             ->result();
             
         return $data;
+    }
+    
+    /**
+     * Update school size for a specific school
+     */
+    public function update_school_size($school_id, $size) {
+        $this->db->where('id', $school_id);
+        return $this->db->update('schools', array(
+            'school_size' => $size,
+            'updated_at' => date('Y-m-d H:i:s')
+        ));
+    }
+    
+    /**
+     * Get schools by level
+     */
+    public function get_schools_by_level($level = null) {
+        $this->db->select('s.*, sd.name as school_district_name, ld.name as legislative_name')
+            ->from('schools s')
+            ->join('school_districts sd', 's.school_district_id = sd.id')
+            ->join('legislative_districts ld', 'sd.legislative_district_id = ld.id');
+        
+        if ($level) {
+            $this->db->where('s.school_level', $level);
+        }
+        
+        return $this->db->order_by('s.school_district_id', 'ASC')
+            ->order_by('s.name', 'ASC')
+            ->get()
+            ->result();
+    }
+    
+    /**
+     * Get school by ID
+     */
+    public function get_school_by_id($school_id) {
+        $this->db->where('school_id', $school_id);
+        return $this->db->get('schools')->row();
+    }
+    
+    /**
+     * Check if school exists
+     */
+    public function school_exists($school_id) {
+        $this->db->where('school_id', $school_id);
+        $query = $this->db->get('schools');
+        return $query->num_rows() > 0;
     }
 }
 ?>
