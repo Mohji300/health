@@ -1,5 +1,3 @@
-    // nutritional_assessment.js
-
     // Storage prefix for localStorage
     const STORAGE_PREFIX = 'nutritional_assessment_';
     let students = [];
@@ -43,14 +41,14 @@
         localStorage.removeItem(getStorageKey()); 
     }
 
-    // Calculate all derived student data
-    function calculateStudentData(name, birthday, weight, height, sex) {
+    // Calculate all derived student data - FIXED to use weighing date from form
+    function calculateStudentData(name, birthday, weight, height, sex, weighingDate) {
         let ageYears = 0, ageMonths = 0;
-        if (birthday) {
+        if (birthday && weighingDate) {
             const bdate = new Date(birthday);
-            const today = new Date();
-            ageYears = today.getFullYear() - bdate.getFullYear();
-            ageMonths = today.getMonth() - bdate.getMonth();
+            const wdate = new Date(weighingDate);
+            ageYears = wdate.getFullYear() - bdate.getFullYear();
+            ageMonths = wdate.getMonth() - bdate.getMonth();
             if (ageMonths < 0) { 
                 ageYears--; 
                 ageMonths += 12; 
@@ -60,6 +58,8 @@
         const heightSq = (height * height).toFixed(4);
         const bmi = (weight / (height * height)).toFixed(2);
 
+        // Simple BMI classification for manual entry (frontend only)
+        // Server will recalculate properly when submitted
         let nutritionalStatus = 'Normal';
         if (bmi < 16) nutritionalStatus = 'Severely Wasted';
         else if (bmi < 18.5) nutritionalStatus = 'Wasted';
@@ -78,7 +78,7 @@
             grade: document.getElementById('grade')?.value || '', 
             section: document.getElementById('section')?.value || '',
             school_year: document.getElementById('school_year')?.value || '', 
-            date: document.getElementById('date')?.value || '',
+            date: weighingDate,
             legislative_district: document.getElementById('legislative_district')?.value || '',
             school_district: document.getElementById('school_district')?.value || '',
             school_id: document.getElementById('school_id')?.value || '', 
@@ -90,12 +90,12 @@
             ageDisplay: ageYears + '|' + ageMonths,
             bmi: parseFloat(bmi), 
             nutritionalStatus, 
-            heightForAge: 'Normal', 
+            heightForAge: 'Normal', // Will be recalculated by server
             sbfpBeneficiary
         };
     }
 
-    // Add or update a student
+    // Add or update a student - FIXED to pass weighing date
     function addOrUpdateStudent() {
         const form = document.getElementById('assessmentForm');
         if (!form.checkValidity()) { 
@@ -121,13 +121,15 @@
         }
         
         // Combine name for display
-        let fullName = firstName;
+        // Build full name with last name first: LastName MiddleInitial FirstName
+        let fullName = lastName;
         if (middleInitial) {
             fullName += ' ' + middleInitial + '.';
         }
-        fullName += ' ' + lastName;
+        fullName += ' ' + firstName;
         
-        const student = calculateStudentData(fullName, birthday, weight, height, sex);
+        // Pass the weighing date to the calculation function
+        const student = calculateStudentData(fullName, birthday, weight, height, sex, date);
         
         // Add the additional name fields to the student object
         student.first_name = firstName;
@@ -159,15 +161,29 @@
         const student = students[index];
         editingIndex = index;
         
-        // Populate the form with student data using separate name fields
-        document.getElementById('first_name').value = student.first_name || '';
-        document.getElementById('middle_initial').value = student.middle_initial || '';
-        document.getElementById('last_name').value = student.last_name || '';
+        // Use the stored separate fields
+        const firstName = student.first_name || '';
+        const middleInitial = student.middle_initial || '';
+        const lastName = student.last_name || '';
+        
+        // Populate the form with student data using separate fields
+        document.getElementById('first_name').value = firstName;
+        document.getElementById('middle_initial').value = middleInitial;
+        document.getElementById('last_name').value = lastName;
         document.getElementById('birthday').value = student.birthday || '';
         document.getElementById('weight').value = student.weight || '';
         document.getElementById('height').value = student.height || '';
         document.getElementById('sex').value = student.sex || '';
-        document.getElementById('date').value = student.date || new Date().toISOString().split('T')[0];
+        
+        // Set the date of weighing from the student's date field
+        const dateInput = document.getElementById('date');
+        if (dateInput) {
+            if (student.date) {
+                dateInput.value = student.date;
+            } else {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+        }
         
         // Change submit button to Update mode
         const submitBtn = document.querySelector('#assessmentForm button[type="submit"]');
@@ -193,6 +209,60 @@
         if (header) header.scrollIntoView({ behavior: 'smooth' });
     }
 
+    /**
+     * Parse a full name into First Name, Middle Initial, Last Name
+     * Handles format: "Last, First M.I" or "First Last" or "Last, First"
+     */
+    function parseFullName(fullName) {
+        if (!fullName) return { firstName: '', middleInitial: '', lastName: '' };
+        
+        let firstName = '';
+        let middleInitial = '';
+        let lastName = '';
+        
+        // Check if name contains a comma (Last, First M.I format)
+        if (fullName.includes(',')) {
+            const parts = fullName.split(',');
+            lastName = parts[0].trim();
+            
+            const firstPart = parts[1] ? parts[1].trim() : '';
+            const nameParts = firstPart.split(' ');
+            
+            if (nameParts.length >= 1) {
+                firstName = nameParts[0];
+            }
+            if (nameParts.length >= 2) {
+                // Check if second part is a middle initial (single letter or letter with period)
+                let mi = nameParts[1];
+                if (mi.length <= 2 && (mi.match(/[A-Z]/i) || mi.endsWith('.'))) {
+                    middleInitial = mi.replace('.', '');
+                }
+            }
+        } else {
+            // Format: "First M.I Last" or "First Last"
+            const nameParts = fullName.trim().split(' ');
+            
+            if (nameParts.length === 1) {
+                firstName = nameParts[0];
+            } else if (nameParts.length === 2) {
+                firstName = nameParts[0];
+                lastName = nameParts[1];
+            } else if (nameParts.length >= 3) {
+                firstName = nameParts[0];
+                // Check if second part is a middle initial
+                const possibleMI = nameParts[1];
+                if (possibleMI.length <= 2 && (possibleMI.match(/[A-Z]/i) || possibleMI.endsWith('.'))) {
+                    middleInitial = possibleMI.replace('.', '');
+                    lastName = nameParts.slice(2).join(' ');
+                } else {
+                    lastName = nameParts.slice(1).join(' ');
+                }
+            }
+        }
+        
+        return { firstName, middleInitial, lastName };
+    }
+
     // Cancel editing
     function cancelEdit() {
         editingIndex = -1;
@@ -200,9 +270,11 @@
         
         // Change button back to Add mode
         const submitBtn = document.querySelector('#assessmentForm button[type="submit"]');
-        submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Student to List';
-        submitBtn.classList.remove('btn-warning');
-        submitBtn.classList.add('btn-success');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Student to List';
+            submitBtn.classList.remove('btn-warning');
+            submitBtn.classList.add('btn-success');
+        }
         
         // Remove cancel button
         const cancelBtn = document.getElementById('cancelEditBtn');
@@ -274,7 +346,7 @@
         document.getElementById('weight').value = ''; 
         document.getElementById('height').value = ''; 
         document.getElementById('sex').value = ''; 
-        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('date').value = ''; // Set to empty, NOT today's date
         document.getElementById('assessmentForm')?.classList.remove('was-validated'); 
     }
 
@@ -292,7 +364,7 @@
         if (confirmTitle) confirmTitle.textContent = 'Clear All Records';
         if (confirmBody) confirmBody.innerHTML = `Clear all <strong>${students.length}</strong> student record(s)? This action cannot be undone.`;
         
-        // Reset the confirm button for clear all
+        // Remove existing event listeners and add new one
         const newConfirmYesBtn = confirmYesBtn.cloneNode(true);
         confirmYesBtn.parentNode.replaceChild(newConfirmYesBtn, confirmYesBtn);
         
@@ -314,6 +386,27 @@
         showAlert('Cleared', 'All student records have been cleared.');
     }
 
+    /**
+     * Format date from YYYY-MM-DD to "MM/DD/YYYY"
+     * Example: "2012-11-12" becomes "11/12/2012"
+     */
+    function formatDateToMonthDayYear(dateString) {
+        if (!dateString) return '';
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString;
+            
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = date.getFullYear();
+            
+            return `${month}/${day}/${year}`;
+        } catch (e) {
+            return dateString;
+        }
+    }
+
     // Update the UI (table, counts, buttons)
     function updateUI() {
         const tbody = document.getElementById('studentTableBody');
@@ -328,25 +421,35 @@
         if (!tbody) return;
         
         if (students.length === 0) { 
-            tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted">No student records yet. Add some students above.</td></tr>'; 
+            tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted">No student records yet. Add some students above. </td></tr>'; 
             return; 
         }
         
         tbody.innerHTML = students.map((s, idx) => {
-            // Display name properly (use first_name, middle_initial, last_name if available)
-            let displayName = s.name;
-            if (s.first_name && s.last_name) {
-                displayName = s.first_name;
-                if (s.middle_initial) {
-                    displayName += ' ' + s.middle_initial + '.';
+            // Format name: "Last, First M.I."
+            let displayName = '';
+            if (s.last_name) {
+                displayName = s.last_name;
+                if (s.first_name) {
+                    displayName += ', ' + s.first_name;
+                    if (s.middle_initial) {
+                        displayName += ' ' + s.middle_initial + '.';
+                    }
                 }
-                displayName += ' ' + s.last_name;
+            } else if (s.name) {
+                displayName = s.name;
+            }
+            
+            // Format birthday: Month Day, Year (e.g., "November 12, 2012")
+            let formattedBirthday = s.birthday;
+            if (s.birthday) {
+                formattedBirthday = formatDateToMonthDayYear(s.birthday);
             }
             
             return `
                 <tr class="${getRowClass(s.nutritionalStatus)}">
                     <td>${escapeHtml(displayName)}</td>
-                    <td>${s.birthday}</td>
+                    <td>${escapeHtml(formattedBirthday)}</td>
                     <td>${escapeHtml(s.grade)}</td>
                     <td>${escapeHtml(s.school_year || s.year || 'N/A')}</td>
                     <td>${s.weight}</td>
@@ -392,7 +495,7 @@
         } 
     }
 
-    // Submit the report
+    // Submit the report - FIXED to trust server values, not recalculate
     async function submitReport() {
         if (!loadingModal) {
             try {
@@ -422,9 +525,8 @@
             const validTypes = ['baseline','midline','endline']; 
             if (!validTypes.includes(assessmentType)) assessmentType = 'baseline';
             
-            // Prepare students data for submission - combine name fields into single name
+            // Prepare students data for submission - send stored values as-is
             const studentsToSubmit = students.map(student => {
-                // Create a copy and only keep the fields the server expects
                 const studentData = {};
                 
                 // Combine first_name, middle_initial, last_name into name
@@ -439,7 +541,7 @@
                     fullName = student.name;
                 }
                 
-                // Only send the fields that exist in the database
+                // Send the fields exactly as stored (server will validate and recalculate if needed)
                 studentData.name = fullName;
                 studentData.birthday = student.birthday || '';
                 studentData.weight = parseFloat(student.weight) || 0;
@@ -448,35 +550,21 @@
                 studentData.grade = student.grade || document.getElementById('grade')?.value || '';
                 studentData.section = student.section || document.getElementById('section')?.value || '';
                 studentData.school_year = student.school_year || document.getElementById('school_year')?.value || '';
-                studentData.date = student.date || document.getElementById('date')?.value || new Date().toISOString().split('T')[0];
+                studentData.date = student.date || document.getElementById('date')?.value || '';
                 studentData.legislative_district = student.legislative_district || document.getElementById('legislative_district')?.value || '';
                 studentData.school_district = student.school_district || document.getElementById('school_district')?.value || '';
                 studentData.school_id = student.school_id || document.getElementById('school_id')?.value || '';
                 studentData.school_name = student.school_name || document.getElementById('school_name')?.value || '';
                 
-                // Calculate derived values if not present
-                if (!studentData.bmi && studentData.weight && studentData.height) {
-                    const heightSquared = studentData.height * studentData.height;
-                    studentData.bmi = parseFloat((studentData.weight / heightSquared).toFixed(2));
-                } else {
-                    studentData.bmi = student.bmi || 0;
-                }
-                
-                if (!studentData.nutritionalStatus) {
-                    if (studentData.bmi < 16) studentData.nutritionalStatus = 'Severely Wasted';
-                    else if (studentData.bmi < 18.5) studentData.nutritionalStatus = 'Wasted';
-                    else if (studentData.bmi < 25) studentData.nutritionalStatus = 'Normal';
-                    else if (studentData.bmi < 30) studentData.nutritionalStatus = 'Overweight';
-                    else studentData.nutritionalStatus = 'Obese';
-                } else {
-                    studentData.nutritionalStatus = student.nutritionalStatus;
-                }
-                
-                studentData.heightSquared = student.heightSquared || (studentData.height * studentData.height).toFixed(4);
+                // Send stored derived values (server will trust or recalculate)
+                studentData.bmi = student.bmi || 0;
+                studentData.nutritionalStatus = student.nutritionalStatus || 'Normal';
+                studentData.heightSquared = student.heightSquared || (student.height * student.height).toFixed(4);
                 studentData.age = student.age || '0|0';
                 studentData.ageDisplay = student.ageDisplay || student.age || '0|0';
                 studentData.heightForAge = student.heightForAge || 'Normal';
-                studentData.sbfpBeneficiary = student.sbfpBeneficiary || ((studentData.nutritionalStatus === 'Severely Wasted' || studentData.nutritionalStatus === 'Wasted') ? 'Yes' : 'No');
+                studentData.sbfpBeneficiary = student.sbfpBeneficiary || 
+                    ((student.nutritionalStatus === 'Severely Wasted' || student.nutritionalStatus === 'Wasted') ? 'Yes' : 'No');
                 
                 return studentData;
             });
@@ -660,7 +748,18 @@
             return; 
         }
         
-        if (uploadLoadingModal) uploadLoadingModal.show(); 
+        // Initialize and show upload loading modal
+        if (!uploadLoadingModal) {
+            const uploadLoadingModalEl = document.getElementById('uploadLoadingModal');
+            if (uploadLoadingModalEl) {
+                uploadLoadingModal = new bootstrap.Modal(uploadLoadingModalEl, { keyboard: false, backdrop: 'static' });
+            } else {
+                showAlert('Error', 'Upload loading modal not found');
+                return;
+            }
+        }
+        
+        uploadLoadingModal.show();
         
         const chooseFileBtn = document.getElementById('chooseFileBtn');
         if (chooseFileBtn) chooseFileBtn.disabled = true;
@@ -671,7 +770,7 @@
         // Get the process_excel URL from config
         const processExcelUrl = window.nutritionalassessmentConfig?.urls?.process_excel;
         if (!processExcelUrl) {
-            uploadLoadingModal?.hide();
+            uploadLoadingModal.hide();
             if (chooseFileBtn) chooseFileBtn.disabled = false;
             showAlert('Configuration Error', 'Excel processing URL not configured');
             return;
@@ -680,7 +779,8 @@
         fetch(processExcelUrl, { method: 'POST', body: formData })
             .then(response => response.json())
             .then(data => {
-                uploadLoadingModal?.hide(); 
+                // ALWAYS hide the modal when response is received
+                uploadLoadingModal.hide();
                 if (chooseFileBtn) chooseFileBtn.disabled = false; 
                 if (fileInput) fileInput.value = '';
                 
@@ -691,7 +791,8 @@
                 }
             })
             .catch(error => { 
-                uploadLoadingModal?.hide(); 
+                // ALWAYS hide the modal on error too
+                uploadLoadingModal.hide();
                 if (chooseFileBtn) chooseFileBtn.disabled = false; 
                 if (fileInput) fileInput.value = ''; 
                 showAlert('Error', 'An error occurred while processing the file: ' + error.message); 
@@ -708,11 +809,32 @@
         let addedCount = 0; 
         let skippedCount = 0;
         
+        // Get the weighing date from the first student (all should have the same date from Excel)
+        const weighingDateFromExcel = extractedStudents[0]?.date;
+        
+        // If the date field is empty, populate it with the date from Excel
+        const dateInput = document.getElementById('date');
+        if (dateInput && weighingDateFromExcel && !dateInput.value) {
+            dateInput.value = weighingDateFromExcel;
+        }
+        
         extractedStudents.forEach((extractedStudent) => {
             const birthday = extractedStudent.birthday; 
-            let ageYears=0, ageMonths=0, ageDisplay='0|0';
+            let ageYears = 0, ageMonths = 0, ageDisplay = '0|0';
             
-            if (birthday) { 
+            // IMPORTANT: Use the weighing date from the server (extracted from Excel cell C3)
+            const weighingDate = extractedStudent.date ? new Date(extractedStudent.date) : null;
+            
+            if (birthday && weighingDate) { 
+                const bdate = new Date(birthday); 
+                ageYears = weighingDate.getFullYear() - bdate.getFullYear(); 
+                ageMonths = weighingDate.getMonth() - bdate.getMonth(); 
+                if (ageMonths < 0) { 
+                    ageYears--; 
+                    ageMonths += 12; 
+                } 
+                ageDisplay = ageYears + '|' + ageMonths; 
+            } else if (birthday) {
                 const bdate = new Date(birthday); 
                 const today = new Date(); 
                 ageYears = today.getFullYear() - bdate.getFullYear(); 
@@ -729,29 +851,63 @@
                 return; 
             }
             
-            // Parse the full name into separate components
-            let firstName = extractedStudent.name;
-            let middleInitial = '';
-            let lastName = '';
+            // Parse the full name: format is "Last, First First M.I"
+            // Examples: 
+            //   "ALMARIO, ROY P." -> Last: ALMARIO, First: ROY, Middle: P
+            //   "DELA CRUZ, RENZ CYRENZ P." -> Last: DELA CRUZ, First: RENZ CYRENZ, Middle: P
+            //   "SANTOS, MARIA C." -> Last: SANTOS, First: MARIA, Middle: C
             
-            // Try to split the name
-            const nameParts = extractedStudent.name.trim().split(' ');
-            if (nameParts.length >= 2) {
-                firstName = nameParts[0];
-                // Check if the second part looks like a middle initial (single letter or letter with period)
-                if (nameParts.length >= 3 && (nameParts[1].length === 1 || (nameParts[1].length === 2 && nameParts[1].endsWith('.')))) {
-                    middleInitial = nameParts[1].replace('.', '');
-                    lastName = nameParts.slice(2).join(' ');
+            let lastName = '';
+            let firstName = '';
+            let middleInitial = '';
+            
+            const fullName = extractedStudent.name.trim();
+            
+            if (fullName.includes(',')) {
+                // Split by comma: left side is Last Name, right side is First + Middle
+                const commaIndex = fullName.indexOf(',');
+                lastName = fullName.substring(0, commaIndex).trim();
+                
+                let rightPart = fullName.substring(commaIndex + 1).trim();
+                
+                // Split the right part by spaces
+                const nameParts = rightPart.split(' ');
+                
+                // Check if the LAST part is a middle initial (single letter with optional period)
+                const lastPart = nameParts[nameParts.length - 1];
+                const isMiddleInitial = (lastPart.length === 1 || (lastPart.length === 2 && lastPart.endsWith('.'))) && /^[A-Za-z]\.?$/.test(lastPart);
+                
+                if (isMiddleInitial && nameParts.length >= 2) {
+                    // Last part is middle initial, everything before is first name
+                    middleInitial = lastPart.replace('.', '');
+                    firstName = nameParts.slice(0, -1).join(' ');
                 } else {
-                    lastName = nameParts.slice(1).join(' ');
+                    // No middle initial, everything is first name
+                    firstName = rightPart;
+                    middleInitial = '';
                 }
             } else {
-                firstName = extractedStudent.name;
-                lastName = '';
+                // No comma format - treat as "First Last"
+                const nameParts = fullName.split(' ');
+                if (nameParts.length >= 1) {
+                    firstName = nameParts[0];
+                }
+                if (nameParts.length >= 2) {
+                    lastName = nameParts.slice(1).join(' ');
+                }
+            }
+            
+            // Build the combined name in the correct format: "Last, First M.I"
+            let combinedName = lastName;
+            if (firstName) {
+                combinedName += ', ' + firstName;
+                if (middleInitial) {
+                    combinedName += ' ' + middleInitial + '.';
+                }
             }
             
             const student = {
-                name: extractedStudent.name,
+                name: combinedName,
                 first_name: firstName,
                 middle_initial: middleInitial,
                 last_name: lastName,
@@ -762,21 +918,22 @@
                 grade: document.getElementById('grade')?.value || '', 
                 section: document.getElementById('section')?.value || '', 
                 school_year: document.getElementById('school_year')?.value || '',
-                date: document.getElementById('date')?.value || new Date().toISOString().split('T')[0], 
+                date: extractedStudent.date || dateInput?.value || '',
                 legislative_district: document.getElementById('legislative_district')?.value || '', 
                 school_district: document.getElementById('school_district')?.value || '',
                 school_id: document.getElementById('school_id')?.value || '', 
                 school_name: document.getElementById('school_name')?.value || '',
                 heightSquared: extractedStudent.height_squared || (extractedStudent.height ? (extractedStudent.height * extractedStudent.height).toFixed(4) : null),
                 age: ageDisplay, 
-                ageYears, 
-                ageMonths, 
-                ageDisplay, 
+                ageYears: ageYears, 
+                ageMonths: ageMonths, 
+                ageDisplay: ageDisplay, 
                 bmi: extractedStudent.bmi, 
                 nutritionalStatus: extractedStudent.nutritional_status || 'Not Specified', 
                 heightForAge: extractedStudent.height_for_age || 'Not Specified',
                 sbfpBeneficiary: extractedStudent.sbfp_beneficiary || ((extractedStudent.nutritional_status === 'Severely Wasted' || extractedStudent.nutritional_status === 'Wasted') ? 'Yes' : 'No')
             };
+            
             students.push(student); 
             addedCount++;
         });
@@ -785,7 +942,12 @@
         updateUI(); 
         
         let successMessage = `Successfully added ${addedCount} student(s) to the list.`; 
-        if (skippedCount > 0) successMessage += ` ${skippedCount} record(s) were skipped due to missing data.`; 
+        if (skippedCount > 0) successMessage += ` ${skippedCount} record(s) were skipped due to missing data.`;
+        
+        if (!dateInput?.value && !weighingDateFromExcel) {
+            successMessage += `\n\nNote: No weighing date was found in the Excel file. Please enter the date manually.`;
+        }
+        
         showAlert('Excel Import Complete', successMessage);
     }
 
@@ -812,14 +974,14 @@
             const submitConfirmModalEl = document.getElementById('submitConfirmModal');
             if (submitConfirmModalEl) submitConfirmModal = new bootstrap.Modal(submitConfirmModalEl);
         } catch (e) {
-            // Silent fail
+            console.error('Modal initialization error:', e);
         }
 
-        // Set default date to today
-        const dateInput = document.getElementById('date');
-        if (dateInput && !dateInput.value) {
-            dateInput.value = new Date().toISOString().split('T')[0];
-        }
+        // DO NOT set default date to today - leave it empty
+        // const dateInput = document.getElementById('date');
+        // if (dateInput && !dateInput.value) {
+        //     dateInput.value = new Date().toISOString().split('T')[0];
+        // }
         
         // Load existing students from localStorage
         loadStudents(); 
