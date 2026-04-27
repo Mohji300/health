@@ -137,7 +137,7 @@ class nutritional_assessment_model extends CI_Model {
     }
 
     /**
-     * Get processed data for dashboard (aggregated counts)
+     * Get processed data for dashboard
      */
     public function get_processed_data()
     {
