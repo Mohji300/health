@@ -61,9 +61,23 @@
                 <td><?= number_format($student['bmi'], 1) ?></td>
                 <td><?= $student['nutritional_status'] ?></td>
                 <td><?= $student['height_for_age'] ?></td>
-                <td></td>
-                <td></td>
-                <td></td>
+                <?php
+                    $parentConsentValue = '';
+                    foreach (['parent_consent','parents_consent','parent_consent_for_milk','parent_consent_milk'] as $c) {
+                        if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $parentConsentValue = $student[$c]; break; }
+                    }
+                    $participation4psValue = '';
+                    foreach (['participation_4ps','participation_in_4ps','is_4ps','4ps_participation'] as $c) {
+                        if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $participation4psValue = $student[$c]; break; }
+                    }
+                    $previousSbfpValue = '';
+                    foreach (['previous_sbfp','sbfp_previous','previous_beneficiary_sbfp','previous_sbfp_beneficiary'] as $c) {
+                        if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $previousSbfpValue = $student[$c]; break; }
+                    }
+                ?>
+                <td><?= htmlspecialchars($parentConsentValue !== '' ? $parentConsentValue : '') ?></td>
+                <td><?= htmlspecialchars($participation4psValue !== '' ? $participation4psValue : '') ?></td>
+                <td><?= htmlspecialchars($previousSbfpValue !== '' ? $previousSbfpValue : '') ?></td>
             </tr>
             <?php endforeach; ?>
             
