@@ -328,30 +328,33 @@ class Nutritional_upload extends CI_Controller {
         return $extractedStudents;
     }
     
-    /**
-     * Combine name components: "Last, First M.I"
-     */
+
     private function combineName($lastName, $firstName, $middleInitial) {
-        $nameParts = array();
+
+        if (!empty($lastName) && !empty($firstName)) {
+            $name = $lastName . ', ' . $firstName;
+            if (!empty($middleInitial)) {
+                $mi = rtrim($middleInitial, '.');
+                $name .= ' ' . $mi . '.';
+            }
+            return $name;
+        }
         
         if (!empty($lastName)) {
-            $nameParts[] = $lastName;
+            return $lastName;
         }
         
-        $firstAndMiddle = array();
+
         if (!empty($firstName)) {
-            $firstAndMiddle[] = $firstName;
-        }
-        if (!empty($middleInitial)) {
-            $mi = rtrim($middleInitial, '.');
-            $firstAndMiddle[] = $mi . '.';
-        }
-        
-        if (!empty($firstAndMiddle)) {
-            $nameParts[] = implode(' ', $firstAndMiddle);
+            $name = $firstName;
+            if (!empty($middleInitial)) {
+                $mi = rtrim($middleInitial, '.');
+                $name .= ' ' . $mi . '.';
+            }
+            return $name;
         }
         
-        return implode(', ', $nameParts);
+        return '';
     }
     
     /**
