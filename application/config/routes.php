@@ -223,6 +223,12 @@ $route['sbfp_beneficiaries/set_assessment_type'] = 'sbfp_beneficiaries_controlle
 $route['sbfp_beneficiaries/set_school_level'] = 'sbfp_beneficiaries_controller/set_school_level';
 
 // ========================
+// SHD REPORTS (Global)
+// ========================
+$route['shd_reports'] = 'shd_reports_controller/index';
+
+
+// ========================
 // ARCHIVE ROUTES
 // ========================
 $route['archive'] = 'archive_controller/index';
