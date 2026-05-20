@@ -64,8 +64,8 @@
         <?php if ($is_admin || $is_regular_user): ?>
         <a href="<?php echo site_url('users'); ?>"
           class="nav-link rounded-2 mb-1 <?php echo is_active_page('users', $current_uri) ? 'active' : ''; ?>">
-          <i class="fas fa-user"></i>
-          <span class="main-sidebar-text"> User Dashboard</span>
+          <i class="fa-solid fa-table-cells"></i>
+          <span class="main-sidebar-text"> Consolidated</span>
         </a>
         <?php endif; ?>
 
@@ -82,8 +82,8 @@
         <?php if ($is_admin || $is_regular_user): ?>
         <a href="<?php echo site_url('sbfp'); ?>"
            class="nav-link rounded-2 mb-1 <?php echo $current_uri == 'sbfp' || $current_uri == '' ? 'active' : ''; ?>">
-          <i class="fas fa-chart-pie"></i>
-          <span class="main-sidebar-text"> SBFP Dashboard</span>
+          <i class="fa-solid fa-file-arrow-up"></i>
+          <span class="main-sidebar-text"> Upload Nutritional Assessment Template</span>
         </a>
         <?php endif; ?>
 
@@ -91,8 +91,8 @@
         <?php if ($is_admin || $is_district): ?>
         <a href="<?php echo site_url('district_dashboard'); ?>"
            class="nav-link rounded-2 mb-1 <?php echo is_active_page('district_dashboard', $current_uri) ? 'active' : ''; ?>">
-          <i class="fas fa-building"></i>
-          <span class="main-sidebar-text"> District Dashboard</span>
+          <i class="fa-solid fa-table-cells"></i>
+          <span class="main-sidebar-text"> District Consolidated</span>
         </a>
         <?php endif; ?>
 
@@ -100,8 +100,8 @@
         <?php if ($is_admin || $is_division): ?>
         <a href="<?php echo site_url('division_dashboard'); ?>"
            class="nav-link rounded-2 mb-1 <?php echo is_active_page('division_dashboard', $current_uri) ? 'active' : ''; ?>">
-          <i class="fas fa-sitemap"></i>
-          <span class="main-sidebar-text"> Division Dashboard</span>
+          <i class="fa-solid fa-table-cells"></i>
+          <span class="main-sidebar-text"> Division Consolidated</span>
         </a>
         <?php endif; ?>
 
