@@ -475,37 +475,55 @@
                                         
                                     <?php endforeach; ?>
 
-                                    <!-- Grand total row - Elementary -->
-                                    <tr class="table-primary">
-                                        <td class="fw-bold text-center" colspan="2">Grand Total (Elementary)</td>
-                                        <?php
-                                        if ($has_nutritional_data) {
-                                            $totalEnrol = 0; $totalWeighed = 0;
-                                            $grandCounts = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
-                                            foreach ($elementaryGrades as $grade_name => $sex_keys) {
-                                                $totalEnrol += gdata_division($nutritional_data, $sex_keys['total'], 'enrolment');
-                                                $totalWeighed += gdata_division($nutritional_data, $sex_keys['total'], 'pupils_weighed');
-                                                foreach ($grandCounts as $k => &$v) {
-                                                    $v += gdata_division($nutritional_data, $sex_keys['total'], $k);
-                                                }
-                                                unset($v);
-                                            }
-                                        } else {
-                                            $totalEnrol = 0;
-                                            $totalWeighed = 0;
-                                            $grandCounts = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                    <!-- Grand total block - Elementary (grouped M / F / Total) -->
+                                    <?php
+                                    $totalEnrol_m = $totalWeighed_m = 0;
+                                    $totalEnrol_f = $totalWeighed_f = 0;
+                                    $totalEnrol_t = $totalWeighed_t = 0;
+                                    $grandCounts_m = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                    $grandCounts_f = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                    $grandCounts_t = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                    if ($has_nutritional_data) {
+                                        foreach ($elementaryGrades as $grade_name => $sex_keys) {
+                                            $totalEnrol_m += gdata_division($nutritional_data, $sex_keys['m'], 'enrolment');
+                                            $totalWeighed_m += gdata_division($nutritional_data, $sex_keys['m'], 'pupils_weighed');
+
+                                            $totalEnrol_f += gdata_division($nutritional_data, $sex_keys['f'], 'enrolment');
+                                            $totalWeighed_f += gdata_division($nutritional_data, $sex_keys['f'], 'pupils_weighed');
+
+                                            $totalEnrol_t += gdata_division($nutritional_data, $sex_keys['total'], 'enrolment');
+                                            $totalWeighed_t += gdata_division($nutritional_data, $sex_keys['total'], 'pupils_weighed');
+
+                                            foreach ($grandCounts_m as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['m'], $k); } unset($v);
+                                            foreach ($grandCounts_f as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['f'], $k); } unset($v);
+                                            foreach ($grandCounts_t as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['total'], $k); } unset($v);
                                         }
-                                        ?>
-                                        <td class="text-center fw-bold"><?= $totalEnrol ?></td>
-                                        <td class="text-center fw-bold"><?= $totalWeighed ?></td>
-                                        <?php foreach ($bmiFields as $bf): $val = $grandCounts[$bf]; ?>
-                                            <td class="text-center fw-bold"><?= $val ?></td>
-                                            <td class="text-center fw-bold"><?= pct_division($val, $totalEnrol) ?></td>
-                                        <?php endforeach; ?>
-                                        <?php foreach ($hfaFields as $hf): $val = $grandCounts[$hf]; ?>
-                                            <td class="text-center fw-bold"><?= $val ?></td>
-                                            <td class="text-center fw-bold"><?= pct_division($val, $totalEnrol) ?></td>
-                                        <?php endforeach; ?>
+                                    }
+                                    ?>
+
+                                    <tr class="table-primary">
+                                        <td class="fw-bold text-center align-middle" rowspan="3">Grand Total (Elementary)</td>
+                                        <td class="text-center">M</td>
+                                        <td class="text-center fw-bold"><?= $totalEnrol_m ?></td>
+                                        <td class="text-center fw-bold"><?= $totalWeighed_m ?></td>
+                                        <?php foreach ($bmiFields as $bf): $val = $grandCounts_m[$bf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $totalEnrol_m) ?></td><?php endforeach; ?>
+                                        <?php foreach ($hfaFields as $hf): $val = $grandCounts_m[$hf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $totalEnrol_m) ?></td><?php endforeach; ?>
+                                    </tr>
+
+                                    <tr class="table-primary">
+                                        <td class="text-center">F</td>
+                                        <td class="text-center fw-bold"><?= $totalEnrol_f ?></td>
+                                        <td class="text-center fw-bold"><?= $totalWeighed_f ?></td>
+                                        <?php foreach ($bmiFields as $bf): $val = $grandCounts_f[$bf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $totalEnrol_f) ?></td><?php endforeach; ?>
+                                        <?php foreach ($hfaFields as $hf): $val = $grandCounts_f[$hf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $totalEnrol_f) ?></td><?php endforeach; ?>
+                                    </tr>
+
+                                    <tr class="table-primary">
+                                        <td class="text-center fw-bold">Total</td>
+                                        <td class="text-center fw-bold"><?= $totalEnrol_t ?></td>
+                                        <td class="text-center fw-bold"><?= $totalWeighed_t ?></td>
+                                        <?php foreach ($bmiFields as $bf): $val = $grandCounts_t[$bf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $totalEnrol_t) ?></td><?php endforeach; ?>
+                                        <?php foreach ($hfaFields as $hf): $val = $grandCounts_t[$hf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $totalEnrol_t) ?></td><?php endforeach; ?>
                                     </tr>
                                 </tbody>
                             </table>
@@ -646,37 +664,55 @@
                                         
                                     <?php endforeach; ?>
 
-                                    <!-- Grand total for Secondary -->
-                                    <tr class="table-primary">
-                                        <td class="fw-bold text-center" colspan="2">Grand Total (Secondary)</td>
-                                        <?php
-                                        if ($has_nutritional_data) {
-                                            $totalEnrol2 = 0; $totalWeighed2 = 0;
-                                            $grandCounts2 = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
-                                            foreach ($secondaryGrades as $grade_name => $sex_keys) {
-                                                $totalEnrol2 += gdata_division($nutritional_data, $sex_keys['total'], 'enrolment');
-                                                $totalWeighed2 += gdata_division($nutritional_data, $sex_keys['total'], 'pupils_weighed');
-                                                foreach ($grandCounts2 as $k => &$v) {
-                                                    $v += gdata_division($nutritional_data, $sex_keys['total'], $k);
-                                                }
-                                                unset($v);
-                                            }
-                                        } else {
-                                            $totalEnrol2 = 0;
-                                            $totalWeighed2 = 0;
-                                            $grandCounts2 = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                    <!-- Grand total block - Secondary (grouped M / F / Total) -->
+                                    <?php
+                                    $sEnrol_m = $sWeighed_m = 0;
+                                    $sEnrol_f = $sWeighed_f = 0;
+                                    $sEnrol_t = $sWeighed_t = 0;
+                                    $scounts_m = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                    $scounts_f = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                    $scounts_t = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                    if ($has_nutritional_data) {
+                                        foreach ($secondaryGrades as $grade_name => $sex_keys) {
+                                            $sEnrol_m += gdata_division($nutritional_data, $sex_keys['m'], 'enrolment');
+                                            $sWeighed_m += gdata_division($nutritional_data, $sex_keys['m'], 'pupils_weighed');
+
+                                            $sEnrol_f += gdata_division($nutritional_data, $sex_keys['f'], 'enrolment');
+                                            $sWeighed_f += gdata_division($nutritional_data, $sex_keys['f'], 'pupils_weighed');
+
+                                            $sEnrol_t += gdata_division($nutritional_data, $sex_keys['total'], 'enrolment');
+                                            $sWeighed_t += gdata_division($nutritional_data, $sex_keys['total'], 'pupils_weighed');
+
+                                            foreach ($scounts_m as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['m'], $k); } unset($v);
+                                            foreach ($scounts_f as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['f'], $k); } unset($v);
+                                            foreach ($scounts_t as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['total'], $k); } unset($v);
                                         }
-                                        ?>
-                                        <td class="text-center fw-bold"><?= $totalEnrol2 ?></td>
-                                        <td class="text-center fw-bold"><?= $totalWeighed2 ?></td>
-                                        <?php foreach ($bmiFields as $bf): $val = $grandCounts2[$bf]; ?>
-                                            <td class="text-center fw-bold"><?= $val ?></td>
-                                            <td class="text-center fw-bold"><?= pct_division($val, $totalEnrol2) ?></td>
-                                        <?php endforeach; ?>
-                                        <?php foreach ($hfaFields as $hf): $val = $grandCounts2[$hf]; ?>
-                                            <td class="text-center fw-bold"><?= $val ?></td>
-                                            <td class="text-center fw-bold"><?= pct_division($val, $totalEnrol2) ?></td>
-                                        <?php endforeach; ?>
+                                    }
+                                    ?>
+
+                                    <tr class="table-primary">
+                                        <td class="fw-bold text-center align-middle" rowspan="3">Grand Total (Secondary)</td>
+                                        <td class="text-center">M</td>
+                                        <td class="text-center fw-bold"><?= $sEnrol_m ?></td>
+                                        <td class="text-center fw-bold"><?= $sWeighed_m ?></td>
+                                        <?php foreach ($bmiFields as $bf): $val = $scounts_m[$bf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $sEnrol_m) ?></td><?php endforeach; ?>
+                                        <?php foreach ($hfaFields as $hf): $val = $scounts_m[$hf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $sEnrol_m) ?></td><?php endforeach; ?>
+                                    </tr>
+
+                                    <tr class="table-primary">
+                                        <td class="text-center">F</td>
+                                        <td class="text-center fw-bold"><?= $sEnrol_f ?></td>
+                                        <td class="text-center fw-bold"><?= $sWeighed_f ?></td>
+                                        <?php foreach ($bmiFields as $bf): $val = $scounts_f[$bf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $sEnrol_f) ?></td><?php endforeach; ?>
+                                        <?php foreach ($hfaFields as $hf): $val = $scounts_f[$hf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $sEnrol_f) ?></td><?php endforeach; ?>
+                                    </tr>
+
+                                    <tr class="table-primary">
+                                        <td class="text-center fw-bold">Total</td>
+                                        <td class="text-center fw-bold"><?= $sEnrol_t ?></td>
+                                        <td class="text-center fw-bold"><?= $sWeighed_t ?></td>
+                                        <?php foreach ($bmiFields as $bf): $val = $scounts_t[$bf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $sEnrol_t) ?></td><?php endforeach; ?>
+                                        <?php foreach ($hfaFields as $hf): $val = $scounts_t[$hf]; ?><td class="text-center fw-bold"><?= $val ?></td><td class="text-center fw-bold"><?= pct_division($val, $sEnrol_t) ?></td><?php endforeach; ?>
                                     </tr>
                                 </tbody>
                             </table>
@@ -729,7 +765,11 @@
             elseif ($level == 'integrated_secondary') echo 'Integrated Schools (Secondary)';
             else echo ucfirst($level);
         ?>',
-        all_schools_by_district: <?php echo json_encode($all_schools_by_district); ?>
+        all_schools_by_district: <?php echo json_encode($all_schools_by_district); ?>,
+        // identifiers for client-side print header
+        school_id: '<?= addslashes($this->session->userdata('school_id') ?? '') ?>',
+        school_name: '<?= addslashes($this->session->userdata('school_name') ?? '') ?>',
+        user_name: '<?= addslashes($this->session->userdata('name') ?? ($auth_user['name'] ?? '')) ?>'
     };
     </script>
     <script src="<?= base_url('assets/js/division_dashboard.js'); ?>"></script>

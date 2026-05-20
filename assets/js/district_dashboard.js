@@ -120,10 +120,16 @@ $(document).ready(function() {
             
             const printCss = `
                 <style>
-                    @page{size:A4 landscape;margin:8mm;}
-                    body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:4px;color:#000;font-size:8px;line-height:1.2;}
-                    table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px;margin:0;}
-                    th,td{border:0.5px solid #dee2e6;padding:2px;word-wrap:break-word;line-height:1.1;}
+                    /* Preserve background colors/images when possible */
+                    *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    @page{size:Legal landscape;margin:8mm;}
+                    body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:4px;color:#000;font-size:7px;line-height:1.05;}
+                    table{width:100%;border-collapse:collapse;table-layout:auto;font-size:7px;margin:0;}
+                    th,td{border:0.5px solid #dee2e6;padding:2px;word-wrap:break-word;line-height:1.05;vertical-align:top;}
+                    th:first-child, td:first-child{width:80px;min-width:80px;max-width:80px;}
+                    th:nth-child(2), td:nth-child(2){width:30px;min-width:30px;max-width:30px;}
+                    thead{display:table-header-group;} tfoot{display:table-footer-group;} tbody{display:table-row-group;}
+                    tr, td, th {page-break-inside: avoid; page-break-after: auto;}
                     .no-print{display:none!important;}
                     h3{font-size:10px;margin:0 0 2px 0;font-weight:bold;}
                     p{font-size:7px;margin:0 0 4px 0;}
@@ -131,12 +137,132 @@ $(document).ready(function() {
                 </style>
             `;
             
-            win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>District Nutritional Report - ' + districtName + '</title>' + '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">' + printCss + '</head><body>');
-            win.document.write('<div class="print-header"><h3>Nutritional Status Report - ' + districtName + ' District</h3><p><strong>Assessment Type:</strong> ' + assessmentType + ' | <strong>School Level:</strong> ' + schoolLevelDisplay + ' | <strong>Report Date:</strong> ' + reportDate + '</p></div>');
-            win.document.write(tableHtml);
-            win.document.write('<script>window.onload=function(){ setTimeout(function(){ window.print(); window.onafterprint=function(){ window.close(); } },200); }<\/script>');
-            win.document.write('</body></html>');
-            win.document.close();
+            try {
+                function pruneEmptyColumns(tableEl) {
+                    try {
+                        const tbl = tableEl.cloneNode(true);
+                        const rows = Array.from(tbl.querySelectorAll('tr'));
+                        if (!rows.length) return tableEl;
+                        const colCount = rows[0].children.length;
+                        let lastNonEmpty = -1;
+
+                        for (let c = 0; c < colCount; c++) {
+                            let hasContent = false;
+                            for (let r = 0; r < rows.length; r++) {
+                                const cell = rows[r].children[c];
+                                if (!cell) continue;
+                                const txt = cell.textContent.replace(/\s+/g, '').trim();
+                                if (txt !== '') { hasContent = true; break; }
+                            }
+                            if (hasContent) lastNonEmpty = c;
+                        }
+
+                        if (lastNonEmpty < 0 || lastNonEmpty === colCount - 1) return tableEl;
+
+                        for (let r = 0; r < rows.length; r++) {
+                            for (let c = colCount - 1; c > lastNonEmpty; c--) {
+                                if (rows[r].children[c]) rows[r].removeChild(rows[r].children[c]);
+                            }
+                        }
+                        return tbl;
+                    } catch (e) { return tableEl; }
+                }
+
+                // set document title using user or school name when available (match user dashboard layout)
+                const _docName = (window.DistrictDashboardConfig && (window.DistrictDashboardConfig.user_name || window.DistrictDashboardConfig.school_name || window.DistrictDashboardConfig.user)) || '';
+                const _docTitle = _docName ? (_docName + ' Nutritional Status Report') : 'Nutritional Status Report';
+                const _docTitleEsc = String(_docTitle).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + _docTitleEsc + '</title>' + printCss + '</head><body>');
+                function escHtml(str) { return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+                function getQueryParam(name) { const params = new URLSearchParams(window.location.search); return params.get(name) || ''; }
+
+                function findSchoolName() {
+                    if (window.DistrictDashboardConfig && window.DistrictDashboardConfig.school_name) return window.DistrictDashboardConfig.school_name;
+                    const ps = document.querySelectorAll('p');
+                    for (let p of ps) {
+                        const txt = (p.textContent || '').trim();
+                        if (txt.startsWith('Showing nutritional data for')) {
+                            const parts = txt.split('Showing nutritional data for');
+                            if (parts[1]) return parts[1].trim();
+                        }
+                    }
+                    const sidebarName = document.querySelector('.main-sidebar-text h6');
+                    if (sidebarName && sidebarName.textContent.trim()) return sidebarName.textContent.trim();
+                    return getQueryParam('school_name') || getQueryParam('school') || districtName || '';
+                }
+
+                function findSchoolId() {
+                    if (window.DistrictDashboardConfig && window.DistrictDashboardConfig.school_id) return window.DistrictDashboardConfig.school_id;
+                    const input = document.querySelector('input[name="school_id"]');
+                    if (input && input.value) return input.value;
+                    return getQueryParam('school_id') || getQueryParam('school') || '';
+                }
+
+                const uName = (window.DistrictDashboardConfig && (window.DistrictDashboardConfig.user_name || window.DistrictDashboardConfig.user)) || '';
+                const sName = findSchoolName();
+                const sId = findSchoolId();
+                const titlePrefix = uName || sName ? (escHtml(uName || '') + (uName && sName ? '/' + escHtml(sName) : (!uName ? escHtml(sName) : ''))) : '';
+                const headerTitle = titlePrefix ? (titlePrefix + ' Nutritional Status Report - ' + escHtml(assessmentType)) : ('Nutritional Status Report - ' + escHtml(sName || ''));
+                const idSuffix = sId ? (' | ID: ' + escHtml(sId)) : '';
+                win.document.write('<div class="print-header"><h3>' + headerTitle + idSuffix + '</h3><p><strong>Assessment Type:</strong> ' + escHtml(assessmentType) + ' | <strong>School Level:</strong> ' + escHtml(schoolLevelDisplay) + ' | <strong>School ID:</strong> ' + escHtml(sId || '') + '</p></div>');
+                try {
+                    const clone = (new DOMParser()).parseFromString(tableHtml, 'text/html').body.firstChild.cloneNode(true);
+                    const hidden = document.createElement('div');
+                    hidden.style.position = 'fixed'; hidden.style.left = '-9999px'; hidden.style.top = '-9999px'; hidden.style.visibility = 'hidden';
+                    document.body.appendChild(hidden);
+                    hidden.appendChild(clone);
+
+                    try {
+                        const elems = clone.querySelectorAll('*');
+                        elems.forEach(el => {
+                            try {
+                                const cs = window.getComputedStyle(el);
+                                if (!cs) return;
+                                const bg = cs.backgroundColor;
+                                const bgImg = cs.backgroundImage;
+                                const isBgVisible = bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent';
+                                if (isBgVisible) el.style.backgroundColor = bg;
+                                if (bgImg && bgImg !== 'none') {
+                                    el.style.backgroundImage = bgImg;
+                                    el.style.backgroundRepeat = cs.backgroundRepeat || '';
+                                    el.style.backgroundSize = cs.backgroundSize || '';
+                                    el.style.backgroundPosition = cs.backgroundPosition || '';
+                                    el.style.backgroundClip = cs.backgroundClip || '';
+                                }
+                                if (cs.color) el.style.color = cs.color;
+                                if (cs.borderColor) el.style.borderColor = cs.borderColor;
+                                el.style.webkitPrintColorAdjust = 'exact';
+                                el.style.printColorAdjust = 'exact';
+                            } catch (inner) { /* ignore per-element failures */ }
+                        });
+                    } catch (ie) { /* ignore */ }
+
+                    const pruned = pruneEmptyColumns(clone);
+                    win.document.write(pruned.outerHTML);
+                    document.body.removeChild(hidden);
+                } catch (e) {
+                    win.document.write(tableHtml);
+                }
+                win.document.write('</body></html>');
+                win.document.close();
+
+                var link = win.document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css';
+                link.onload = function() {
+                    try { win.focus(); win.print(); } catch (e) { console.error(e); }
+                    win.onafterprint = function() { try { win.close(); } catch (e) {} };
+                };
+                link.onerror = function() {
+                    try { win.focus(); win.print(); } catch (e) { console.error(e); }
+                    win.onafterprint = function() { try { win.close(); } catch (e) {} };
+                };
+                win.document.head.appendChild(link);
+            } catch (err) {
+                console.error('Print window error, falling back to inline print', err);
+                try { window.print(); } catch (e) { console.error(e); }
+            }
         });
     }
 
