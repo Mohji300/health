@@ -8,6 +8,9 @@
     let submitConfirmModal = null;
     let editingIndex = -1; // Track which student is being edited
 
+    // Track if upload is in progress to prevent concurrent uploads
+    let isUploading = false;
+
     function getStorageKey() {
         const ld = document.getElementById('legislative_district')?.value || 'na';
         const sd = document.getElementById('school_district')?.value || 'na';
@@ -41,7 +44,7 @@
         localStorage.removeItem(getStorageKey()); 
     }
 
-    // Calculate all derived student data - FIXED to use weighing date from form
+    // Calculate all derived student data
     function calculateStudentData(name, birthday, weight, height, sex, weighingDate) {
         let ageYears = 0, ageMonths = 0;
         if (birthday && weighingDate) {
@@ -58,16 +61,14 @@
         const heightSq = (height * height).toFixed(4);
         const bmi = (weight / (height * height)).toFixed(2);
 
-        // Simple BMI classification for manual entry (frontend only)
-        // Server will recalculate properly when submitted
-        let nutritionalStatus = 'Normal';
-        if (bmi < 16) nutritionalStatus = 'Severely Wasted';
-        else if (bmi < 18.5) nutritionalStatus = 'Wasted';
-        else if (bmi < 25) nutritionalStatus = 'Normal';
-        else if (bmi < 30) nutritionalStatus = 'Overweight';
-        else nutritionalStatus = 'Obese';
+        let nutritionalStatus = 'NORMAL';
+        if (bmi < 16) nutritionalStatus = 'SEVERELY WASTED';
+        else if (bmi < 18.5) nutritionalStatus = 'WASTED';
+        else if (bmi < 25) nutritionalStatus = 'NORMAL';
+        else if (bmi < 30) nutritionalStatus = 'OVERWEIGHT';
+        else nutritionalStatus = 'OBESE';
 
-        const sbfpBeneficiary = (nutritionalStatus === 'Severely Wasted' || nutritionalStatus === 'Wasted') ? 'Yes' : 'No';
+        const sbfpBeneficiary = (nutritionalStatus === 'SEVERELY WASTED' || nutritionalStatus === 'WASTED') ? 'YES' : 'NO';
 
         return {
             name: name.trim(), 
@@ -90,12 +91,11 @@
             ageDisplay: ageYears + '|' + ageMonths,
             bmi: parseFloat(bmi), 
             nutritionalStatus, 
-            heightForAge: 'Normal', // Will be recalculated by server
+            heightForAge: 'Normal',
             sbfpBeneficiary
         };
     }
 
-    // Add or update a student - FIXED to pass weighing date
     function addOrUpdateStudent() {
         const form = document.getElementById('assessmentForm');
         if (!form.checkValidity()) { 
@@ -103,48 +103,43 @@
             return; 
         }
         
-        // Get the new separate name fields
-        const firstName = document.getElementById('first_name').value.trim();
-        const middleInitial = document.getElementById('middle_initial').value.trim();
-        const lastName = document.getElementById('last_name').value.trim();
+        // Get values and convert to uppercase
+        let firstName = document.getElementById('first_name').value.trim().toUpperCase();
+        let middleInitial = document.getElementById('middle_initial').value.trim().toUpperCase();
+        let lastName = document.getElementById('last_name').value.trim().toUpperCase();
         const birthday = document.getElementById('birthday').value;
         const weight = document.getElementById('weight').value;
         const height = document.getElementById('height').value;
-        const sex = document.getElementById('sex').value;
+        let sex = document.getElementById('sex').value.toUpperCase();
         const date = document.getElementById('date').value;
         
-        // Validate required fields
         if (!firstName || !lastName || !birthday || !weight || !height || !sex || !date) {
             showAlert('Please fill in all required fields', 'warning');
             form.classList.add('was-validated');
             return;
         }
         
-        // Combine name for display
-        // Build full name with last name first: LastName MiddleInitial FirstName
+        // Build full name in "LAST, FIRST M.I" format (all uppercase)
         let fullName = lastName;
         if (middleInitial) {
             fullName += ' ' + middleInitial + '.';
         }
         fullName += ' ' + firstName;
         
-        // Pass the weighing date to the calculation function
         const student = calculateStudentData(fullName, birthday, weight, height, sex, date);
         
-        // Add the additional name fields to the student object
+        // Store individual components in uppercase
         student.first_name = firstName;
         student.middle_initial = middleInitial;
         student.last_name = lastName;
         student.date = date;
         
         if (editingIndex >= 0 && editingIndex < students.length) {
-            // Update existing student
             students[editingIndex] = student;
             saveStudents();
             cancelEdit();
             showAlert('Success', 'Student record updated successfully!');
         } else {
-            // Add new student
             students.push(student);
             saveStudents();
             clearForm();
@@ -154,28 +149,20 @@
         updateUI();
     }
 
-    // Edit a student
     function editStudent(index) {
         if (index < 0 || index >= students.length) return;
         
         const student = students[index];
         editingIndex = index;
         
-        // Use the stored separate fields
-        const firstName = student.first_name || '';
-        const middleInitial = student.middle_initial || '';
-        const lastName = student.last_name || '';
-        
-        // Populate the form with student data using separate fields
-        document.getElementById('first_name').value = firstName;
-        document.getElementById('middle_initial').value = middleInitial;
-        document.getElementById('last_name').value = lastName;
+        document.getElementById('first_name').value = student.first_name || '';
+        document.getElementById('middle_initial').value = student.middle_initial || '';
+        document.getElementById('last_name').value = student.last_name || '';
         document.getElementById('birthday').value = student.birthday || '';
         document.getElementById('weight').value = student.weight || '';
         document.getElementById('height').value = student.height || '';
         document.getElementById('sex').value = student.sex || '';
         
-        // Set the date of weighing from the student's date field
         const dateInput = document.getElementById('date');
         if (dateInput) {
             if (student.date) {
@@ -185,7 +172,6 @@
             }
         }
         
-        // Change submit button to Update mode
         const submitBtn = document.querySelector('#assessmentForm button[type="submit"]');
         if (submitBtn) {
             submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Student';
@@ -193,7 +179,6 @@
             submitBtn.classList.add('btn-warning');
         }
         
-        // Add cancel button if not exists
         if (!document.getElementById('cancelEditBtn')) {
             const cancelBtn = document.createElement('button');
             cancelBtn.type = 'button';
@@ -204,7 +189,6 @@
             submitBtn.parentNode.appendChild(cancelBtn);
         }
         
-        // Scroll to form
         const header = document.querySelector('.card-header.bg-primary');
         if (header) header.scrollIntoView({ behavior: 'smooth' });
     }
@@ -232,14 +216,15 @@
                 firstName = nameParts[0];
             }
             if (nameParts.length >= 2) {
-                // Check if second part is a middle initial (single letter or letter with period)
-                let mi = nameParts[1];
-                if (mi.length <= 2 && (mi.match(/[A-Z]/i) || mi.endsWith('.'))) {
+                // Check if second part is a middle initial
+                let mi = nameParts[nameParts.length - 1];
+                if ((mi.length === 1 || (mi.length === 2 && mi.endsWith('.'))) && /^[A-Za-z]\.?$/.test(mi)) {
                     middleInitial = mi.replace('.', '');
+                    // If the middle initial was at the end, the first name is everything before it
+                    firstName = nameParts.slice(0, -1).join(' ');
                 }
             }
         } else {
-            // Format: "First M.I Last" or "First Last"
             const nameParts = fullName.trim().split(' ');
             
             if (nameParts.length === 1) {
@@ -249,9 +234,8 @@
                 lastName = nameParts[1];
             } else if (nameParts.length >= 3) {
                 firstName = nameParts[0];
-                // Check if second part is a middle initial
                 const possibleMI = nameParts[1];
-                if (possibleMI.length <= 2 && (possibleMI.match(/[A-Z]/i) || possibleMI.endsWith('.'))) {
+                if ((possibleMI.length === 1 || (possibleMI.length === 2 && possibleMI.endsWith('.'))) && /^[A-Za-z]\.?$/.test(possibleMI)) {
                     middleInitial = possibleMI.replace('.', '');
                     lastName = nameParts.slice(2).join(' ');
                 } else {
@@ -263,12 +247,10 @@
         return { firstName, middleInitial, lastName };
     }
 
-    // Cancel editing
     function cancelEdit() {
         editingIndex = -1;
         clearForm();
         
-        // Change button back to Add mode
         const submitBtn = document.querySelector('#assessmentForm button[type="submit"]');
         if (submitBtn) {
             submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Student to List';
@@ -276,20 +258,17 @@
             submitBtn.classList.add('btn-success');
         }
         
-        // Remove cancel button
         const cancelBtn = document.getElementById('cancelEditBtn');
         if (cancelBtn) {
             cancelBtn.remove();
         }
     }
 
-    // Confirm delete student
     function confirmDeleteStudent(index) {
         if (index < 0 || index >= students.length) return;
         
         const studentName = students[index].name || 'this student';
         
-        // Use existing confirm modal
         const confirmBody = document.getElementById('confirmBody');
         const confirmTitle = document.getElementById('confirmTitle');
         const confirmYesBtn = document.getElementById('confirmYesBtn');
@@ -297,10 +276,8 @@
         if (confirmTitle) confirmTitle.textContent = 'Delete Student';
         if (confirmBody) confirmBody.innerHTML = `Are you sure you want to delete <strong>${escapeHtml(studentName)}</strong>? This action cannot be undone.`;
         
-        // Store the index to delete
         confirmYesBtn.setAttribute('data-delete-index', index);
         
-        // Remove existing event listeners and add new one
         const newConfirmYesBtn = confirmYesBtn.cloneNode(true);
         confirmYesBtn.parentNode.replaceChild(newConfirmYesBtn, confirmYesBtn);
         
@@ -315,21 +292,17 @@
         if (confirmModal) confirmModal.show();
     }
 
-    // Perform the actual delete
     function performDeleteStudent(index) {
         if (index < 0 || index >= students.length) return;
         
         const studentName = students[index].name || 'Student';
         
-        // If we're editing this student, cancel edit mode
         if (editingIndex === index) {
             cancelEdit();
         } else if (editingIndex > index) {
-            // If we deleted a student before the editing index, update the editing index
             editingIndex--;
         }
         
-        // Remove the student
         students.splice(index, 1);
         saveStudents();
         updateUI();
@@ -337,7 +310,6 @@
         showAlert('Success', `${escapeHtml(studentName)} has been deleted successfully!`);
     }
 
-    // Clear the input form
     function clearForm() { 
         document.getElementById('first_name').value = ''; 
         document.getElementById('middle_initial').value = ''; 
@@ -346,11 +318,10 @@
         document.getElementById('weight').value = ''; 
         document.getElementById('height').value = ''; 
         document.getElementById('sex').value = ''; 
-        document.getElementById('date').value = ''; // Set to empty, NOT today's date
+        document.getElementById('date').value = '';
         document.getElementById('assessmentForm')?.classList.remove('was-validated'); 
     }
 
-    // Clear all students
     function clearAllStudents() {
         if (students.length === 0) { 
             showAlert('No Records', 'There are no student records to clear.'); 
@@ -364,7 +335,6 @@
         if (confirmTitle) confirmTitle.textContent = 'Clear All Records';
         if (confirmBody) confirmBody.innerHTML = `Clear all <strong>${students.length}</strong> student record(s)? This action cannot be undone.`;
         
-        // Remove existing event listeners and add new one
         const newConfirmYesBtn = confirmYesBtn.cloneNode(true);
         confirmYesBtn.parentNode.replaceChild(newConfirmYesBtn, confirmYesBtn);
         
@@ -376,20 +346,15 @@
         if (confirmModal) confirmModal.show();
     }
 
-    // Perform the actual clear all
     function performClearAll() {
         students = [];
-        editingIndex = -1; // Reset editing state
+        editingIndex = -1;
         saveStudents();
         updateUI();
-        cancelEdit(); // Cancel any active edit
+        cancelEdit();
         showAlert('Cleared', 'All student records have been cleared.');
     }
 
-    /**
-     * Format date from YYYY-MM-DD to "MM/DD/YYYY"
-     * Example: "2012-11-12" becomes "11/12/2012"
-     */
     function formatDateToMonthDayYear(dateString) {
         if (!dateString) return '';
         
@@ -407,7 +372,6 @@
         }
     }
 
-    // Update the UI (table, counts, buttons)
     function updateUI() {
         const tbody = document.getElementById('studentTableBody');
         const count = document.getElementById('studentCount');
@@ -421,12 +385,11 @@
         if (!tbody) return;
         
         if (students.length === 0) { 
-            tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted">No student records yet. Add some students above. </td></tr>'; 
+            tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted">No student records yet. Add some students above.</td></tr>'; 
             return; 
         }
         
         tbody.innerHTML = students.map((s, idx) => {
-            // Format name: "Last, First M.I."
             let displayName = '';
             if (s.last_name) {
                 displayName = s.last_name;
@@ -440,7 +403,6 @@
                 displayName = s.name;
             }
             
-            // Format birthday: Month Day, Year (e.g., "November 12, 2012")
             let formattedBirthday = s.birthday;
             if (s.birthday) {
                 formattedBirthday = formatDateToMonthDayYear(s.birthday);
@@ -476,7 +438,6 @@
         }).join('');
     }
 
-    // Helper function to prevent XSS attacks
     function escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');
@@ -484,18 +445,16 @@
         return div.innerHTML;
     }
 
-    // Get row class based on nutritional status
     function getRowClass(status) { 
         switch (status) { 
-            case 'Severely Wasted': return 'status-severely-wasted'; 
-            case 'Wasted': return 'status-wasted'; 
-            case 'Overweight': return 'status-overweight'; 
-            case 'Obese': return 'status-obese'; 
+            case 'SEVERELY WASTED': return 'status-severely-wasted'; 
+            case 'WASTED': return 'status-wasted'; 
+            case 'OVERWEIGHT': return 'status-overweight'; 
+            case 'OBESE': return 'status-obese'; 
             default: return ''; 
         } 
     }
 
-    // Submit the report - FIXED to trust server values, not recalculate
     async function submitReport() {
         if (!loadingModal) {
             try {
@@ -512,12 +471,9 @@
             }
         }
         
-        // Show loading modal
         try {
             loadingModal.show();
-        } catch (e) {
-            // Silent fail
-        }
+        } catch (e) {}
         
         try {
             const urlParams = new URLSearchParams(window.location.search);
@@ -525,11 +481,9 @@
             const validTypes = ['baseline','midline','endline']; 
             if (!validTypes.includes(assessmentType)) assessmentType = 'baseline';
             
-            // Prepare students data for submission - send stored values as-is
             const studentsToSubmit = students.map(student => {
                 const studentData = {};
                 
-                // Combine first_name, middle_initial, last_name into name
                 let fullName = '';
                 if (student.first_name) {
                     fullName = student.first_name;
@@ -541,8 +495,10 @@
                     fullName = student.name;
                 }
                 
-                // Send the fields exactly as stored (server will validate and recalculate if needed)
                 studentData.name = fullName;
+                studentData.first_name = student.first_name || '';
+                studentData.middle_initial = student.middle_initial || '';
+                studentData.last_name = student.last_name || '';
                 studentData.birthday = student.birthday || '';
                 studentData.weight = parseFloat(student.weight) || 0;
                 studentData.height = parseFloat(student.height) || 0;
@@ -556,7 +512,6 @@
                 studentData.school_id = student.school_id || document.getElementById('school_id')?.value || '';
                 studentData.school_name = student.school_name || document.getElementById('school_name')?.value || '';
                 
-                // Send stored derived values (server will trust or recalculate)
                 studentData.bmi = student.bmi || 0;
                 studentData.nutritionalStatus = student.nutritionalStatus || 'Normal';
                 studentData.heightSquared = student.heightSquared || (student.height * student.height).toFixed(4);
@@ -569,7 +524,6 @@
                 return studentData;
             });
             
-            // Get the bulk_store URL from config
             const bulkStoreUrl = window.nutritionalassessmentConfig?.urls?.bulk_store;
             if (!bulkStoreUrl) {
                 throw new Error('Bulk store URL not configured');
@@ -585,7 +539,6 @@
                     '&assessment_type=' + encodeURIComponent(assessmentType)
             });
             
-            // Check if response is OK
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(`Server error (${response.status}): ${errorText.substring(0, 200)}`);
@@ -593,12 +546,9 @@
             
             const result = await response.json();
             
-            // Hide loading modal
             try {
                 loadingModal.hide();
-            } catch (e) {
-                // Silent fail
-            }
+            } catch (e) {}
             
             if (result.success) {
                 students = []; 
@@ -637,14 +587,11 @@
         } catch (e) { 
             try {
                 if (loadingModal) loadingModal.hide();
-            } catch (err) {
-                // Silent fail
-            }
+            } catch (err) {}
             showAlert('Network Error', 'Error communicating with server: ' + e.message); 
         }
     }
 
-    // Show submit confirmation modal
     function showSubmitConfirmation() {
         if (students.length === 0) {
             showAlert('No Records', 'There are no student records to submit.');
@@ -659,14 +606,12 @@
         if (submitConfirmModal) {
             submitConfirmModal.show();
         } else {
-            // Try to initialize submit confirm modal
             try {
                 const submitConfirmModalEl = document.getElementById('submitConfirmModal');
                 if (submitConfirmModalEl) {
                     submitConfirmModal = new bootstrap.Modal(submitConfirmModalEl);
                     submitConfirmModal.show();
                 } else {
-                    // Fallback if modal not initialized
                     if (confirm(`Submit ${students.length} student record(s)?`)) {
                         submitReport();
                     }
@@ -679,7 +624,6 @@
         }
     }
 
-    // Show alert modal
     function showAlert(title, message) { 
         const tEl = document.getElementById('alertTitle'); 
         const bEl = document.getElementById('alertBody'); 
@@ -693,7 +637,6 @@
                 window.alert(title + '\n\n' + message);
             }
         } else { 
-            // Try to initialize alert modal
             try {
                 const alertModalEl = document.getElementById('alertModal');
                 if (alertModalEl) {
@@ -708,13 +651,11 @@
         } 
     }
 
-    // Switch assessment type
     function switchAssessmentType(type) {
         if (students.length > 0) {
             if (!confirm('Switching assessment type will clear all current student records. Continue?')) {
                 return;
             }
-            // Clear students if user confirms
             students = [];
             editingIndex = -1;
             saveStudents();
@@ -722,182 +663,229 @@
             cancelEdit();
         }
         
-        // Redirect to the same page with new assessment type
         const url = new URL(window.location.href);
         url.searchParams.set('assessment_type', type);
         window.location.href = url.toString();
     }
 
-    // Extract data from Excel
     function extractFromExcel() {
+        // Prevent concurrent uploads
+        if (isUploading) {
+            showAlert('Please Wait', 'An upload is already in progress. Please wait.');
+            return;
+        }
+
         const fileInput = document.getElementById('excelFile');
         if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
             showAlert('No File', 'Please select a file to upload.');
             return;
         }
-        
+
         const file = fileInput.files[0];
-        
-        const fileExtension = file.name.split('.').pop().toLowerCase(); 
-        if (!['xlsx','xls','csv'].includes(fileExtension)) { 
-            showAlert('Invalid File', 'Please select an Excel file (.xlsx, .xls) or CSV file'); 
-            return; 
-        }
-        if (file.size > 5 * 1024 * 1024) { 
-            showAlert('File Too Large', 'Please select a file smaller than 5MB'); 
-            return; 
-        }
-        
-        // Initialize and show upload loading modal
-        if (!uploadLoadingModal) {
-            const uploadLoadingModalEl = document.getElementById('uploadLoadingModal');
-            if (uploadLoadingModalEl) {
-                uploadLoadingModal = new bootstrap.Modal(uploadLoadingModalEl, { keyboard: false, backdrop: 'static' });
-            } else {
-                showAlert('Error', 'Upload loading modal not found');
-                return;
-            }
-        }
-        
-        uploadLoadingModal.show();
-        
-        const chooseFileBtn = document.getElementById('chooseFileBtn');
-        if (chooseFileBtn) chooseFileBtn.disabled = true;
-        
-        const formData = new FormData(); 
-        formData.append('excel_file', file);
-        
-        // Get the process_excel URL from config
-        const processExcelUrl = window.nutritionalassessmentConfig?.urls?.process_excel;
-        if (!processExcelUrl) {
-            uploadLoadingModal.hide();
-            if (chooseFileBtn) chooseFileBtn.disabled = false;
-            showAlert('Configuration Error', 'Excel processing URL not configured');
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        if (!['xlsx', 'xls', 'csv'].includes(fileExtension)) {
+            showAlert('Invalid File', 'Please select an Excel file (.xlsx, .xls) or CSV file');
             return;
         }
-        
-        fetch(processExcelUrl, { method: 'POST', body: formData })
-            .then(response => response.json())
+        if (file.size > 5 * 1024 * 1024) {
+            showAlert('File Too Large', 'Please select a file smaller than 5MB');
+            return;
+        }
+
+        // --- Start upload process ---
+        isUploading = true;
+        currentUploadController = new AbortController();
+        const timeoutId = setTimeout(() => {
+            if (currentUploadController) {
+                currentUploadController.abort();
+            }
+        }, 60000); // 60 second timeout
+
+        // Show the loading modal (assumed already initialized once on DOMContentLoaded)
+        if (uploadLoadingModal) {
+            uploadLoadingModal.show();
+        } else {
+            // Fallback if modal not initialized
+            console.warn('uploadLoadingModal not initialized');
+        }
+
+        // Disable the "Choose File" button while processing
+        const chooseFileBtn = document.getElementById('chooseFileBtn');
+        if (chooseFileBtn) chooseFileBtn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('excel_file', file);
+
+        const processExcelUrl = window.nutritionalassessmentConfig?.urls?.process_excel;
+        if (!processExcelUrl) {
+            // Cleanup and exit
+            cleanupUpload('Excel processing URL not configured');
+            return;
+        }
+
+        fetch(processExcelUrl, {
+            method: 'POST',
+            body: formData,
+            signal: currentUploadController.signal
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
-                // ALWAYS hide the modal when response is received
-                uploadLoadingModal.hide();
-                if (chooseFileBtn) chooseFileBtn.disabled = false; 
-                if (fileInput) fileInput.value = '';
-                
                 if (data.success) {
                     addExtractedStudentsDirectly(data.students || [], data.message);
                 } else {
                     showAlert('Processing Error', data.message);
                 }
             })
-            .catch(error => { 
-                // ALWAYS hide the modal on error too
-                uploadLoadingModal.hide();
-                if (chooseFileBtn) chooseFileBtn.disabled = false; 
-                if (fileInput) fileInput.value = ''; 
-                showAlert('Error', 'An error occurred while processing the file: ' + error.message); 
+            .catch(error => {
+                console.error('Upload error:', error);
+                let errorMessage = 'An error occurred while processing the file.';
+                if (error.name === 'AbortError') {
+                    errorMessage = 'Request timeout. The file may be too large or the server is slow.';
+                } else if (error.message.includes('HTTP error')) {
+                    errorMessage = 'Server error. Please try again later.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMessage = 'Network error. Please check your connection.';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                showAlert('Error', errorMessage);
+            })
+            .finally(() => {
+                // --- ALWAYS clean up, whether success or error ---
+                cleanupUpload(null);
             });
-    }
 
-    // Add extracted students to the list
-    function addExtractedStudentsDirectly(extractedStudents, message) {
-        if (extractedStudents.length === 0) { 
-            showAlert('No Students', 'No valid student data found in the file.'); 
-            return; 
+        // Helper function for consistent cleanup
+        function cleanupUpload(errorMsg) {
+            // Clear timeout
+            clearTimeout(timeoutId);
+
+            // Hide the loading modal
+            if (uploadLoadingModal) {
+                try {
+                    uploadLoadingModal.hide();
+                } catch (e) {
+                    console.warn('Error hiding modal:', e);
+                }
+            }
+
+            // Re-enable the file chooser button
+            if (chooseFileBtn) chooseFileBtn.disabled = false;
+            if (fileInput) fileInput.value = '';
+
+            // Reset upload flags
+            isUploading = false;
+            currentUploadController = null;
+
+            // Optionally show an error message if one was passed
+            if (errorMsg) {
+                showAlert('Upload Error', errorMsg);
+            }
         }
-        
-        let addedCount = 0; 
+    }
+    
+    // Add extracted students to the list - PRESERVE UPPERCASE
+    function addExtractedStudentsDirectly(extractedStudents, message) {
+        if (extractedStudents.length === 0) {
+            showAlert('No Students', 'No valid student data found in the file.');
+            return;
+        }
+
+        let addedCount = 0;
         let skippedCount = 0;
-        
-        // Get the weighing date from the first student (all should have the same date from Excel)
+
         const weighingDateFromExcel = extractedStudents[0]?.date;
-        
-        // If the date field is empty, populate it with the date from Excel
         const dateInput = document.getElementById('date');
         if (dateInput && weighingDateFromExcel && !dateInput.value) {
             dateInput.value = weighingDateFromExcel;
         }
-        
+
         extractedStudents.forEach((extractedStudent) => {
-            const birthday = extractedStudent.birthday; 
+            const birthday = extractedStudent.birthday;
             let ageYears = 0, ageMonths = 0, ageDisplay = '0|0';
-            
-            // IMPORTANT: Use the weighing date from the server (extracted from Excel cell C3)
+
             const weighingDate = extractedStudent.date ? new Date(extractedStudent.date) : null;
-            
-            if (birthday && weighingDate) { 
-                const bdate = new Date(birthday); 
-                ageYears = weighingDate.getFullYear() - bdate.getFullYear(); 
-                ageMonths = weighingDate.getMonth() - bdate.getMonth(); 
-                if (ageMonths < 0) { 
-                    ageYears--; 
-                    ageMonths += 12; 
-                } 
-                ageDisplay = ageYears + '|' + ageMonths; 
+
+            if (birthday && weighingDate) {
+                const bdate = new Date(birthday);
+                ageYears = weighingDate.getFullYear() - bdate.getFullYear();
+                ageMonths = weighingDate.getMonth() - bdate.getMonth();
+                if (ageMonths < 0) {
+                    ageYears--;
+                    ageMonths += 12;
+                }
+                ageDisplay = ageYears + '|' + ageMonths;
             } else if (birthday) {
-                const bdate = new Date(birthday); 
-                const today = new Date(); 
-                ageYears = today.getFullYear() - bdate.getFullYear(); 
-                ageMonths = today.getMonth() - bdate.getMonth(); 
-                if (ageMonths < 0) { 
-                    ageYears--; 
-                    ageMonths += 12; 
-                } 
-                ageDisplay = ageYears + '|' + ageMonths; 
+                const bdate = new Date(birthday);
+                const today = new Date();
+                ageYears = today.getFullYear() - bdate.getFullYear();
+                ageMonths = today.getMonth() - bdate.getMonth();
+                if (ageMonths < 0) {
+                    ageYears--;
+                    ageMonths += 12;
+                }
+                ageDisplay = ageYears + '|' + ageMonths;
             }
-            
-            if (!extractedStudent.name || !extractedStudent.birthday || !extractedStudent.weight || !extractedStudent.height || !extractedStudent.sex) { 
-                skippedCount++; 
-                return; 
+
+            if (!extractedStudent.name || !extractedStudent.birthday || !extractedStudent.weight || !extractedStudent.height || !extractedStudent.sex) {
+                skippedCount++;
+                return;
             }
-            
-            // Parse the full name: format is "Last, First First M.I"
-            // Examples: 
-            //   "ALMARIO, ROY P." -> Last: ALMARIO, First: ROY, Middle: P
-            //   "DELA CRUZ, RENZ CYRENZ P." -> Last: DELA CRUZ, First: RENZ CYRENZ, Middle: P
-            //   "SANTOS, MARIA C." -> Last: SANTOS, First: MARIA, Middle: C
-            
+
+            // --- Parse name and convert everything to UPPERCASE ---
+            const fullName = extractedStudent.name.trim().toUpperCase();
             let lastName = '';
             let firstName = '';
             let middleInitial = '';
-            
-            const fullName = extractedStudent.name.trim();
-            
+
             if (fullName.includes(',')) {
-                // Split by comma: left side is Last Name, right side is First + Middle
                 const commaIndex = fullName.indexOf(',');
                 lastName = fullName.substring(0, commaIndex).trim();
-                
                 let rightPart = fullName.substring(commaIndex + 1).trim();
-                
-                // Split the right part by spaces
                 const nameParts = rightPart.split(' ');
-                
-                // Check if the LAST part is a middle initial (single letter with optional period)
-                const lastPart = nameParts[nameParts.length - 1];
-                const isMiddleInitial = (lastPart.length === 1 || (lastPart.length === 2 && lastPart.endsWith('.'))) && /^[A-Za-z]\.?$/.test(lastPart);
-                
-                if (isMiddleInitial && nameParts.length >= 2) {
-                    // Last part is middle initial, everything before is first name
-                    middleInitial = lastPart.replace('.', '');
-                    firstName = nameParts.slice(0, -1).join(' ');
-                } else {
-                    // No middle initial, everything is first name
-                    firstName = rightPart;
-                    middleInitial = '';
+
+                if (nameParts.length > 0) {
+                    const lastPart = nameParts[nameParts.length - 1];
+                    const isMiddleInitial = (lastPart.length === 1 || (lastPart.length === 2 && lastPart.endsWith('.'))) &&
+                        /^[A-Za-z]\.?$/.test(lastPart);
+
+                    if (isMiddleInitial && nameParts.length >= 2) {
+                        middleInitial = lastPart.replace('.', '');
+                        firstName = nameParts.slice(0, -1).join(' ');
+                    } else if (nameParts.length === 1) {
+                        firstName = nameParts[0];
+                    } else {
+                        firstName = nameParts.join(' ');
+                    }
                 }
             } else {
-                // No comma format - treat as "First Last"
                 const nameParts = fullName.split(' ');
-                if (nameParts.length >= 1) {
+                if (nameParts.length === 1) {
                     firstName = nameParts[0];
-                }
-                if (nameParts.length >= 2) {
-                    lastName = nameParts.slice(1).join(' ');
+                } else if (nameParts.length === 2) {
+                    firstName = nameParts[0];
+                    lastName = nameParts[1];
+                } else if (nameParts.length >= 3) {
+                    const possibleMI = nameParts[1];
+                    if ((possibleMI.length === 1 || (possibleMI.length === 2 && possibleMI.endsWith('.'))) &&
+                        /^[A-Za-z]\.?$/.test(possibleMI)) {
+                        firstName = nameParts[0];
+                        middleInitial = possibleMI.replace('.', '');
+                        lastName = nameParts.slice(2).join(' ');
+                    } else {
+                        firstName = nameParts[0];
+                        lastName = nameParts.slice(1).join(' ');
+                    }
                 }
             }
-            
-            // Build the combined name in the correct format: "Last, First M.I"
+
+            // No case conversion – everything already uppercase
+            // Build combined name in "LAST, FIRST M.I" format (uppercase)
             let combinedName = lastName;
             if (firstName) {
                 combinedName += ', ' + firstName;
@@ -905,49 +893,50 @@
                     combinedName += ' ' + middleInitial + '.';
                 }
             }
-            
+
+            // Ensure sex is uppercase
+            const sex = extractedStudent.sex ? extractedStudent.sex.toUpperCase() : '';
+
             const student = {
                 name: combinedName,
                 first_name: firstName,
                 middle_initial: middleInitial,
                 last_name: lastName,
-                birthday: extractedStudent.birthday, 
-                weight: extractedStudent.weight, 
-                height: extractedStudent.height, 
-                sex: extractedStudent.sex,
-                grade: document.getElementById('grade')?.value || '', 
-                section: document.getElementById('section')?.value || '', 
+                birthday: extractedStudent.birthday,
+                weight: extractedStudent.weight,
+                height: extractedStudent.height,
+                sex: sex,
+                grade: document.getElementById('grade')?.value || '',
+                section: document.getElementById('section')?.value || '',
                 school_year: document.getElementById('school_year')?.value || '',
                 date: extractedStudent.date || dateInput?.value || '',
-                legislative_district: document.getElementById('legislative_district')?.value || '', 
+                legislative_district: document.getElementById('legislative_district')?.value || '',
                 school_district: document.getElementById('school_district')?.value || '',
-                school_id: document.getElementById('school_id')?.value || '', 
+                school_id: document.getElementById('school_id')?.value || '',
                 school_name: document.getElementById('school_name')?.value || '',
                 heightSquared: extractedStudent.height_squared || (extractedStudent.height ? (extractedStudent.height * extractedStudent.height).toFixed(4) : null),
-                age: ageDisplay, 
-                ageYears: ageYears, 
-                ageMonths: ageMonths, 
-                ageDisplay: ageDisplay, 
-                bmi: extractedStudent.bmi, 
-                nutritionalStatus: extractedStudent.nutritional_status || 'Not Specified', 
-                heightForAge: extractedStudent.height_for_age || 'Not Specified',
-                sbfpBeneficiary: extractedStudent.sbfp_beneficiary || ((extractedStudent.nutritional_status === 'Severely Wasted' || extractedStudent.nutritional_status === 'Wasted') ? 'Yes' : 'No')
+                age: ageDisplay,
+                ageYears: ageYears,
+                ageMonths: ageMonths,
+                ageDisplay: ageDisplay,
+                bmi: extractedStudent.bmi,
+                nutritionalStatus: extractedStudent.nutritional_status ? extractedStudent.nutritional_status.toUpperCase() : 'NOT SPECIFIED',
+                heightForAge: extractedStudent.height_for_age ? extractedStudent.height_for_age.toUpperCase() : 'NOT SPECIFIED',
+                sbfpBeneficiary: extractedStudent.sbfp_beneficiary || ((extractedStudent.nutritional_status === 'Severely Wasted' || extractedStudent.nutritional_status === 'Wasted') ? 'YES' : 'NO')
             };
-            
-            students.push(student); 
+
+            students.push(student);
             addedCount++;
         });
-        
-        saveStudents(); 
-        updateUI(); 
-        
-        let successMessage = `Successfully added ${addedCount} student(s) to the list.`; 
+
+        saveStudents();
+        updateUI();
+
+        let successMessage = `Successfully added ${addedCount} student(s) to the list.`;
         if (skippedCount > 0) successMessage += ` ${skippedCount} record(s) were skipped due to missing data.`;
-        
         if (!dateInput?.value && !weighingDateFromExcel) {
             successMessage += `\n\nNote: No weighing date was found in the Excel file. Please enter the date manually.`;
         }
-        
         showAlert('Excel Import Complete', successMessage);
     }
 
@@ -965,8 +954,7 @@
             const loadingModalEl = document.getElementById('loadingModal');
             if (loadingModalEl) loadingModal = new bootstrap.Modal(loadingModalEl, { keyboard: false, backdrop: 'static' });
             
-            const uploadLoadingModalEl = document.getElementById('uploadLoadingModal');
-            if (uploadLoadingModalEl) uploadLoadingModal = new bootstrap.Modal(uploadLoadingModalEl, { keyboard: false, backdrop: 'static' });
+            // Don't initialize uploadLoadingModal here - will be created fresh on each upload
             
             const confirmModalEl = document.getElementById('confirmModal');
             if (confirmModalEl) confirmModal = new bootstrap.Modal(confirmModalEl);
@@ -976,21 +964,12 @@
         } catch (e) {
             console.error('Modal initialization error:', e);
         }
-
-        // DO NOT set default date to today - leave it empty
-        // const dateInput = document.getElementById('date');
-        // if (dateInput && !dateInput.value) {
-        //     dateInput.value = new Date().toISOString().split('T')[0];
-        // }
         
-        // Load existing students from localStorage
         loadStudents(); 
         updateUI();
 
-        // Event listeners - using named functions to avoid conflicts
         const assessmentForm = document.getElementById('assessmentForm');
         if (assessmentForm) {
-            // Remove any existing listeners and add new one
             assessmentForm.removeEventListener('submit', addOrUpdateStudent);
             assessmentForm.addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -1019,7 +998,6 @@
             });
         }
 
-        // File upload handlers
         const chooseFileBtn = document.getElementById('chooseFileBtn');
         if (chooseFileBtn) {
             chooseFileBtn.removeEventListener('click', function() {});
@@ -1036,7 +1014,6 @@
             });
         }
 
-        // Submit confirm modal button
         const submitConfirmYesBtn = document.getElementById('submitConfirmYesBtn');
         if (submitConfirmYesBtn) {
             submitConfirmYesBtn.removeEventListener('click', function() {});
@@ -1046,7 +1023,6 @@
             });
         }
 
-        // Assessment type switchers (if they exist in the DOM)
         const switchToBaseline = document.getElementById('switchToBaseline'); 
         const switchToEndline = document.getElementById('switchToEndline');
         const switchToMidline = document.getElementById('switchToMidline');
