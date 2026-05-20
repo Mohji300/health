@@ -231,5 +231,135 @@ $(document).ready(function() {
         setTimeout(function() { alertDiv.fadeOut(500, function() { $(this).remove(); }); }, 3000);
     }
 
+    $(document).on('click', '.sbfp-flag-btn', function() {
+        var btn = $(this);
+        var group = btn.closest('.sbfp-flag-group');
+        var assessmentId = group.data('assessment-id');
+        var field = btn.data('field');
+        var value = btn.data('value');
+
+        if (!assessmentId || !field) return;
+
+        try {
+            localStorage.setItem('sbfp_flag_' + assessmentId + '_' + field, value);
+        } catch (e) {
+        }
+
+        // UI: disable group while updating
+        var buttons = group.find('.sbfp-flag-btn');
+        buttons.prop('disabled', true);
+        buttons.removeClass('btn-primary').addClass('btn-outline-secondary');
+        buttons.not(btn).addClass('d-none');
+        btn.removeClass('btn-outline-secondary').removeClass('d-none').addClass('btn-primary');
+
+        $.ajax({
+            url: window.SbfpBeneficiariesConfig.urls.update_flag,
+            method: 'POST',
+            data: { id: assessmentId, field: field, value: value },
+            dataType: 'json',
+            success: function(resp) {
+                if (resp && resp.success) {
+                    showNotification('Saved', 'success');
+                } else {
+                    showNotification('Save failed: ' + (resp.message || 'Unknown error'), 'danger');
+                }
+            },
+            error: function(xhr, status, err) {
+                showNotification('Save failed. Please try again.', 'danger');
+            },
+            complete: function() {
+                buttons.prop('disabled', false);
+            }
+        });
+    });
+
+    // Initialize flag UI from localStorage so previously clicked choices remain visible client-side
+    (function initializeLocalFlags() {
+        $('.sbfp-flag-group').each(function() {
+            var group = $(this);
+            var assessmentId = group.data('assessment-id');
+            if (!assessmentId) return;
+            group.find('.sbfp-flag-btn').each(function() {
+                var b = $(this);
+                var field = b.data('field');
+                if (!field) return;
+                try {
+                    var stored = localStorage.getItem('sbfp_flag_' + assessmentId + '_' + field);
+                    if (stored && stored !== '') {
+                        var foundMatch = false;
+                        var normalizedStored = String(stored).toLowerCase();
+                        group.find('.sbfp-flag-btn').each(function() {
+                            var btnVal = String($(this).data('value') || '').toLowerCase();
+                            if (btnVal === normalizedStored) {
+                                foundMatch = true;
+                            }
+                        });
+                        if (foundMatch) {
+                            group.find('.sbfp-flag-btn').each(function() {
+                                var btn = $(this);
+                                if (String(btn.data('value') || '').toLowerCase() === normalizedStored) {
+                                    btn.removeClass('btn-outline-secondary').addClass('btn-primary').removeClass('d-none');
+                                } else {
+                                    btn.addClass('d-none').removeClass('btn-primary').addClass('btn-outline-secondary');
+                                }
+                            });
+                        } else {
+                        }
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            });
+        });
+    })();
+
+    // Export button handler: gather local flags and POST to server so export reflects client choices
+    $('#exportExcelBtn').on('click', function(e) {
+        e.preventDefault();
+
+        var overrides = {};
+        try {
+            for (var i = 0; i < localStorage.length; i++) {
+                var key = localStorage.key(i);
+                if (!key) continue;
+                if (key.indexOf('sbfp_flag_') === 0) {
+                    var parts = key.split('_');
+                    if (parts.length >= 4) {
+                        var id = parts[2];
+                        var field = parts.slice(3).join('_');
+                        var val = localStorage.getItem(key);
+                        if (!overrides[id]) overrides[id] = {};
+                        overrides[id][field] = val;
+                    }
+                }
+            }
+        } catch (ex) {
+            console.warn('Could not read localStorage for export overrides', ex);
+        }
+
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = window.SbfpBeneficiariesConfig && window.SbfpBeneficiariesConfig.urls && window.SbfpBeneficiariesConfig.urls.export_excel ? window.SbfpBeneficiariesConfig.urls.export_excel : (window.location.origin + '/sbfp_beneficiaries_controller/export_excel');
+
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'local_flags';
+        input.value = JSON.stringify(overrides);
+        form.appendChild(input);
+
+        document.body.appendChild(form);
+        form.submit();
+    });
+
     $('#btnPrint').click(function() { window.print(); });
+
+    $(document).on('click', '.flag-value', function() {
+        var valSpan = $(this);
+        var group = valSpan.next('.sbfp-flag-group');
+        if (!group.length) group = valSpan.siblings('.sbfp-flag-group');
+        if (!group.length) return;
+        valSpan.addClass('d-none');
+        group.removeClass('d-none');
+        group.find('.sbfp-flag-btn').prop('disabled', false);
+    });
 });

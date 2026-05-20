@@ -166,7 +166,6 @@ $school_year = isset($school_year) ? $school_year : '';
               </div>
               <div class="card-body">
                   <div class="row">
-                      <!-- Grade Level Filter - Visible to all roles -->
                       <div class="col-md-4 mb-3">
                           <label class="form-label fw-bold">
                               <i class="fas fa-graduation-cap me-1"></i>Grade Level
@@ -301,9 +300,9 @@ $school_year = isset($school_year) ? $school_year : '';
                 <div class="no-print">
                     <!-- Export buttons -->
                     <div class="btn-group me-2" role="group">
-                      <a href="<?= site_url('sbfp_beneficiaries_controller/export_excel') ?>" class="btn btn-success btn-sm">
+                      <button type="button" id="exportExcelBtn" class="btn btn-success btn-sm">
                           <i class="fas fa-file-excel me-1"></i> Export to Excel
-                      </a>
+                      </button>
                       <a href="<?= site_url('sbfp_beneficiaries_controller/print_report') ?>" target="_blank" class="btn btn-outline-info btn-sm no-print">
                           <i class="fas fa-print me-1"></i> Print Form
                       </a>
@@ -381,14 +380,42 @@ $school_year = isset($school_year) ? $school_year : '';
                       <td class="text-center">
                         <span class="badge <?= $hfa_class ?>"><?= $student['height_for_age'] ?></span>
                       </td>
+                      <?php
+                        $assessment_id = isset($student['id']) ? $student['id'] : (isset($student['assessment_id']) ? $student['assessment_id'] : '');
+
+                        $parentConsentValue = '';
+                        foreach (['parent_consent','parents_consent','parent_consent_for_milk','parent_consent_milk'] as $c) {
+                          if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $parentConsentValue = $student[$c]; break; }
+                        }
+                        $participation4psValue = '';
+                        foreach (['participation_4ps','participation_in_4ps','is_4ps','4ps_participation'] as $c) {
+                          if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $participation4psValue = $student[$c]; break; }
+                        }
+                        $previousSbfpValue = '';
+                        foreach (['previous_sbfp','sbfp_previous','previous_beneficiary_sbfp','previous_sbfp_beneficiary'] as $c) {
+                          if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $previousSbfpValue = $student[$c]; break; }
+                        }
+                      ?>
+
                       <td class="text-center">
-                        <span class="badge bg-info"></span>
+                        <div class="btn-group btn-group-sm sbfp-flag-group" role="group" data-assessment-id="<?= htmlspecialchars($assessment_id) ?>">
+                          <button type="button" class="btn sbfp-flag-btn <?= ($parentConsentValue === 'Yes') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="parent_consent_milk" data-value="Yes">Yes</button>
+                          <button type="button" class="btn sbfp-flag-btn <?= ($parentConsentValue === 'No') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="parent_consent_milk" data-value="No">No</button>
+                        </div>
                       </td>
+
                       <td class="text-center">
-                        <span class="badge bg-warning"></span>
+                        <div class="btn-group btn-group-sm sbfp-flag-group" role="group" data-assessment-id="<?= htmlspecialchars($assessment_id) ?>">
+                          <button type="button" class="btn sbfp-flag-btn <?= ($participation4psValue === 'Yes') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="participation_4ps" data-value="Yes">Yes</button>
+                          <button type="button" class="btn sbfp-flag-btn <?= ($participation4psValue === 'No') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="participation_4ps" data-value="No">No</button>
+                        </div>
                       </td>
+
                       <td class="text-center">
-                        <span class="badge bg-success"></span>
+                        <div class="btn-group btn-group-sm sbfp-flag-group" role="group" data-assessment-id="<?= htmlspecialchars($assessment_id) ?>">
+                          <button type="button" class="btn sbfp-flag-btn <?= ($previousSbfpValue === 'Yes') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="previous_sbfp" data-value="Yes">Yes</button>
+                          <button type="button" class="btn sbfp-flag-btn <?= ($previousSbfpValue === 'No') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="previous_sbfp" data-value="No">No</button>
+                        </div>
                       </td>
                     </tr>
                     <?php endforeach; ?>
@@ -482,7 +509,8 @@ $school_year = isset($school_year) ? $school_year : '';
             set_district_filter: '<?= site_url("sbfp_beneficiaries_controller/set_district_filter"); ?>',
             clear_filters: '<?= site_url("sbfp_beneficiaries_controller/clear_filters"); ?>',
             export_excel: '<?= site_url("sbfp_beneficiaries_controller/export_excel"); ?>',
-            print_report: '<?= site_url("sbfp_beneficiaries_controller/print_report"); ?>'
+            print_report: '<?= site_url("sbfp_beneficiaries_controller/print_report"); ?>',
+            update_flag: '<?= site_url("sbfp_beneficiaries_controller/update_flag"); ?>'
         },
         assessment_type: '<?= $assessment_type; ?>',
         hasData: <?= !empty($beneficiaries) ? 'true' : 'false'; ?>,

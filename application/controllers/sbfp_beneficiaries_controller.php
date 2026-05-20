@@ -303,6 +303,65 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $this->session->unset_userdata('selected_school');
         echo json_encode(['success' => true]);
     }
+
+    /**
+     * AJAX: Update a simple Yes/No flag for a beneficiary record (parent consent, 4Ps, previous SBFP)
+     */
+    public function update_flag()
+    {
+        $this->output->set_content_type('application/json');
+
+        $id = $this->input->post('id');
+        $field = $this->input->post('field');
+        $value = $this->input->post('value');
+
+        if (empty($id) || empty($field) || !in_array($value, ['Yes', 'No'])) {
+            echo json_encode(['success' => false, 'message' => 'Invalid input']);
+            return;
+        }
+
+        // Map logical field names to possible DB columns. We'll pick the first existing column.
+        $candidates = [];
+        switch ($field) {
+            case 'parent_consent_milk':
+                $candidates = ['parent_consent', 'parents_consent', 'parent_consent_for_milk', 'parent_consent_milk'];
+                break;
+            case 'participation_4ps':
+                $candidates = ['participation_4ps', 'participation_in_4ps', 'is_4ps', '4ps_participation'];
+                break;
+            case 'previous_sbfp':
+                $candidates = ['previous_sbfp', 'sbfp_previous', 'previous_beneficiary_sbfp', 'previous_sbfp_beneficiary'];
+                break;
+            default:
+                echo json_encode(['success' => false, 'message' => 'Unknown field']);
+                return;
+        }
+
+        $targetColumn = null;
+        foreach ($candidates as $col) {
+            if ($this->db->field_exists($col, 'nutritional_assessments')) {
+                $targetColumn = $col;
+                break;
+            }
+        }
+
+        if (!$targetColumn) {
+            echo json_encode(['success' => false, 'message' => 'Database column for this field does not exist']);
+            return;
+        }
+
+        try {
+            $this->db->where('id', $id);
+            $updated = $this->db->update('nutritional_assessments', [ $targetColumn => $value, 'updated_at' => date('Y-m-d H:i:s') ]);
+            if ($updated) {
+                echo json_encode(['success' => true, 'column' => $targetColumn, 'value' => $value]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Update failed']);
+            }
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Exception: ' . $e->getMessage()]);
+        }
+    }
     
     /**
      * Get the current school year from database
@@ -566,6 +625,19 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             );
             
             log_message('debug', 'Beneficiaries found for export: ' . count($beneficiaries));
+
+            // Accept local overrides posted from client (JSON of structure: { "<id>": { "parent_consent_milk": "Yes", ... }, ... })
+            $localFlags = [];
+            $localFlagsRaw = $this->input->post('local_flags');
+            if (!empty($localFlagsRaw)) {
+                $decoded = json_decode($localFlagsRaw, true);
+                if (is_array($decoded)) {
+                    $localFlags = $decoded;
+                    log_message('debug', 'Local flags overrides received: ' . print_r(array_keys($localFlags), true));
+                } else {
+                    log_message('debug', 'local_flags posted but failed to decode JSON');
+                }
+            }
             
             if (empty($beneficiaries)) {
                 log_message('error', 'No beneficiaries found for export');
@@ -765,10 +837,40 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
                     // Column M: HFA (Height for Age)
                     $sheet->setCellValue('M' . $currentRow, $student['height_for_age'] ?? '');
                     
-                    // Columns N, O, P are left empty for manual checkboxes
-                    $sheet->setCellValue('N' . $currentRow, '');
-                    $sheet->setCellValue('O' . $currentRow, '');
-                    $sheet->setCellValue('P' . $currentRow, '');
+                    // Columns N, O, P: Parent's consent, 4Ps participation, Previous SBFP
+                    $parentConsentValue = '';
+                    foreach (['parent_consent','parents_consent','parent_consent_for_milk','parent_consent_milk'] as $c) {
+                        if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $parentConsentValue = $student[$c]; break; }
+                    }
+
+                    $participation4psValue = '';
+                    foreach (['participation_4ps','participation_in_4ps','is_4ps','4ps_participation'] as $c) {
+                        if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $participation4psValue = $student[$c]; break; }
+                    }
+
+                    $previousSbfpValue = '';
+                    foreach (['previous_sbfp','sbfp_previous','previous_beneficiary_sbfp','previous_sbfp_beneficiary'] as $c) {
+                        if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $previousSbfpValue = $student[$c]; break; }
+                    }
+
+                    // Apply local overrides if provided (client-side saved choices)
+                    $studentId = $student['id'] ?? ($student['assessment_id'] ?? '');
+                    if (!empty($studentId) && isset($localFlags[$studentId]) && is_array($localFlags[$studentId])) {
+                        $over = $localFlags[$studentId];
+                        if (isset($over['parent_consent_milk'])) {
+                            $parentConsentValue = $over['parent_consent_milk'];
+                        }
+                        if (isset($over['participation_4ps'])) {
+                            $participation4psValue = $over['participation_4ps'];
+                        }
+                        if (isset($over['previous_sbfp'])) {
+                            $previousSbfpValue = $over['previous_sbfp'];
+                        }
+                    }
+
+                    $sheet->setCellValue('N' . $currentRow, $parentConsentValue);
+                    $sheet->setCellValue('O' . $currentRow, $participation4psValue);
+                    $sheet->setCellValue('P' . $currentRow, $previousSbfpValue);
                     
                     $counter++;
                     $populatedRows++;

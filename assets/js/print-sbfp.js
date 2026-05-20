@@ -355,6 +355,29 @@ const SBFPUtils = {
             'BMI', 'BMI-A', 'HFA', 'Parent Consent', '4Ps', 'Previous Beneficiary'
         ];
         
+        function getFlagValue(student, field) {
+            var possibleKeys = [];
+            if (field === 'parent_consent_milk') possibleKeys = ['parent_consent','parents_consent','parent_consent_for_milk','parent_consent_milk'];
+            if (field === 'participation_4ps') possibleKeys = ['participation_4ps','participation_in_4ps','is_4ps','4ps_participation'];
+            if (field === 'previous_sbfp') possibleKeys = ['previous_sbfp','sbfp_previous','previous_beneficiary_sbfp','previous_sbfp_beneficiary'];
+
+            for (var i = 0; i < possibleKeys.length; i++) {
+                var k = possibleKeys[i];
+                if (student.hasOwnProperty(k) && student[k] !== null && student[k] !== undefined && String(student[k]) !== '') return student[k];
+            }
+
+            // fallback to localStorage if available
+            try {
+                var id = student.id || student.assessment_id || student.assessmentId || '';
+                if (id) {
+                    var stored = localStorage.getItem('sbfp_flag_' + id + '_' + field);
+                    if (stored) return stored;
+                }
+            } catch (e) {}
+
+            return '';
+        }
+
         const rows = students.map((student, index) => [
             index + 1,
             student.name,
@@ -368,7 +391,9 @@ const SBFPUtils = {
             student.bmi,
             student.nutritional_status,
             student.height_for_age,
-            '', '', ''
+            getFlagValue(student, 'parent_consent_milk'),
+            getFlagValue(student, 'participation_4ps'),
+            getFlagValue(student, 'previous_sbfp')
         ]);
         
         return [headers, ...rows].map(row => 
