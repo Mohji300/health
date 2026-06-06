@@ -21,7 +21,7 @@
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-center">
                 <div>
-                  <h1 class="h2 font-weight-bold mb-2">Nutritional Assessment</h1>
+                  <h1 class="h2 font-weight-bold mb-2">Upload Nutritional Assessment</h1>
                   <p class="mb-0 opacity-8">Add and manage student nutritional assessment records</p>
                 </div>
               </div>
