@@ -39,7 +39,7 @@
             </div>
           </div>
 
-          <!-- School Information Card (for regular users) -->
+          <!-- School Information Card -->
           <?php if ($is_regular_user && !empty($current_filters['school_name'])): ?>
           <div class="row mb-4">
             <div class="col-12">
@@ -100,7 +100,6 @@
 
           <!-- Statistics Cards -->
           <?php
-          // If a specific school filter is active, compute filtered statistics
           $use_filtered_stats = !empty($current_filters['school_name']);
           if ($use_filtered_stats) {
             $filtered_total_assessments = 0;
@@ -138,7 +137,7 @@
                       </div>
                     </div>
                     <div class="col-auto">
-                      <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                      <i class="fas fa-clipboard-list fa-2x text-black"></i>
                     </div>
                   </div>
                 </div>
@@ -212,7 +211,7 @@
             </div>
           </div>
 
-          <!-- Filters Card (Simplified for regular users) -->
+          <!-- Filters Card -->
           <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
               <h6 class="m-0 font-weight-bold text-primary">
@@ -241,10 +240,10 @@
                       <?php endif; ?>
                     <?php endif; ?>
                     
-                    <!-- Assessment Type Filter (shown to all users) -->
+                    <!-- Assessment Type Filter -->
                     <div class="col-md-3">
                       <label class="form-label fw-bold text-dark">
-                        <i class="fas fa-flag me-1"></i> Assessment Type
+                        <i class="fas fa-chart-line me-1"></i> Assessment Type
                       </label>
                       <select name="assessment_type" class="form-select">
                         <?php foreach ($assessment_types as $value => $label): ?>
@@ -256,7 +255,7 @@
                       </select>
                     </div>
                     
-                    <!-- Grade Level Filter (shown to all users) -->
+                    <!-- Grade Level Filter -->
                     <div class="col-md-3">
                       <label class="form-label fw-bold text-dark">
                         <i class="fas fa-graduation-cap me-1"></i> Grade Level
@@ -319,10 +318,6 @@
                   <a href="<?php echo site_url($reports_base . '/export?' . http_build_query($current_filters)); ?>" 
                     class="btn btn-success btn-sm me-2 export-btn">
                       <i class="fas fa-file-export me-1"></i> Export to CSV
-                  </a>
-                  <a href="<?php echo site_url($reports_base . '/statistics?' . http_build_query($current_filters)); ?>" 
-                    class="btn btn-info btn-sm stats-btn">
-                      <i class="fas fa-chart-pie me-1"></i> View Statistics
                   </a>
                 </div>
               </div>
@@ -437,7 +432,6 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script>
-        // Pass PHP variables to JavaScript
         const reportsConfig = {
             totalReports: <?php echo count($reports); ?>,
             currentFilters: <?php echo json_encode($current_filters); ?>,
