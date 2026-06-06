@@ -93,7 +93,7 @@ class district_dashboard_model extends CI_Model {
             elseif ($school_level === 'integrated_elementary') {
                 // Only elementary grades (K-6) from integrated schools
                 $this->db->where("school_name LIKE '%Integrated%'");
-                $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']);
+                $this->db->where_in('grade_level', ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'SPED']);
             }
             elseif ($school_level === 'integrated_secondary') {
                 // Only secondary grades (7-12) from integrated schools
@@ -105,7 +105,7 @@ class district_dashboard_model extends CI_Model {
         $assessments = $this->db->get('nutritional_assessments')->result();
         
         // Define all grade levels
-        $allGrades = ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6',
+        $allGrades = ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'SPED',
                     'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
         
         // Initialize data structure
@@ -126,6 +126,7 @@ class district_dashboard_model extends CI_Model {
             'Grade 4' => 'Grade 4',
             'Grade 5' => 'Grade 5',
             'Grade 6' => 'Grade 6',
+            'SPED'  => 'SPED',
             'Grade 7' => 'Grade 7',
             'Grade 8' => 'Grade 8',
             'Grade 9' => 'Grade 9',

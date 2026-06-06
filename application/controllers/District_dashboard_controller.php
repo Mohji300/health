@@ -147,7 +147,7 @@ class District_dashboard_controller extends CI_Controller {
         $assessment_type = $this->input->post('assessment_type', TRUE);
         
         // Validate school level
-        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary'];
+        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary', 'shs_only'];
         if (!in_array($school_level, $valid_levels)) {
             $this->output->set_content_type('application/json')->set_output(json_encode([
                 'success' => false,

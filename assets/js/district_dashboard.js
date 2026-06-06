@@ -1,27 +1,22 @@
 /* district_dashboard.js */
 
 $(document).ready(function() {
-    console.log('District dashboard JS loaded');
-    
-    // Assessment type switching
-    $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
-    $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
-    $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
-    
-    function switchAssessmentType(type) {
-        var activeBtn = type === 'baseline' ? $('#switchToBaseline') : 
-                       (type === 'midline' ? $('#switchToMidline') : $('#switchToEndline'));
-        var originalHtml = activeBtn.html();
-        activeBtn.html('<i class="fas fa-spinner fa-spin"></i> Switching...');
-        $('.assessment-switcher .btn').prop('disabled', true);
-        
+    // Assessment type dropdown click -> redirect preserving school_level
+    $(document).on('click', 'a.dropdown-item[data-type]', function(e) {
+        e.preventDefault();
+        var $item = $(this);
+        var type = $item.data('type');
+        if ($item.hasClass('active')) return;
+        var $btn = $('#assessmentDropdown');
+        if ($btn.length) $btn.prop('disabled', true);
+
         var currentSchoolLevel = window.DistrictDashboardConfig.school_level || 'all';
-        var url = window.DistrictDashboardConfig.urls.base + '?assessment_type=' + type;
+        var url = window.DistrictDashboardConfig.urls.base + '?assessment_type=' + encodeURIComponent(type);
         if (currentSchoolLevel && currentSchoolLevel !== 'all') {
             url += '&school_level=' + encodeURIComponent(currentSchoolLevel);
         }
         window.location.href = url;
-    }
+    });
 
     
     //school level dropdown selection
@@ -69,23 +64,31 @@ $(document).ready(function() {
     function updateTableVisibility(schoolLevel) {
         const elemTable = document.getElementById('elementaryTable');
         const secTable = document.getElementById('secondaryTable');
+        const shsTable = document.getElementById('shsTable');
         
         if (!elemTable || !secTable) return;
-
         switch(schoolLevel) {
             case 'secondary':
             case 'integrated_secondary':
-                elemTable.classList.add('d-none');
-                secTable.classList.remove('d-none');
+                if (elemTable) elemTable.classList.add('d-none');
+                if (secTable) secTable.classList.remove('d-none');
+                if (shsTable) shsTable.classList.add('d-none');
                 break;
-                
+
+            case 'shs_only':
+                if (elemTable) elemTable.classList.add('d-none');
+                if (secTable) secTable.classList.add('d-none');
+                if (shsTable) shsTable.classList.remove('d-none');
+                break;
+
             case 'elementary':
             case 'integrated_elementary':
             case 'integrated':
             case 'all':
             default:
-                elemTable.classList.remove('d-none');
-                secTable.classList.add('d-none');
+                if (elemTable) elemTable.classList.remove('d-none');
+                if (secTable) secTable.classList.add('d-none');
+                if (shsTable) shsTable.classList.add('d-none');
                 break;
         }
     }
@@ -97,12 +100,14 @@ $(document).ready(function() {
     const btnPrint = document.getElementById('btnPrint');
     const elemTable = document.getElementById('elementaryTable');
     const secTable = document.getElementById('secondaryTable');
+    const shsTable = document.getElementById('shsTable');
 
     if (btnPrint) {
         btnPrint.addEventListener('click', function() {
             const win = window.open('', '_blank');
-            const isElemVisible = !elemTable.classList.contains('d-none');
-            const tableHtml = (isElemVisible ? elemTable : secTable).outerHTML;
+            const isElemVisible = elemTable && !elemTable.classList.contains('d-none');
+            const isShsVisible = shsTable && !shsTable.classList.contains('d-none');
+            const tableHtml = isElemVisible ? elemTable.outerHTML : (isShsVisible ? shsTable.outerHTML : secTable.outerHTML);
             const assessmentType = window.DistrictDashboardConfig.assessment_type_display || '';
             const reportDate = new Date().toLocaleDateString();
             const districtName = window.DistrictDashboardConfig.district_name || '';
@@ -113,6 +118,7 @@ $(document).ready(function() {
                 case 'all': schoolLevelDisplay = 'All Schools (Elementary View)'; break;
                 case 'elementary': schoolLevelDisplay = 'Elementary Schools Only'; break;
                 case 'secondary': schoolLevelDisplay = 'Secondary Schools Only'; break;
+                case 'shs_only': schoolLevelDisplay = 'Senior High School (11-12)'; break;
                 case 'integrated': schoolLevelDisplay = 'Integrated Schools (All Grades)'; break;
                 case 'integrated_elementary': schoolLevelDisplay = 'Integrated Schools (Elementary Grades Only)'; break;
                 case 'integrated_secondary': schoolLevelDisplay = 'Integrated Schools (Secondary Grades Only)'; break;
