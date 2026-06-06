@@ -16,7 +16,6 @@
       <div id="page-content-wrapper">
         <div class="container-fluid py-4">
 
-          <!-- Header Card - Made same size/style as Nutritional Dashboard -->
           <div class="card bg-gradient-primary text-white mb-4">
             <div class="card-body">
               <h1 class="h2 font-weight-bold mb-2">Super Admin Dashboard</h1>
@@ -170,6 +169,9 @@
                     <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#updateAllModal">
                       <i class="fas fa-sync-alt me-1"></i> Update All Roles
                     </button>
+                    <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#resetAllSchoolInfoModal">
+                      <i class="fas fa-undo-alt me-1"></i> Reset All School Info
+                    </button>
                   </div>
                 </div>
                 <div class="card-body">
@@ -193,6 +195,7 @@
                         <tr>
                           <th>Name</th>
                           <th>Email</th>
+                          <th>District</th>
                           <th>Role</th>
                           <th class="text-center">Actions</th>
                         </tr>
@@ -202,6 +205,7 @@
                         <tr data-user-id="<?php echo $user->id; ?>">
                           <td class="fw-bold"><?php echo htmlspecialchars($user->name ?? 'N/A'); ?></td>
                           <td><?php echo htmlspecialchars($user->email ?? 'N/A'); ?></td>
+                          <td><?php echo htmlspecialchars($user->school_district ?? $user->district ?? $user->school_district_name ?? 'N/A'); ?></td>
                           <td>
                             <form method="post" action="<?php echo site_url('superadmin/update_user_role/' . $user->id); ?>" class="d-inline">
                               <select name="role" class="form-select form-select-sm role-select" onchange="this.form.submit()">
@@ -218,6 +222,13 @@
                               <a href="<?php echo site_url('superadmin/edit-user/' . $user->id); ?>" class="btn btn-info btn-sm me-1">
                                 <i class="fas fa-edit me-1"></i> Edit
                               </a>
+                              <button type="button" class="btn btn-warning btn-sm reset-user-btn me-1" 
+                                      data-user-id="<?php echo $user->id; ?>" 
+                                      data-user-name="<?php echo htmlspecialchars($user->name ?? 'N/A'); ?>"
+                                      data-bs-toggle="modal" 
+                                      data-bs-target="#resetUserModal">
+                                <i class="fas fa-undo me-1"></i> Reset
+                              </button>
                               <button type="button" class="btn btn-danger btn-sm delete-user-btn" 
                                       data-user-id="<?php echo $user->id; ?>" 
                                       data-user-name="<?php echo htmlspecialchars($user->name ?? 'N/A'); ?>"
@@ -231,67 +242,6 @@
                         <?php endforeach; ?>
                       </tbody>
                     </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="col-lg-4 mb-4">
-              <div class="card shadow">
-                <div class="card-header py-3">
-                  <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
-                </div>
-                <div class="card-body">
-                  <div class="list-group">
-                    <a href="<?php echo site_url('admin/districts'); ?>" class="list-group-item list-group-item-action">
-                      <div class="d-flex align-items-center">
-                        <div class="me-3">
-                          <i class="fas fa-map-marker-alt text-success fa-2x"></i>
-                        </div>
-                        <div>
-                          <h6 class="mb-1 fw-bold">Manage Districts</h6>
-                          <p class="mb-1 text-muted small">Configure school districts and assignments</p>
-                        </div>
-                      </div>
-                    </a>
-
-                    <a href="<?php echo site_url('settings'); ?>" class="list-group-item list-group-item-action">
-                      <div class="d-flex align-items-center">
-                        <div class="me-3">
-                          <i class="fas fa-cog text-gray-600 fa-2x"></i>
-                        </div>
-                        <div>
-                          <h6 class="mb-1 fw-bold">System Settings</h6>
-                          <p class="mb-1 text-muted small">Configure system-wide preferences</p>
-                        </div>
-                      </div>
-                    </a>
-
-                    <a href="<?php echo site_url('admin/reports'); ?>" class="list-group-item list-group-item-action">
-                      <div class="d-flex align-items-center">
-                        <div class="me-3">
-                          <i class="fas fa-chart-bar text-warning fa-2x"></i>
-                        </div>
-                        <div>
-                          <h6 class="mb-1 fw-bold">Nutritional Assessment Reports</h6>
-                          <p class="mb-1 text-muted small">View and analyze all submitted nutritional assessment data</p>
-                        </div>
-                      </div>
-                    </a>
-
-                    <!-- Add User Quick Action -->
-                    <a href="<?php echo site_url('superadmin/add-user'); ?>" class="list-group-item list-group-item-action">
-                      <div class="d-flex align-items-center">
-                        <div class="me-3">
-                          <i class="fas fa-user-plus text-primary fa-2x"></i>
-                        </div>
-                        <div>
-                          <h6 class="mb-1 fw-bold">Add New User</h6>
-                          <p class="mb-1 text-muted small">Create new user accounts</p>
-                        </div>
-                      </div>
-                    </a>
                   </div>
                 </div>
               </div>
@@ -327,6 +277,54 @@
       </div>
     </div>
 
+    <!-- Reset Confirmation Modal -->
+    <div class="modal fade" id="resetUserModal" tabindex="-1" aria-labelledby="resetUserModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="resetUserModalLabel">Confirm Reset User Data</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+            <div class="modal-body">
+                <p>Are you sure you want to reset the <strong>school_info_completed</strong> flag for 
+                  <span id="resetUserNamePlaceholder" class="fw-bold"></span>?</p>
+                <p>This will set the user's school information status to "incomplete", allowing them to go through the 
+                  school setup process again. <strong>No uploaded files or other data will be removed.</strong></p>
+                <p class="text-warning fw-bold">Only the completion flag will be reset – all existing school data remains intact.</p>
+            </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <form id="resetUserForm" method="post" action="">
+              <button type="submit" class="btn btn-warning">Reset</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reset All School Info Modal -->
+    <div class="modal fade" id="resetAllSchoolInfoModal" tabindex="-1" aria-labelledby="resetAllSchoolInfoModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="resetAllSchoolInfoModalLabel">Reset All School Info Flags</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>Are you sure you want to reset <strong>school_info_completed</strong> to <strong>0</strong> for <strong>ALL users</strong>?</p>
+            <p class="text-danger fw-bold">This action cannot be undone. All users will be required to complete the school information setup again.</p>
+            <p class="text-warning">No other user data (uploads, profiles, etc.) will be affected – only the completion flag.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <form id="resetAllSchoolInfoForm" method="post" action="<?php echo site_url('superadmincontroller/reset_all_school_info'); ?>">
+              <button type="submit" class="btn btn-warning">Reset All</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Delete Confirmation Modal -->
     <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
       <div class="modal-dialog">
@@ -355,7 +353,8 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script>
     window.SuperAdminConfig = {
-      delete_user_base: '<?= site_url("superadmin/delete-user/"); ?>'
+      delete_user_base: '<?= site_url("superadmincontroller/delete_user/"); ?>',
+      reset_user_base: '<?= site_url("superadmincontroller/reset_user_data/"); ?>'
     };
     </script>
     <script src="<?= base_url('assets/js/superadmin_dashboard.js'); ?>"></script>

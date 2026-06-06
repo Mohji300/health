@@ -3,7 +3,7 @@ $(document).ready(function() {
     var table = $('#userTable').DataTable({
         "pageLength": 10,
         "ordering": true,
-        "columnDefs": [ { "orderable": false, "targets": [3] } ]
+        "columnDefs": [ { "orderable": false, "targets": [4] } ]
     });
 
     $('#submitBulkPayload').on('click', function(e) {
@@ -28,6 +28,17 @@ $(document).ready(function() {
         $('#userNamePlaceholder').text(userName);
         $('#deleteUserForm').attr('action', deleteUrl);
         deleteUserModal.show();
+    });
+
+    var resetUserModal = new bootstrap.Modal(document.getElementById('resetUserModal'));
+    $('.reset-user-btn').on('click', function(e) {
+        e.preventDefault();
+        var userId = $(this).data('user-id');
+        var userName = $(this).data('user-name');
+        var resetUrl = window.SuperAdminConfig.reset_user_base + userId;
+        $('#resetUserNamePlaceholder').text(userName);
+        $('#resetUserForm').attr('action', resetUrl);
+        resetUserModal.show();
     });
 
     $('.role-select').on('change', function() {

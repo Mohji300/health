@@ -26,12 +26,28 @@ class Superadmincontroller extends CI_Controller {
         // Define available roles
         $availableRoles = ['super_admin', 'admin', 'district', 'division', 'user'];
         
+        // Also load districts and school districts so the view can use authoritative values
+        $this->load->model('legislative_district_model');
+        $legislative_districts = $this->legislative_district_model->get_districts_with_school_districts();
+
+        // Get ordered school districts for selection (includes legislative linkage)
+        $school_districts = $this->db
+            ->select('sd.*, ld.name as legislative_name')
+            ->from('school_districts sd')
+            ->join('legislative_districts ld', 'sd.legislative_district_id = ld.id', 'left')
+            ->order_by('ld.name', 'ASC')
+            ->order_by('sd.name', 'ASC')
+            ->get()
+            ->result();
+
         $data = [
             'title' => 'Super Admin Dashboard',
             'userCounts' => $userCounts,
             'users' => $users,
             'availableRoles' => $availableRoles,
-            'currentUser' => $this->session->userdata('email')
+            'currentUser' => $this->session->userdata('email'),
+            'legislative_districts' => $legislative_districts,
+            'school_districts' => $school_districts
         ];
         
         $this->load->view('templates/header', $data);
@@ -151,6 +167,54 @@ class Superadmincontroller extends CI_Controller {
             $this->session->set_flashdata('success', 'User deleted successfully!');
         } else {
             $this->session->set_flashdata('error', 'Failed to delete user.');
+        }
+
+        redirect('superadmin');
+    }
+
+    public function reset_user_data($user_id)
+    {
+        if ($this->input->method() != 'post') {
+            show_404();
+        }
+
+        $user = $this->user_model->get_user_by_id($user_id);
+        if (!$user) {
+            $this->session->set_flashdata('error', 'User not found.');
+            redirect('superadmin');
+            return;
+        }
+
+        // Only reset the school_info_completed flag
+        $resetData = [
+            'school_info_completed' => 0,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+
+        $updateOk = $this->user_model->update_user($user_id, $resetData);
+
+        if ($updateOk) {
+            $this->session->set_flashdata('success', 'School info completion flag reset successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to reset school info completion flag.');
+        }
+
+        redirect('superadmin');
+    }
+
+    public function reset_all_school_info()
+    {
+        if ($this->input->method() != 'post') {
+            show_404();
+        }
+
+        $this->load->model('user_model');
+        $result = $this->user_model->reset_all_school_info_completed();
+
+        if ($result) {
+            $this->session->set_flashdata('success', 'Successfully reset school_info_completed for all users.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to reset school_info_completed for all users.');
         }
 
         redirect('superadmin');
