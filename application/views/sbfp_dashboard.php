@@ -61,8 +61,8 @@ foreach ($submitted as $s) {
             <!-- Header Card -->
             <div class="card bg-gradient-primary text-white mb-4">
               <div class="card-body">
-                <h1 class="h2 font-weight-bold mb-2">School-Based Feeding Program (SBFP) Dashboard</h1>
-                <p class="mb-0 opacity-8">Manage nutritional assessments, sections, and student health monitoring</p>
+                <h1 class="h2 font-weight-bold mb-2">Upload Nutritional Assessments</h1>
+                <p class="mb-0 opacity-8">Manage nutritional assessments and sections</p>
               </div>
             </div>
 
@@ -248,10 +248,10 @@ foreach ($submitted as $s) {
                                       $user_school_level = isset($auth->school_level) ? strtolower(trim($auth->school_level)) : '';
                                       
                                       // Define grade arrays based on school level
-                                      $elementary_grades = ['Kindergarten','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6'];
+                                      $elementary_grades = ['Kindergarten','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','SPED'];
                                       $secondary_grades = ['Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
                                       $shs_grades = ['Grade 11','Grade 12'];
-                                      $all_grades = ['Kindergarten','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
+                                      $all_grades = ['Kindergarten','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','SPED','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
                                       
                                       // Filter grades based on school level
                                       if ($user_school_level === 'elementary') {
