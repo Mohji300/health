@@ -60,6 +60,15 @@
       <li class="nav-item mb-2 px-2">
         <h6 class="text-uppercase text-gray-400 small fw-semibold mb-2 main-sidebar-text">Quick Access</h6>
 
+        <!-- Enrollment -->
+         <?php if ($is_admin || $is_regular_user): ?>
+        <a href="<?php echo site_url('enrollment'); ?>"
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('enrollment', $current_uri) ? 'active' : ''; ?>">
+          <i class="fas fa-user-graduate"></i>
+          <span class="main-sidebar-text"> Enrollment</span>
+        </a>
+        <?php endif; ?>
+
         <!-- Show to Admin and Regular Users only -->
         <?php if ($is_admin || $is_regular_user): ?>
         <a href="<?php echo site_url('users'); ?>"
