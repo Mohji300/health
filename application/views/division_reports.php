@@ -40,7 +40,7 @@
                       </div>
                     </div>
                     <div class="col-auto">
-                      <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                      <i class="fas fa-clipboard-list fa-2x text-black"></i>
                     </div>
                   </div>
                 </div>
@@ -126,7 +126,7 @@
                       </div>
                     </div>
                     <div class="col-auto">
-                      <i class="fas fa-school fa-2x text-gray-300"></i>
+                      <i class="fas fa-school fa-2x text-black"></i>
                     </div>
                   </div>
                 </div>
@@ -197,7 +197,7 @@
                     </div>
                     <div class="col-md-3">
                       <label class="form-label fw-bold text-dark">
-                        <i class="fas fa-flag me-1"></i> Assessment Type
+                        <i class="fas fa-chart-line me-1"></i> Assessment Type
                       </label>
                       <select name="assessment_type" class="form-select" id="assessmentTypeFilter">
                         <?php foreach ($assessment_types as $value => $label): ?>
