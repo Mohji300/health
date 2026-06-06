@@ -7,16 +7,15 @@ $(document).ready(function() {
     // Store all schools data from config
     const allSchoolsData = window.DivisionDashboardConfig.all_schools_by_district || {};
     
-    $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
-    $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
-    $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
-    
-    function switchAssessmentType(type) {
-        var activeBtn = $('#switchTo' + type.charAt(0).toUpperCase() + type.slice(1));
-        var originalHtml = activeBtn.html();
-        $('.assessment-switcher .btn').prop('disabled', true);
-        activeBtn.html('<i class="fas fa-spinner fa-spin"></i> Switching...');
-        
+    // Assessment dropdown click handler (AJAX then redirect)
+    $(document).on('click', 'a.dropdown-item[data-type]', function(e) {
+        e.preventDefault();
+        var $item = $(this);
+        var type = $item.data('type');
+        if ($item.hasClass('active')) return;
+        var $btn = $('#assessmentDropdown');
+        if ($btn.length) $btn.prop('disabled', true);
+
         $.ajax({
             url: window.DivisionDashboardConfig.urls.set_assessment_type,
             method: 'POST',
@@ -33,18 +32,18 @@ $(document).ready(function() {
                     }
                     window.location.href = url;
                 } else {
-                    alert('Error: ' + response.message);
-                    activeBtn.html(originalHtml);
-                    $('.assessment-switcher .btn').prop('disabled', false);
+                    hideLoading();
+                    showNotification('Error updating filter: ' + response.message, 'error');
+                    if ($btn.length) $btn.prop('disabled', false);
                 }
             },
             error: function() {
-                alert('Error switching assessment type. Please try again.');
-                activeBtn.html(originalHtml);
-                $('.assessment-switcher .btn').prop('disabled', false);
+                hideLoading();
+                showNotification('Error connecting to server. Please try again.', 'error');
+                if ($btn.length) $btn.prop('disabled', false);
             }
         });
-    }
+    });
     
     // Handle school level dropdown selection
     $('.dropdown-item[data-level]').on('click', function(e) {
@@ -137,6 +136,7 @@ $(document).ready(function() {
     function updateTableVisibility(schoolLevel) {
         const elemTable = document.getElementById('elementaryTable');
         const secTable = document.getElementById('secondaryTable');
+        const shsTable = document.getElementById('shsTable');
         
         if (!elemTable || !secTable) return;
         
@@ -146,6 +146,19 @@ $(document).ready(function() {
             case 'integrated_secondary':
                 elemTable.classList.add('d-none');
                 secTable.classList.remove('d-none');
+                if (shsTable) shsTable.classList.add('d-none');
+                break;
+
+            case 'shs_only':
+                // If a dedicated SHS table exists in the view, show it; otherwise fall back to secondary table
+                if (shsTable) {
+                    if (elemTable) elemTable.classList.add('d-none');
+                    if (secTable) secTable.classList.add('d-none');
+                    shsTable.classList.remove('d-none');
+                } else {
+                    elemTable.classList.add('d-none');
+                    secTable.classList.remove('d-none');
+                }
                 break;
                 
             case 'elementary':
@@ -166,15 +179,17 @@ $(document).ready(function() {
     
     const elemTable = document.getElementById('elementaryTable');
     const secTable = document.getElementById('secondaryTable');
+    const shsTable = document.getElementById('shsTable');
     const btnPrint = document.getElementById('btnPrint');
 
     if (btnPrint) {
         btnPrint.addEventListener('click', () => {
             const win = window.open('', '_blank');
-            const isElemVisible = !elemTable.classList.contains('d-none');
-            const tableHtml = (isElemVisible ? elemTable : secTable).outerHTML;
+            const isElemVisible = elemTable && !elemTable.classList.contains('d-none');
+            const isShsVisible = shsTable && !shsTable.classList.contains('d-none');
+            const tableHtml = isElemVisible ? elemTable.outerHTML : (isShsVisible ? shsTable.outerHTML : secTable.outerHTML);
             const assessmentType = window.DivisionDashboardConfig.assessment_type_display || '';
-            const schoolLevelDisplay = window.DivisionDashboardConfig.school_level_display || '';
+            let schoolLevelDisplay = window.DivisionDashboardConfig.school_level_display || '';
             const reportDate = new Date().toLocaleDateString();
 
             try {
@@ -262,7 +277,17 @@ $(document).ready(function() {
             const titlePrefix = uName || sName ? (escHtml(uName || '') + (uName && sName ? '/' + escHtml(sName) : (!uName ? escHtml(sName) : ''))) : '';
             const headerTitle = titlePrefix ? (titlePrefix + ' Nutritional Status Report - ' + escHtml(assessmentType)) : ('Nutritional Status Report - ' + escHtml(sName || ''));
             const idSuffix = sId ? (' | ID: ' + escHtml(sId)) : '';
-            win.document.write('<div class="print-header"><h3>' + headerTitle + idSuffix + '</h3><p><strong>Assessment Type:</strong> ' + escHtml(assessmentType) + ' | <strong>School Level:</strong> ' + escHtml(schoolLevelDisplay) + ' | <strong>School ID:</strong> ' + escHtml(sId || '') + '</p></div>');
+                // Provide a default display label for SHS if not already set
+                if (!schoolLevelDisplay) {
+                    switch(window.DivisionDashboardConfig.school_level) {
+                        case 'shs_only': schoolLevelDisplay = 'Senior High School (11-12)'; break;
+                        case 'secondary': schoolLevelDisplay = 'Secondary Schools Only'; break;
+                        case 'elementary': schoolLevelDisplay = 'Elementary Schools Only'; break;
+                        default: schoolLevelDisplay = 'All Schools';
+                    }
+                }
+
+                win.document.write('<div class="print-header"><h3>' + headerTitle + idSuffix + '</h3><p><strong>Assessment Type:</strong> ' + escHtml(assessmentType) + ' | <strong>School Level:</strong> ' + escHtml(schoolLevelDisplay) + ' | <strong>School ID:</strong> ' + escHtml(sId || '') + '</p></div>');
             try {
                 const clone = (new DOMParser()).parseFromString(tableHtml, 'text/html').body.firstChild.cloneNode(true);
                 const hidden = document.createElement('div');

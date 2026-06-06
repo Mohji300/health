@@ -43,7 +43,7 @@
 
 .btn-outline-primary.active, .btn-outline-primary:active { background: #0d6efd !important; color: white !important; border-color: #0d6efd !important; }
         
-.assessment-badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; margin-left: 8px; }
+.assessment-badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; margin-left: 4px; }
 .badge-baseline { background: linear-gradient(45deg, #4e73df, #224abe); color: white; }
 .badge-midline { background: linear-gradient(45deg, #5ae1f6, #11c2dd); color: white; }
 .badge-endline { background: linear-gradient(45deg, #1cc88a, #13855c); color: white; }
@@ -72,3 +72,37 @@
     h3 { font-size: 10px; margin: 0 0 2px 0; font-weight: bold; }
     p { font-size: 7px; margin: 0 0 4px 0; }
 }
+
+/* Ensure assessment dropdown toggle text is black and doesn't change color when not hovered */
+.btn-outline-light.dropdown-toggle,
+.btn-outline-light.dropdown-toggle:focus,
+.btn-outline-light.dropdown-toggle:hover {
+    color: #000 !important;
+}
+.btn-outline-light.dropdown-toggle:hover { background-color: transparent !important; }
+
+/* Make assessment dropdown narrower so it doesn't touch the print button */
+#assessmentDropdown {
+    /* Match school level dropdown sizing: larger horizontal padding and min-width */
+    padding-top: 0.375rem !important;
+    padding-bottom: 0.375rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    font-size: 1rem !important;
+    min-width: 170px !important;
+    margin-right: 4px !important;
+}
+
+/* Tighter dropdown menu: reduce gap between toggle and menu, and reduce item padding */
+.btn-group .dropdown-menu {
+    margin-top: 0 !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    border-radius: 4px !important;
+}
+.btn-group .dropdown-menu .dropdown-header { padding: 6px 6px !important; }
+.btn-group .dropdown-menu .dropdown-item { padding: 6px 6px !important; }
+/* Make the count badges inside dropdown items sit closer to the label */
+.btn-group .dropdown-menu .dropdown-item .badge { margin-left: 4px !important; }

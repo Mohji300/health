@@ -18,9 +18,13 @@ class division_dashboard_model extends CI_Model {
         }
         
         // Define grade levels
-        $grades = ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6',
+        $grades = ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'SPED',
                   'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
-        
+
+        if ($school_level === 'shs_only') {
+        $grades = ['Grade 11', 'Grade 12'];
+        }
+
         $data = array();
         
         foreach ($grades as $grade) {
@@ -128,13 +132,21 @@ class division_dashboard_model extends CI_Model {
                 school_name NOT LIKE '%HighSchool%'
             )");
         }
+        elseif ($school_level === 'shs_only') {
+        $this->db->where("(
+            school_name LIKE '%Senior High%' OR 
+            school_name LIKE '%SHS%' OR
+            school_name NOT LIKE '%Elementary%' AND school_name NOT LIKE '%High School%' AND school_name NOT LIKE '%NHS%'
+        )");
+        }
+
         elseif ($school_level === 'integrated') {
             $this->db->where("school_name LIKE '%Integrated%'");
         }
         elseif ($school_level === 'integrated_elementary') {
             $this->db->where("school_name LIKE '%Integrated%'");
             if ($grade) {
-                $elementary_grades = ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+                $elementary_grades = ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'SPED'];
                 $this->db->where_in('grade_level', $elementary_grades);
             }
         }
@@ -143,6 +155,11 @@ class division_dashboard_model extends CI_Model {
             if ($grade) {
                 $secondary_grades = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
                 $this->db->where_in('grade_level', $secondary_grades);
+            }
+        }
+        elseif ($school_level === 'shs_only') {
+            if ($grade) {
+                $this->db->where_in('grade_level', ['Grade 11', 'Grade 12']);
             }
         }
     }

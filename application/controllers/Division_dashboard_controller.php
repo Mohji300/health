@@ -197,7 +197,7 @@ public function debug_school_assessments() {
                        ($this->session->userdata('division_school_level') ?: 'all');
         
         // Validate school level
-        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary'];
+        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary', 'shs_only'];
         if (!in_array($school_level, $valid_levels)) {
             $school_level = 'all';
         }
@@ -355,7 +355,7 @@ public function debug_school_assessments() {
         $school_level = $this->input->post('school_level', TRUE);
         
         // Validate school level
-        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary'];
+        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary', 'shs_only'];
         if (!in_array($school_level, $valid_levels)) {
             $this->output->set_content_type('application/json')->set_output(json_encode([
                 'success' => false,

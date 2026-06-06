@@ -38,20 +38,7 @@
                                 </p>
                             </div>
                             <div class="d-flex align-items-center">
-                                <div class="assessment-switcher">
-                                    <button class="btn btn-primary btn-sm <?php echo ($assessment_type == 'baseline') ? 'active' : ''; ?>" 
-                                            id="switchToBaseline">
-                                        <i class="fas fa-flag me-1"></i> Baseline
-                                    </button>
-                                    <button class="btn btn-info btn-sm <?php echo ($assessment_type == 'midline') ? 'active' : ''; ?>" 
-                                            id="switchToMidline">
-                                        <i class="fas fa-flag me-1"></i> Midline
-                                    </button>
-                                    <button class="btn btn-success btn-sm <?php echo ($assessment_type == 'endline') ? 'active' : ''; ?>" 
-                                            id="switchToEndline">
-                                        <i class="fas fa-flag-checkered me-1"></i> Endline
-                                    </button>
-                                </div>
+                                <!-- assessment dropdown moved to controls below -->
                             </div>
                         </div>
                     </div>
@@ -141,6 +128,7 @@
                                             </div>
                                         </div>
                                     <?php endforeach; ?>
+                                    
                                 <?php else: ?>
                                     <div class="col-12">
                                         <div class="text-center py-4 text-muted">
@@ -214,11 +202,12 @@
                             <span class="badge bg-secondary ms-2 school-level-badge">
                                 <i class="fas fa-filter me-1"></i>
                                 <?php 
-                                    if ($school_level === 'elementary') echo 'Elementary Only';
-                                    elseif ($school_level === 'secondary') echo 'Secondary Only';
-                                    elseif ($school_level === 'integrated') echo 'Integrated (All)';
-                                    elseif ($school_level === 'integrated_elementary') echo 'Integrated (Elementary)';
-                                    elseif ($school_level === 'integrated_secondary') echo 'Integrated (Secondary)';
+                                    if ($school_level === 'elementary') echo 'Elementary';
+                                    elseif ($school_level === 'secondary') echo 'Secondary';
+                                    elseif ($school_level === 'integrated') echo 'Integrated';
+                                    elseif ($school_level === 'integrated_elementary') echo 'Integrated Elementary';
+                                    elseif ($school_level === 'integrated_secondary') echo 'Integrated Secondary';
+                                    elseif ($school_level === 'shs_only') echo 'Stand Alone SHS';
                                     else echo ucfirst($school_level);
                                 ?>
                             </span>
@@ -232,38 +221,47 @@
                                     School Level: 
                                     <?php 
                                         $level = isset($school_level) ? $school_level : 'all';
-                                        if ($level == 'all') echo 'All Schools';
-                                        elseif ($level == 'elementary') echo 'Elementary (K-6)';
-                                        elseif ($level == 'secondary') echo 'Secondary (7-12)';
-                                        elseif ($level == 'integrated') echo 'Integrated (K-12)';
+                                        if ($level == 'elementary') echo 'Elementary ';
+                                        elseif ($level == 'secondary') echo 'Secondary ';
+                                        elseif ($level == 'integrated') echo 'Integrated ';
                                         elseif ($level == 'integrated_elementary') echo 'Integrated Elementary';
                                         elseif ($level == 'integrated_secondary') echo 'Integrated Secondary';
-                                        else echo 'All Schools';
+                                        elseif ($level == 'shs_only') echo 'Stand Alone SHS';
+                                        else echo 'Elementary';
                                     ?>
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="schoolLevelDropdown">
                                     <li><h6 class="dropdown-header">Filter by School Level</h6></li>
-                                    <li><a class="dropdown-item <?php echo ($level == 'all') ? 'active' : ''; ?>" href="#" data-level="all">
-                                        <i class="fas fa-school me-2"></i> All Schools
-                                    </a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item <?php echo ($level == 'elementary') ? 'active' : ''; ?>" href="#" data-level="elementary">
-                                        <i class="fas fa-child me-2"></i> Elementary Only <span class="badge bg-info ms-2">K-6</span>
+                                         Elementary 
                                     </a></li>
                                     <li><a class="dropdown-item <?php echo ($level == 'secondary') ? 'active' : ''; ?>" href="#" data-level="secondary">
-                                        <i class="fas fa-graduation-cap me-2"></i> Secondary Only <span class="badge bg-info ms-2">7-12</span>
+                                         Secondary 
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><h6 class="dropdown-header">Integrated Schools</h6></li>
-                                    <li><a class="dropdown-item <?php echo ($level == 'integrated') ? 'active' : ''; ?>" href="#" data-level="integrated">
-                                        <i class="fas fa-university me-2"></i> All Integrated <span class="badge bg-info ms-2">K-12</span>
-                                    </a></li>
                                     <li><a class="dropdown-item <?php echo ($level == 'integrated_elementary') ? 'active' : ''; ?>" href="#" data-level="integrated_elementary">
-                                        <i class="fas fa-child me-2"></i> Integrated Elementary <span class="badge bg-info ms-2">K-6</span>
+                                         Integrated Elementary
                                     </a></li>
                                     <li><a class="dropdown-item <?php echo ($level == 'integrated_secondary') ? 'active' : ''; ?>" href="#" data-level="integrated_secondary">
-                                        <i class="fas fa-graduation-cap me-2"></i> Integrated Secondary <span class="badge bg-info ms-2">7-12</span>
+                                         Integrated Secondary
                                     </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item <?php echo ($level == 'shs_only') ? 'active' : ''; ?>" href="#" data-level="shs_only">
+                                         Stand Alone SHS
+                                    </a></li>
+                                </ul>
+                            </div>
+                            <div class="btn-group me-2">
+                                <button class="btn btn-outline-primary dropdown-toggle" type="button" id="assessmentDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    <?php echo ucfirst($assessment_type); ?>
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="assessmentDropdown">
+                                    <li><h6 class="dropdown-header">Select Assessment</h6></li>
+                                    <li><a class="dropdown-item <?= ($assessment_type == 'baseline') ? 'active' : '' ?>" href="#" data-type="baseline">Baseline <span class="badge bg-info ms-2"><?= isset($baseline_count) ? $baseline_count : 0 ?></span></a></li>
+                                    <li><a class="dropdown-item <?= ($assessment_type == 'midline') ? 'active' : '' ?>" href="#" data-type="midline">Midline <span class="badge bg-info ms-2"><?= isset($midline_count) ? $midline_count : 0 ?></span></a></li>
+                                    <li><a class="dropdown-item <?= ($assessment_type == 'endline') ? 'active' : '' ?>" href="#" data-type="endline">Endline <span class="badge bg-info ms-2"><?= isset($endline_count) ? $endline_count : 0 ?></span></a></li>
                                 </ul>
                             </div>
                             <button id="btnPrint" class="btn btn-success">
@@ -299,7 +297,7 @@
                         <div id="tableContainer" class="table-responsive p-3">
                             
                             <!-- Elementary Table with Sex Breakdown -->
-                            <table id="elementaryTable" class="table table-bordered table-sm mb-0">
+                            <table id="elementaryTable" class="table table-bordered table-sm mb-0 <?php echo ($level === 'secondary' || $level === 'integrated_secondary' || $level === 'shs_only') ? 'd-none' : ''; ?>">
                                 <thead class="table-light">
                                     <tr>
                                         <th rowspan="3">Grade Level</th>
@@ -350,7 +348,8 @@
                                         'Grade 3' => ['m' => 'Grade 3_m', 'f' => 'Grade 3_f', 'total' => 'Grade 3_total'],
                                         'Grade 4' => ['m' => 'Grade 4_m', 'f' => 'Grade 4_f', 'total' => 'Grade 4_total'],
                                         'Grade 5' => ['m' => 'Grade 5_m', 'f' => 'Grade 5_f', 'total' => 'Grade 5_total'],
-                                        'Grade 6' => ['m' => 'Grade 6_m', 'f' => 'Grade 6_f', 'total' => 'Grade 6_total']
+                                        'Grade 6' => ['m' => 'Grade 6_m', 'f' => 'Grade 6_f', 'total' => 'Grade 6_total'],
+                                        'SPED' => ['m' => 'SPED_m', 'f' => 'SPED_f', 'total' => 'SPED_total']
                                     ];
                                     
                                     $secondaryGrades = [
@@ -358,6 +357,11 @@
                                         'Grade 8' => ['m' => 'Grade 8_m', 'f' => 'Grade 8_f', 'total' => 'Grade 8_total'],
                                         'Grade 9' => ['m' => 'Grade 9_m', 'f' => 'Grade 9_f', 'total' => 'Grade 9_total'],
                                         'Grade 10' => ['m' => 'Grade 10_m', 'f' => 'Grade 10_f', 'total' => 'Grade 10_total'],
+                                        'Grade 11' => ['m' => 'Grade 11_m', 'f' => 'Grade 11_f', 'total' => 'Grade 11_total'],
+                                        'Grade 12' => ['m' => 'Grade 12_m', 'f' => 'Grade 12_f', 'total' => 'Grade 12_total']
+                                    ];
+                                    
+                                    $shsGrades = [
                                         'Grade 11' => ['m' => 'Grade 11_m', 'f' => 'Grade 11_f', 'total' => 'Grade 11_total'],
                                         'Grade 12' => ['m' => 'Grade 12_m', 'f' => 'Grade 12_f', 'total' => 'Grade 12_total']
                                     ];
@@ -528,8 +532,210 @@
                                 </tbody>
                             </table>
 
+                            <!-- SHS-only Table (Grade 11-12) -->
+                            <table id="shsTable" class="table table-bordered table-sm mb-0 <?php echo ($level === 'shs_only') ? '' : 'd-none'; ?>">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th rowspan="3">Grade Level</th>
+                                        <th rowspan="3">Sex</th>
+                                        <th rowspan="3" class="text-center">Enrolment</th>
+                                        <th rowspan="3" class="text-center">Students Weighed</th>
+                                        <th colspan="10" class="text-center">BODY MASS INDEX (BMI)</th>
+                                        <th colspan="10" class="text-center">HEIGHT-FOR-AGE (HFA)</th>
+                                    </tr>
+                                    <tr class="table-secondary">
+                                        <th colspan="2" class="text-center th-red text-white">Severely Wasted</th>
+                                        <th colspan="2" class="text-center th-orange text-white">Wasted</th>
+                                        <th colspan="2" class="text-center th-green text-white">Normal BMI</th>
+                                        <th colspan="2" class="text-center th-orange text-white">Overweight</th>
+                                        <th colspan="2" class="text-center th-red text-white">Obese</th>
+                                        <th colspan="2" class="text-center th-red text-white">Severely Stunted</th>
+                                        <th colspan="2" class="text-center th-orange text-white">Stunted</th>
+                                        <th colspan="2" class="text-center th-green text-white">Normal HFA</th>
+                                        <th colspan="2" class="text-center th-green text-white">Tall</th>
+                                        <th colspan="2" class="text-center">Students Height</th>
+                                    </tr>
+                                    <tr class="table-secondary">
+                                        <?php for ($i=0;$i<10;$i++): ?>
+                                            <th class="text-center">Count</th>
+                                            <th class="text-center">%</th>
+                                        <?php endfor; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    $grade_count = 0;
+                                    foreach ($shsGrades as $grade_name => $sex_keys): 
+                                        $grade_count++;
+                                        $rowspan = 3;
+                                    ?>
+                                        <tr class="sex-row-male">
+                                            <?php if ($grade_count == 1 || true): ?>
+                                                <td class="fw-bold text-center align-middle" rowspan="<?= $rowspan ?>"><?= htmlspecialchars($grade_name) ?></td>
+                                            <?php endif; ?>
+                                            <td class="text-center">M</td>
+                                            <?php 
+                                                $enrol = $has_nutritional_data ? gdata_division($nutritional_data, $sex_keys['m'], 'enrolment') : 0;
+                                                $weighed = $has_nutritional_data ? gdata_division($nutritional_data, $sex_keys['m'], 'pupils_weighed') : 0;
+                                            ?>
+                                            <td class="text-center"><?= $enrol ?></td>
+                                            <td class="text-center"><?= $weighed ?></td>
+                                            <?php
+                                            if ($has_nutritional_data) {
+                                                foreach ($bmiFields as $bf) {
+                                                    $val = gdata_division($nutritional_data, $sex_keys['m'], $bf);
+                                                    echo '<td class="text-center">' . $val . '</td>';
+                                                    echo '<td class="text-center">' . pct_division($val, $enrol) . '</td>';
+                                                }
+                                                foreach ($hfaFields as $hf) {
+                                                    $val = gdata_division($nutritional_data, $sex_keys['m'], $hf);
+                                                    echo '<td class="text-center">' . $val . '</td>';
+                                                    echo '<td class="text-center">' . pct_division($val, $enrol) . '</td>';
+                                                }
+                                            } else {
+                                                for ($i=0; $i<10; $i++) { echo '<td class="text-center">0</td><td class="text-center">0%</td>'; }
+                                            }
+                                            ?>
+                                        </tr>
+                                        <tr class="sex-row-female">
+                                            <td class="text-center">F</td>
+                                            <?php 
+                                                $enrol = $has_nutritional_data ? gdata_division($nutritional_data, $sex_keys['f'], 'enrolment') : 0;
+                                                $weighed = $has_nutritional_data ? gdata_division($nutritional_data, $sex_keys['f'], 'pupils_weighed') : 0;
+                                            ?>
+                                            <td class="text-center"><?= $enrol ?></td>
+                                            <td class="text-center"><?= $weighed ?></td>
+                                            <?php
+                                            if ($has_nutritional_data) {
+                                                foreach ($bmiFields as $bf) {
+                                                    $val = gdata_division($nutritional_data, $sex_keys['f'], $bf);
+                                                    echo '<td class="text-center">' . $val . '</td>';
+                                                    echo '<td class="text-center">' . pct_division($val, $enrol) . '</td>';
+                                                }
+                                                foreach ($hfaFields as $hf) {
+                                                    $val = gdata_division($nutritional_data, $sex_keys['f'], $hf);
+                                                    echo '<td class="text-center">' . $val . '</td>';
+                                                    echo '<td class="text-center">' . pct_division($val, $enrol) . '</td>';
+                                                }
+                                            } else {
+                                                for ($i=0; $i<10; $i++) { echo '<td class="text-center">0</td><td class="text-center">0%</td>'; }
+                                            }
+                                            ?>
+                                        </tr>
+                                        <tr class="sex-row-total">
+                                            <td class="text-center fw-bold">Total</td>
+                                            <?php 
+                                                $enrol = $has_nutritional_data ? gdata_division($nutritional_data, $sex_keys['total'], 'enrolment') : 0;
+                                                $weighed = $has_nutritional_data ? gdata_division($nutritional_data, $sex_keys['total'], 'pupils_weighed') : 0;
+                                            ?>
+                                            <td class="text-center fw-bold"><?= $enrol ?></td>
+                                            <td class="text-center fw-bold"><?= $weighed ?></td>
+                                            <?php
+                                            if ($has_nutritional_data) {
+                                                foreach ($bmiFields as $bf) {
+                                                    $val = gdata_division($nutritional_data, $sex_keys['total'], $bf);
+                                                    echo '<td class="text-center fw-bold">' . $val . '</td>';
+                                                    echo '<td class="text-center fw-bold">' . pct_division($val, $enrol) . '</td>';
+                                                }
+                                                foreach ($hfaFields as $hf) {
+                                                    $val = gdata_division($nutritional_data, $sex_keys['total'], $hf);
+                                                    echo '<td class="text-center fw-bold">' . $val . '</td>';
+                                                    echo '<td class="text-center fw-bold">' . pct_division($val, $enrol) . '</td>';
+                                                }
+                                            } else {
+                                                for ($i=0; $i<10; $i++) { echo '<td class="text-center fw-bold">0</td><td class="text-center fw-bold">0%</td>'; }
+                                            }
+                                            ?>
+                                        </tr>
+                                        <?php if ($grade_count < count($shsGrades)): ?>
+                                            <tr class="grade-separator">
+                                                <td colspan="100" style="padding: 0;"><div style="border-top: 2px solid #dee2e6;"></div></td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                    
+                                    <?php
+                                        $shsEnrol_m = $shsWeighed_m = 0;
+                                        $shsEnrol_f = $shsWeighed_f = 0;
+                                        $shsEnrol_t = $shsWeighed_t = 0;
+                                        $shsCounts_m = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                        $shsCounts_f = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+                                        $shsCounts_t = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
+
+                                        if ($has_nutritional_data) {
+                                            foreach ($shsGrades as $grade_name => $sex_keys) {
+                                                // Male
+                                                $shsEnrol_m += gdata_division($nutritional_data, $sex_keys['m'], 'enrolment');
+                                                $shsWeighed_m += gdata_division($nutritional_data, $sex_keys['m'], 'pupils_weighed');
+                                                foreach ($shsCounts_m as $k => &$v) {
+                                                    $v += gdata_division($nutritional_data, $sex_keys['m'], $k);
+                                                }
+                                                unset($v);
+                                                // Female
+                                                $shsEnrol_f += gdata_division($nutritional_data, $sex_keys['f'], 'enrolment');
+                                                $shsWeighed_f += gdata_division($nutritional_data, $sex_keys['f'], 'pupils_weighed');
+                                                foreach ($shsCounts_f as $k => &$v) {
+                                                    $v += gdata_division($nutritional_data, $sex_keys['f'], $k);
+                                                }
+                                                unset($v);
+                                                // Total
+                                                $shsEnrol_t += gdata_division($nutritional_data, $sex_keys['total'], 'enrolment');
+                                                $shsWeighed_t += gdata_division($nutritional_data, $sex_keys['total'], 'pupils_weighed');
+                                                foreach ($shsCounts_t as $k => &$v) {
+                                                    $v += gdata_division($nutritional_data, $sex_keys['total'], $k);
+                                                }
+                                                unset($v);
+                                            }
+                                        }
+                                        ?>
+
+                                        <tr class="table-primary">
+                                            <td class="fw-bold text-center align-middle" rowspan="3">Grand Total (SHS)</td>
+                                            <td class="text-center">M</td>
+                                            <td class="text-center fw-bold"><?= $shsEnrol_m ?></td>
+                                            <td class="text-center fw-bold"><?= $shsWeighed_m ?></td>
+                                            <?php foreach ($bmiFields as $bf): $val = $shsCounts_m[$bf]; ?>
+                                                <td class="text-center fw-bold"><?= $val ?></td>
+                                                <td class="text-center fw-bold"><?= pct_division($val, $shsEnrol_m) ?></td>
+                                            <?php endforeach; ?>
+                                            <?php foreach ($hfaFields as $hf): $val = $shsCounts_m[$hf]; ?>
+                                                <td class="text-center fw-bold"><?= $val ?></td>
+                                                <td class="text-center fw-bold"><?= pct_division($val, $shsEnrol_m) ?></td>
+                                            <?php endforeach; ?>
+                                        </tr>
+
+                                        <tr class="table-primary">
+                                            <td class="text-center">F</td>
+                                            <td class="text-center fw-bold"><?= $shsEnrol_f ?></td>
+                                            <td class="text-center fw-bold"><?= $shsWeighed_f ?></td>
+                                            <?php foreach ($bmiFields as $bf): $val = $shsCounts_f[$bf]; ?>
+                                                <td class="text-center fw-bold"><?= $val ?></td>
+                                                <td class="text-center fw-bold"><?= pct_division($val, $shsEnrol_f) ?></td>
+                                            <?php endforeach; ?>
+                                            <?php foreach ($hfaFields as $hf): $val = $shsCounts_f[$hf]; ?>
+                                                <td class="text-center fw-bold"><?= $val ?></td>
+                                                <td class="text-center fw-bold"><?= pct_division($val, $shsEnrol_f) ?></td>
+                                            <?php endforeach; ?>
+                                        </tr>
+
+                                        <tr class="table-primary">
+                                            <td class="text-center fw-bold">Total</td>
+                                            <td class="text-center fw-bold"><?= $shsEnrol_t ?></td>
+                                            <td class="text-center fw-bold"><?= $shsWeighed_t ?></td>
+                                            <?php foreach ($bmiFields as $bf): $val = $shsCounts_t[$bf]; ?>
+                                                <td class="text-center fw-bold"><?= $val ?></td>
+                                                <td class="text-center fw-bold"><?= pct_division($val, $shsEnrol_t) ?></td>
+                                            <?php endforeach; ?>
+                                            <?php foreach ($hfaFields as $hf): $val = $shsCounts_t[$hf]; ?>
+                                                <td class="text-center fw-bold"><?= $val ?></td>
+                                                <td class="text-center fw-bold"><?= pct_division($val, $shsEnrol_t) ?></td>
+                                            <?php endforeach; ?>
+                                        </tr>
+                                </tbody>
+                            </table>
+
                             <!-- Secondary Table with Sex Breakdown -->
-                            <table id="secondaryTable" class="table table-bordered table-sm mb-0 d-none">
+                            <table id="secondaryTable" class="table table-bordered table-sm mb-0 <?php echo ($level === 'elementary' || $level === 'integrated_elementary') ? 'd-none' : ''; ?>">
                                 <thead class="table-light">
                                     <tr>
                                         <th rowspan="3">Grade Level</th>
