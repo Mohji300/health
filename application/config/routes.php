@@ -227,6 +227,14 @@ $route['sbfp_beneficiaries/set_school_level'] = 'sbfp_beneficiaries_controller/s
 // ========================
 $route['shd_reports'] = 'shd_reports_controller/index';
 
+// ========================
+// ENROLLMENT
+// ========================
+$route['enrollment'] = 'enrollment_controller/index';
+$route['enrollment/store'] = 'enrollment_controller/store';
+$route['enrollment/edit/(:num)'] = 'enrollment_controller/edit/$1';
+$route['enrollment/update/(:num)'] = 'enrollment_controller/update/$1';
+$route['enrollment/delete/(:num)'] = 'enrollment_controller/delete/$1';
 
 // ========================
 // ARCHIVE ROUTES
