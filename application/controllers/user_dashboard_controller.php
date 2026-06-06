@@ -67,7 +67,7 @@ class User_dashboard_controller extends CI_Controller {
         $data = [];
         $data['assessment_type'] = $assessment_type;
         $data['school_level'] = $school_level;
-        $data['user_actual_school_level'] = $user_school_level; // Pass this for debugging
+        $data['user_actual_school_level'] = $user_school_level;
         
         // Set display mode based on school level
         $display_mode = 'normal'; // default
@@ -118,9 +118,8 @@ class User_dashboard_controller extends CI_Controller {
             
             // Check if school_level exists and is not null
             if (isset($row->school_level) && !empty($row->school_level)) {
-                $school_level = trim($row->school_level); // Don't convert to lowercase yet
-                
-                // Map database values to our expected values - PRESERVE THE EXACT FORMAT
+                $school_level = trim($row->school_level);
+
                 if (strtolower($school_level) === 'elementary') {
                     return 'elementary';
                 } elseif (strtolower($school_level) === 'secondary') {
@@ -152,8 +151,8 @@ class User_dashboard_controller extends CI_Controller {
         
         $school_level = $this->input->post('school_level', TRUE);
         
-        // Update validation for new levels - include "Stand Alone SHS"
-        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary', 'Stand Alone SHS'];
+        // Update validation for new levels
+        $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary', 'shs_only', 'stand alone shs'];
         if (!in_array($school_level, $valid_levels)) {
             $this->output->set_content_type('application/json')->set_output(json_encode([
                 'success' => false,
@@ -168,6 +167,35 @@ class User_dashboard_controller extends CI_Controller {
             'success' => true,
             'message' => 'School level filter updated',
             'redirect' => site_url('users')
+        ]));
+    }
+
+    /**
+     * AJAX: Set assessment type in session
+     */
+    public function set_assessment_type()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+            return;
+        }
+
+        $assessment_type = $this->input->post('assessment_type', TRUE);
+
+        if (!in_array($assessment_type, ['baseline', 'midline', 'endline'])) {
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'Invalid assessment type'
+            ]));
+            return;
+        }
+
+        // Save to session using the same key used elsewhere
+        $this->session->set_userdata('assessment_type', $assessment_type);
+
+        $this->output->set_content_type('application/json')->set_output(json_encode([
+            'success' => true,
+            'message' => 'Assessment type set to ' . $assessment_type
         ]));
     }
     

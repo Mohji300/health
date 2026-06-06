@@ -81,24 +81,8 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-center">
                 <div>
-                  <h1 class="h2 font-weight-bold mb-2">Nutritional Status Dashboard</h1>
+                  <h1 class="h2 font-weight-bold mb-2">CONSOLIDATED DATA OF NUTRITIONAL ASSESSMENTS IN SCHOOLS</h1>
                   <p class="mb-0 opacity-8"><?php if (!empty($selected_school)) { echo 'Showing nutritional data for ' . htmlspecialchars($selected_school); } else { echo 'Comprehensive overview of student nutritional assessments and health metrics'; } ?></p>
-                </div>
-                <div class="d-flex align-items-center">
-                  <div class="assessment-switcher">
-                      <button class="btn btn-primary btn-sm <?php echo $is_baseline ? 'active' : ''; ?>" 
-                              id="switchToBaseline">
-                          <i class="fas fa-flag me-1"></i> Baseline
-                      </button>
-                      <button class="btn btn-info btn-sm <?php echo $is_midline ? 'active' : ''; ?>" 
-                              id="switchToMidline">
-                          <i class="fas fa-flag me-1"></i> Midline
-                      </button>
-                      <button class="btn btn-success btn-sm <?php echo $is_endline ? 'active' : ''; ?>" 
-                              id="switchToEndline">
-                          <i class="fas fa-flag-checkered me-1"></i> Endline
-                      </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -216,6 +200,7 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
                   </span>
                   <?php endif; ?>
               </h6>
+              <!-- assessment dropdown moved to the right-side controls -->
               <div class="no-print d-flex align-items-center">
                   <!-- School Level Filter Buttons - Only show if in normal mode -->
                   <?php if ($display_mode === 'normal'): ?>
@@ -254,9 +239,22 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
                   </div>
                   <?php endif; ?>
                   
-                  <button id="btnPrint" class="btn btn-success">
+                    <div class="btn-group me-2">
+                      <button class="btn btn-outline-primary dropdown-toggle" type="button" id="assessmentDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-chart-line me-1"></i>
+                        <?php echo ucfirst($assessment_type); ?>
+                      </button>
+                      <ul class="dropdown-menu" aria-labelledby="assessmentDropdown">
+                        <li><h6 class="dropdown-header">Select Assessment</h6></li>
+                        <li><a class="dropdown-item <?= ($assessment_type == 'baseline') ? 'active' : '' ?>" href="#" data-type="baseline">Baseline</a></li>
+                        <li><a class="dropdown-item <?= ($assessment_type == 'midline') ? 'active' : '' ?>" href="#" data-type="midline">Midline</a></li>
+                        <li><a class="dropdown-item <?= ($assessment_type == 'endline') ? 'active' : '' ?>" href="#" data-type="endline">Endline</a></li>
+                      </ul>
+                    </div>
+
+                    <button id="btnPrint" class="btn btn-success">
                       <i class="fas fa-print me-1"></i> Print Report
-                  </button>
+                    </button>
               </div>
           </div>
 
@@ -766,8 +764,9 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
     <script>
     window.user_dashboard_controllerConfig = window.user_dashboard_controllerConfig || {};
     window.user_dashboard_controllerConfig.urls = {
-        set_school_level: '<?= site_url("users/set_school_level"); ?>',
-        base: '<?= site_url("users"); ?>'
+      set_school_level: '<?= site_url("users/set_school_level"); ?>',
+      set_assessment_type: '<?= site_url("users/set_assessment_type"); ?>',
+      base: '<?= site_url("users"); ?>'
     };
     window.user_dashboard_controllerConfig.school_level = '<?= isset($school_level) ? addslashes($school_level) : ""; ?>';
     window.user_dashboard_controllerConfig.user_actual_school_level = '<?= isset($user_actual_school_level) ? addslashes($user_actual_school_level) : ""; ?>';

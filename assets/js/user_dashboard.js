@@ -1,7 +1,4 @@
 $(document).ready(function() {
-    $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
-    $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
-    $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
     
     // Check if config exists
     if (!window.user_dashboard_controllerConfig) {
@@ -110,34 +107,45 @@ $(document).ready(function() {
         }
     }
     
-    function switchAssessmentType(type) {
-        var activeBtn = type === 'baseline' ? $('#switchToBaseline') : 
-                    (type === 'midline' ? $('#switchToMidline') : $('#switchToEndline'));
+    // Assessment dropdown click handler
+    $(document).on('click', 'a.dropdown-item[data-type]', function(e) {
+        e.preventDefault();
+        var $item = $(this);
+        var newType = $item.data('type');
+        var $btn = $('#assessmentDropdown');
+        if ($item.hasClass('active')) return;
+        $btn.prop('disabled', true);
 
-        activeBtn.html('<i class="fas fa-spinner fa-spin"></i> Switching...');
-        $('.assessment-switcher .btn').prop('disabled', true);
-
-        var currentSchoolLevel = window.user_dashboard_controllerConfig.school_level || 'all';
-
-        var url = window.user_dashboard_controllerConfig.urls.base + '?assessment_type=' + type;
-
-        if (currentSchoolLevel && currentSchoolLevel !== 'all') {
-            url += '&school_level=' + encodeURIComponent(currentSchoolLevel);
-        }
-        
-        window.location.href = url;
-    }
+        $.ajax({
+            url: window.user_dashboard_controllerConfig.urls.set_assessment_type,
+            method: 'POST',
+            data: { assessment_type: newType },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + response.message);
+                    $btn.prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('Error switching assessment type. Please try again.');
+                $btn.prop('disabled', false);
+            }
+        });
+    });
 
     function setSchoolLevelFilter(level) {
         // Show loading indicators
-        $('#btnIntegratedElementary, #btnIntegratedSecondary').each(function() {
+        $('#btnIntegratedElementary, #btnIntegratedSecondary, #btnSHSOnly').each(function() {
             var $btn = $(this);
             if ($btn.length) {
                 $btn.html('<i class="fas fa-spinner fa-spin"></i>');
             }
         });
 
-        $('#btnIntegratedElementary, #btnIntegratedSecondary').prop('disabled', true);
+        $('#btnIntegratedElementary, #btnIntegratedSecondary, #btnSHSOnly').prop('disabled', true);
         
         $.ajax({
             url: window.user_dashboard_controllerConfig.urls.set_school_level,
@@ -162,8 +170,9 @@ $(document).ready(function() {
     function resetIntegratedButtonStates() {
         $('#btnIntegratedElementary').html('<i class="fas fa-child me-1"></i> Elementary <span class="badge bg-info ms-1">K-6</span>');
         $('#btnIntegratedSecondary').html('<i class="fas fa-graduation-cap me-1"></i> Secondary <span class="badge bg-info ms-1">7-12</span>');
-        
-        $('#btnIntegratedElementary, #btnIntegratedSecondary').prop('disabled', false);
+        $('#btnSHSOnly').html('<i class="fas fa-graduation-cap me-1"></i> SHS Only <span class="badge bg-info ms-1">11-12</span>');
+
+        $('#btnIntegratedElementary, #btnIntegratedSecondary, #btnSHSOnly').prop('disabled', false);
     }
     
     // Print functionality

@@ -99,11 +99,7 @@ class user_model extends CI_Model {
         return $this->db->trans_status();
     }
 
-    /**
-     * Create a new user record.
-     * Expects an associative array of column => value.
-     * Also hashes the password if 'password' key exists.
-     */
+
     public function create_user($data)
     {
         if (empty($data) || !is_array($data)) {
@@ -112,7 +108,6 @@ class user_model extends CI_Model {
 
         // Hash the password if it exists and is not already hashed
         if (isset($data['password']) && !empty($data['password'])) {
-            // Check if password is not already hashed (simple check)
             if (strlen($data['password']) < 60 || strpos($data['password'], '$2y$') !== 0) {
                 $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
             }
@@ -132,10 +127,7 @@ class user_model extends CI_Model {
         return $this->db->insert_id();
     }
 
-    /**
-     * Get a single user row by email.
-     * Returns the user object or null if not found.
-     */
+
     public function get_by_email($email)
     {
         if (empty($email)) {
@@ -149,7 +141,7 @@ class user_model extends CI_Model {
     }
     
     /**
-     * Alias for get_by_email - for compatibility with Excel controller
+     * Alias for get_by_email
      */
     public function get_user_by_email($email)
     {
@@ -200,7 +192,7 @@ class user_model extends CI_Model {
     }
 
     /**
-     * Get a single user by ID (alias for get_user_by_id for compatibility)
+     * Get a single user by
      */
     public function get_user($user_id) {
         return $this->get_user_by_id($user_id);
@@ -220,10 +212,6 @@ class user_model extends CI_Model {
         return $this->db->update($this->table, $data);
     }
 
-    /**
-     * Optional server-driven bulk update.
-     * Example implementation: ensure users with empty/null role are set to 'user'.
-     */
     public function update_all_roles()
     {
         // Set empty or NULL roles to 'user' as a safe default.
@@ -235,6 +223,16 @@ class user_model extends CI_Model {
 
         // Return true if query ran (even if 0 rows affected).
         return ($this->db->affected_rows() >= 0);
+    }
+
+    public function reset_all_school_info_completed()
+    {
+        $data = [
+            'school_info_completed' => 0,
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        $this->db->where_not_in('role', ['super_admin', 'admin', 'district', 'division']);
+        return $this->db->update('users', $data);
     }
 
     /**
