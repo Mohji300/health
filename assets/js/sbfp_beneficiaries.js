@@ -20,10 +20,6 @@ $(document).ready(function() {
     } else {
         $('#beneficiariesTable').addClass('table-striped');
     }
-
-    $('#switchToBaseline').click(function() { switchAssessmentType('baseline'); });
-    $('#switchToMidline').click(function() { switchAssessmentType('midline'); });
-    $('#switchToEndline').click(function() { switchAssessmentType('endline'); });
     
     // Apply Filters button click
     $('#applyFiltersBtn').click(function() {
@@ -33,6 +29,26 @@ $(document).ready(function() {
     // Clear Filters button click
     $('#clearFiltersBtn').click(function() {
         clearAllFilters();
+    });
+
+    $('#assessmentTypeSelect').on('change', function() {
+        var newType = $(this).val();
+        $.ajax({
+            url: window.SbfpBeneficiariesConfig.urls.set_assessment_type,
+            method: 'POST',
+            data: { assessment_type: newType },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Error switching assessment type. Please try again.');
+            }
+        });
     });
     
     // Grade level filter change

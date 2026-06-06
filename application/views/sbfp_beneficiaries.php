@@ -38,25 +38,6 @@ $school_year = isset($school_year) ? $school_year : '';
                   <h1 class="h2 font-weight-bold mb-2">SBFP Beneficiaries Master List<?php echo !empty($selected_school) ? ' — ' . htmlspecialchars($selected_school) : ''; ?></h1>
                   <p class="mb-0 opacity-8">School-Based Feeding Program (SY <?php echo $school_year; ?>) - <?php echo ucfirst($assessment_type); ?> Data</p>
                 </div>
-                <div class="d-flex align-items-center">
-                  <div class="assessment-switcher">
-                      <button class="btn btn-primary btn-sm <?php echo $is_baseline ? 'active' : ''; ?>" 
-                              id="switchToBaseline">
-                          <i class="fas fa-flag me-1"></i> Baseline
-                          <span class="badge bg-light text-primary ms-1"><?= $baseline_count ?></span>
-                      </button>
-                      <button class="btn btn-info btn-sm <?php echo $is_midline ? 'active' : ''; ?>" 
-                              id="switchToMidline">
-                          <i class="fas fa-flag me-1"></i> Midline
-                          <span class="badge bg-light text-info ms-1"><?= $midline_count ?></span>
-                      </button>
-                      <button class="btn btn-success btn-sm <?php echo $is_endline ? 'active' : ''; ?>" 
-                              id="switchToEndline">
-                          <i class="fas fa-flag-checkered me-1"></i> Endline
-                          <span class="badge bg-light text-success ms-1"><?= $endline_count ?></span>
-                      </button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -164,68 +145,88 @@ $school_year = isset($school_year) ? $school_year : '';
                       <i class="fas fa-filter me-2"></i>Filters
                   </h6>
               </div>
-              <div class="card-body">
-                  <div class="row">
-                      <div class="col-md-4 mb-3">
-                          <label class="form-label fw-bold">
-                              <i class="fas fa-graduation-cap me-1"></i>Grade Level
-                          </label>
-                          <select id="gradeLevelFilter" class="form-select">
-                              <option value="">All Grade Levels</option>
-                              <?php foreach ($available_grade_levels as $grade): ?>
-                                  <option value="<?= htmlspecialchars($grade['grade_level']) ?>" 
-                                      <?= ($grade_level_filter == $grade['grade_level']) ? 'selected' : '' ?>>
-                                      <?= htmlspecialchars($grade['grade_level']) ?>
-                                  </option>
-                              <?php endforeach; ?>
-                          </select>
-                      </div>
-                      
-                      <!-- School Name Filter - For district, division, and admin roles -->
-                      <?php if (in_array($user_role, ['district', 'division', 'admin'])): ?>
-                      <div class="col-md-4 mb-3">
-                          <label class="form-label fw-bold">
-                              <i class="fas fa-school me-1"></i>School Name
-                          </label>
-                          <select id="schoolNameFilter" class="form-select">
-                              <option value="">All Schools</option>
-                              <?php foreach ($available_schools as $school): ?>
-                                  <option value="<?= htmlspecialchars($school['school_name']) ?>" 
-                                      <?= ($school_name_filter == $school['school_name']) ? 'selected' : '' ?>>
-                                      <?= htmlspecialchars($school['school_name']) ?>
-                                  </option>
-                              <?php endforeach; ?>
-                          </select>
-                      </div>
-                      <?php endif; ?>
-                      
-                      <!-- District Filter - Only for division and admin roles -->
-                      <?php if (in_array($user_role, ['division', 'admin'])): ?>
-                      <div class="col-md-4 mb-3">
-                          <label class="form-label fw-bold">
-                              <i class="fas fa-map-marker-alt me-1"></i>District
-                          </label>
-                          <select id="districtFilter" class="form-select">
-                              <option value="">All Districts</option>
-                              <?php foreach ($available_districts as $district_item): ?>
-                                  <option value="<?= htmlspecialchars($district_item['school_district']) ?>" 
-                                      <?= ($district_filter == $district_item['school_district']) ? 'selected' : '' ?>>
-                                      <?= htmlspecialchars($district_item['school_district']) ?>
-                                  </option>
-                              <?php endforeach; ?>
-                          </select>
-                      </div>
-                      <?php endif; ?>
-                      
-                      <!-- Filter Buttons -->
-                      <div class="col-md-12 mt-2">
-                          <button type="button" id="applyFiltersBtn" class="btn btn-primary btn-sm">
-                              <i class="fas fa-search me-1"></i> Apply Filters
-                          </button>
-                          <button type="button" id="clearFiltersBtn" class="btn btn-secondary btn-sm">
-                              <i class="fas fa-eraser me-1"></i> Clear Filters
-                          </button>
-                      </div>
+            <div class="card-body">
+              <div class="row">
+                  <!-- Assessment Type Column -->
+                  <div class="col-md-4 mb-3">
+                      <label class="form-label fw-bold">
+                          <i class="fas fa-chart-line me-1"></i> 
+                          Assessment Type
+                      </label>
+                      <select id="assessmentTypeSelect" class="form-select">
+                          <option value="baseline" <?= $is_baseline ? 'selected' : '' ?>>
+                              Baseline
+                          </option>
+                          <option value="midline" <?= $is_midline ? 'selected' : '' ?>>
+                              Midline
+                          </option>
+                          <option value="endline" <?= $is_endline ? 'selected' : '' ?>>
+                              Endline
+                          </option>
+                      </select>
+                  </div>
+
+                  <!-- Grade Level Filter -->
+                  <div class="col-md-4 mb-3">
+                      <label class="form-label fw-bold">
+                          <i class="fas fa-graduation-cap me-1"></i>Grade Level
+                      </label>
+                      <select id="gradeLevelFilter" class="form-select">
+                          <option value="">All Grade Levels</option>
+                          <?php foreach ($available_grade_levels as $grade): ?>
+                              <option value="<?= htmlspecialchars($grade['grade_level']) ?>" 
+                                  <?= ($grade_level_filter == $grade['grade_level']) ? 'selected' : '' ?>>
+                                  <?= htmlspecialchars($grade['grade_level']) ?>
+                              </option>
+                          <?php endforeach; ?>
+                      </select>
+                  </div>
+
+                  <!-- School Name Filter (for district/division/admin) -->
+                  <?php if (in_array($user_role, ['district', 'division', 'admin'])): ?>
+                  <div class="col-md-4 mb-3">
+                      <label class="form-label fw-bold">
+                          <i class="fas fa-school me-1"></i>School Name
+                      </label>
+                      <select id="schoolNameFilter" class="form-select">
+                          <option value="">All Schools</option>
+                          <?php foreach ($available_schools as $school): ?>
+                              <option value="<?= htmlspecialchars($school['school_name']) ?>" 
+                                  <?= ($school_name_filter == $school['school_name']) ? 'selected' : '' ?>>
+                                  <?= htmlspecialchars($school['school_name']) ?>
+                              </option>
+                          <?php endforeach; ?>
+                      </select>
+                  </div>
+                  <?php endif; ?>
+
+                  <!-- District Filter (for division/admin) -->
+                  <?php if (in_array($user_role, ['division', 'admin'])): ?>
+                  <div class="col-md-4 mb-3">
+                      <label class="form-label fw-bold">
+                          <i class="fas fa-map-marker-alt me-1"></i>District
+                      </label>
+                      <select id="districtFilter" class="form-select">
+                          <option value="">All Districts</option>
+                          <?php foreach ($available_districts as $district_item): ?>
+                              <option value="<?= htmlspecialchars($district_item['school_district']) ?>" 
+                                  <?= ($district_filter == $district_item['school_district']) ? 'selected' : '' ?>>
+                                  <?= htmlspecialchars($district_item['school_district']) ?>
+                              </option>
+                          <?php endforeach; ?>
+                      </select>
+                  </div>
+                  <?php endif; ?>
+
+                  <!-- Filter Buttons -->
+                  <div class="col-md-12 mt-2">
+                      <button type="button" id="applyFiltersBtn" class="btn btn-primary btn-sm">
+                          <i class="fas fa-search me-1"></i> Apply Filters
+                      </button>
+                      <button type="button" id="clearFiltersBtn" class="btn btn-secondary btn-sm">
+                          <i class="fas fa-eraser me-1"></i> Clear Filters
+                      </button>
+                  </div>
                   </div>
                   
                   <!-- Active Filters Display -->
@@ -253,7 +254,7 @@ $school_year = isset($school_year) ? $school_year : '';
                   </div>
                   <?php endif; ?>
               </div>
-          </div>
+            </div>
 
           <!-- Main Content Card -->
           <div class="card shadow">

@@ -509,7 +509,6 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         
     /**
      * Export to Excel using template file
-     * With proper template usage and Arial font
      */
     public function export_excel() {
         error_reporting(E_ALL);
@@ -626,7 +625,6 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             
             log_message('debug', 'Beneficiaries found for export: ' . count($beneficiaries));
 
-            // Accept local overrides posted from client (JSON of structure: { "<id>": { "parent_consent_milk": "Yes", ... }, ... })
             $localFlags = [];
             $localFlagsRaw = $this->input->post('local_flags');
             if (!empty($localFlagsRaw)) {
