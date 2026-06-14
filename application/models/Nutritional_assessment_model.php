@@ -14,12 +14,15 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get submitted assessments summary
      */
-    public function get_submitted_summary($legislative_district, $school_district)
+    public function get_submitted_summary($legislative_district, $school_district, $school_id = null)
     {
         $this->db->select('grade_level as grade, section, year as school_year, assessment_type, COUNT(*) as total_students, MAX(date_of_weighing) as last_updated');
         $this->db->from('nutritional_assessments');
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
+        if ($school_id !== null) {
+            $this->db->where('school_id', $school_id);
+        }
         $this->db->where('is_deleted', FALSE);
         $this->db->group_by(['grade_level', 'section', 'year', 'assessment_type']);
         $this->db->order_by('grade_level', 'ASC');
@@ -32,10 +35,11 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Delete assessment (soft delete)
      */
-    public function delete_assessment($legislative_district, $school_district, $grade, $section, $school_year = null, $assessment_type = null)
+    public function delete_assessment($legislative_district, $school_district, $school_id, $grade, $section, $school_year = null, $assessment_type = null)
     {
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
+        $this->db->where('school_id', $school_id);
         $this->db->where('grade_level', $grade);
         $this->db->where('section', $section);
         $this->db->where('is_deleted', FALSE);
@@ -134,6 +138,13 @@ class nutritional_assessment_model extends CI_Model {
         $this->db->where('is_deleted', FALSE);
         $this->db->order_by('created_at', 'DESC');
         return $this->db->get($this->table)->result();
+    }
+
+    // delete all assessments 
+    public function delete_all_assessments()
+    {
+        // Truncate is faster and resets auto‑increment
+        return $this->db->truncate($this->table);
     }
 
     /**

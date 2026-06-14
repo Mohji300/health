@@ -211,31 +211,39 @@ class Nutritional_upload extends CI_Controller {
      */
     private function extractWeighingDate($worksheet) {
         try {
-            $weighingDateCell = $worksheet->getCell('C3');
-            $weighingDateValue = $weighingDateCell->getValue();
+            // Try C3 first, then C4 if empty
+            $weighingDateValue = $worksheet->getCell('C3')->getValue();
+            if (empty($weighingDateValue)) {
+                $weighingDateValue = $worksheet->getCell('C4')->getValue();
+            }
             
+            if (empty($weighingDateValue)) {
+                throw new Exception('No date found in C3 or C4');
+            }
+            
+            // Convert to a valid Y-m-d date
             if (is_numeric($weighingDateValue)) {
-                // Excel serial date
                 $this->weighing_date = $this->formatExcelSerialDate($weighingDateValue);
             } else {
-                $this->weighing_date = $this->formatExcelDate($weighingDateValue);
+                // Handle string like "2026-02-16 00:00:00" -> extract only the date part
+                $dateString = trim($weighingDateValue);
+                // If it contains a space, take only the first part (YYYY-MM-DD)
+                if (strpos($dateString, ' ') !== false) {
+                    $dateString = substr($dateString, 0, strpos($dateString, ' '));
+                }
+                $this->weighing_date = date('Y-m-d', strtotime($dateString));
             }
             
-            // Validate the date is reasonable (not the placeholder 2002 date)
+            // Validate the date is reasonable (not the 2002 placeholder)
             if (!empty($this->weighing_date)) {
                 $dateObj = new DateTime($this->weighing_date);
-                $minDate = new DateTime('2020-01-01'); // No assessments before 2020
+                $minDate = new DateTime('2020-01-01');
                 $maxDate = new DateTime('+1 year');
-                
                 if ($dateObj < $minDate || $dateObj > $maxDate) {
-                    // Date is invalid (like the 2002 placeholder)
-                    log_message('info', 'Invalid weighing date found: ' . $this->weighing_date . '. Using current date instead.');
                     $this->weighing_date = date('Y-m-d');
+                    log_message('info', 'Weighing date out of range, using today.');
                 }
-            }
-            
-            if (empty($this->weighing_date)) {
-                // Default to today if no date found
+            } else {
                 $this->weighing_date = date('Y-m-d');
             }
         } catch (Exception $e) {

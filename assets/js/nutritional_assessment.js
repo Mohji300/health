@@ -6,7 +6,8 @@
     let uploadLoadingModal = null;
     let confirmModal = null;
     let submitConfirmModal = null;
-    let editingIndex = -1; // Track which student is being edited
+    let editingIndex = -1;
+    let currentUploadController = null;
 
     // Track if upload is in progress to prevent concurrent uploads
     let isUploading = false;
@@ -59,16 +60,12 @@
         }
 
         const heightSq = (height * height).toFixed(4);
-        const bmi = (weight / (height * height)).toFixed(2);
+        // Use 2 decimal places to match server rounding
+        const bmi = parseFloat((weight / (height * height)).toFixed(2));
 
-        let nutritionalStatus = 'NORMAL';
-        if (bmi < 16) nutritionalStatus = 'SEVERELY WASTED';
-        else if (bmi < 18.5) nutritionalStatus = 'WASTED';
-        else if (bmi < 25) nutritionalStatus = 'NORMAL';
-        else if (bmi < 30) nutritionalStatus = 'OVERWEIGHT';
-        else nutritionalStatus = 'OBESE';
-
-        const sbfpBeneficiary = (nutritionalStatus === 'SEVERELY WASTED' || nutritionalStatus === 'WASTED') ? 'YES' : 'NO';
+        // Do not compute WHO classification on client; show PENDING until server confirms
+        let nutritionalStatus = 'PENDING';
+        const sbfpBeneficiary = 'NO';
 
         return {
             name: name.trim(), 
@@ -132,21 +129,64 @@
         student.first_name = firstName;
         student.middle_initial = middleInitial;
         student.last_name = lastName;
-        student.date = date;
-        
+
+        const currentDate = document.getElementById('date').value;
+        if (currentDate) {
+            localStorage.setItem('last_weighing_date', currentDate);
+        }
+
         if (editingIndex >= 0 && editingIndex < students.length) {
             students[editingIndex] = student;
             saveStudents();
             cancelEdit();
             showAlert('Success', 'Student record updated successfully!');
+            fetchClassificationForStudent(editingIndex);
         } else {
             students.push(student);
             saveStudents();
             clearForm();
             showAlert('Success', 'Student added to the list!');
+            fetchClassificationForStudent(students.length - 1);
         }
-        
         updateUI();
+    }
+
+    // Request server-side classification for a student and update the local record
+    function fetchClassificationForStudent(index) {
+        if (index < 0 || index >= students.length) return;
+        const student = students[index];
+        const classifyUrl = window.nutritionalassessmentConfig?.urls?.classify;
+        if (!classifyUrl) return;
+
+        const payload = new URLSearchParams();
+        payload.append('birthday', student.birthday || '');
+        payload.append('weight', student.weight || '');
+        payload.append('height', student.height || '');
+        payload.append('sex', student.sex || '');
+        payload.append('date', student.date || '');
+
+        fetch(classifyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: payload.toString()
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.success) {
+                // Update local student with authoritative values
+                student.bmi = parseFloat(data.bmi);
+                student.nutritionalStatus = (data.nutritional_status || '').toUpperCase();
+                if (data.height_for_age) student.heightForAge = data.height_for_age.toUpperCase();
+                saveStudents();
+                updateUI();
+            } else {
+                // Keep PENDING or show an inline note if needed
+                console.warn('Classification failed for student', index, data.message || data);
+            }
+        })
+        .catch(err => {
+            console.error('Classification request failed', err);
+        });
     }
 
     function editStudent(index) {
@@ -318,7 +358,6 @@
         document.getElementById('weight').value = ''; 
         document.getElementById('height').value = ''; 
         document.getElementById('sex').value = ''; 
-        document.getElementById('date').value = '';
         document.getElementById('assessmentForm')?.classList.remove('was-validated'); 
     }
 
@@ -470,20 +509,20 @@
                 return;
             }
         }
-        
+
         try {
             loadingModal.show();
         } catch (e) {}
-        
+
         try {
             const urlParams = new URLSearchParams(window.location.search);
             let assessmentType = urlParams.get('assessment_type') || 'baseline';
-            const validTypes = ['baseline','midline','endline']; 
+            const validTypes = ['baseline', 'midline', 'endline'];
             if (!validTypes.includes(assessmentType)) assessmentType = 'baseline';
-            
+
             const studentsToSubmit = students.map(student => {
                 const studentData = {};
-                
+
                 let fullName = '';
                 if (student.first_name) {
                     fullName = student.first_name;
@@ -494,7 +533,7 @@
                 } else if (student.name) {
                     fullName = student.name;
                 }
-                
+
                 studentData.name = fullName;
                 studentData.first_name = student.first_name || '';
                 studentData.middle_initial = student.middle_initial || '';
@@ -511,70 +550,112 @@
                 studentData.school_district = student.school_district || document.getElementById('school_district')?.value || '';
                 studentData.school_id = student.school_id || document.getElementById('school_id')?.value || '';
                 studentData.school_name = student.school_name || document.getElementById('school_name')?.value || '';
-                
+
                 studentData.bmi = student.bmi || 0;
                 studentData.nutritionalStatus = student.nutritionalStatus || 'Normal';
                 studentData.heightSquared = student.heightSquared || (student.height * student.height).toFixed(4);
                 studentData.age = student.age || '0|0';
                 studentData.ageDisplay = student.ageDisplay || student.age || '0|0';
                 studentData.heightForAge = student.heightForAge || 'Normal';
-                studentData.sbfpBeneficiary = student.sbfpBeneficiary || 
+                studentData.sbfpBeneficiary = student.sbfpBeneficiary ||
                     ((student.nutritionalStatus === 'Severely Wasted' || student.nutritionalStatus === 'Wasted') ? 'Yes' : 'No');
-                
+
                 return studentData;
             });
-            
+
             const bulkStoreUrl = window.nutritionalassessmentConfig?.urls?.bulk_store;
             if (!bulkStoreUrl) {
                 throw new Error('Bulk store URL not configured');
             }
-            
+
             const response = await fetch(bulkStoreUrl, {
-                method: 'POST', 
-                headers: { 
+                method: 'POST',
+                headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: 'students=' + encodeURIComponent(JSON.stringify(studentsToSubmit)) + 
+                body: 'students=' + encodeURIComponent(JSON.stringify(studentsToSubmit)) +
                     '&assessment_type=' + encodeURIComponent(assessmentType)
             });
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(`Server error (${response.status}): ${errorText.substring(0, 200)}`);
             }
-            
+
             const result = await response.json();
-            
+
+            const created = result.created_records || [];
+            const updated = result.updated_records || [];
+            const merged = created.concat(updated);
+            if (merged.length > 0) {
+                const mapped = merged.map(r => {
+                    const ageParts = (r.age || '0|0').split('|');
+                    const ageYears = parseInt(ageParts[0]) || 0;
+                    const ageMonths = parseInt(ageParts[1]) || 0;
+
+                    return {
+                        name: r.name || '',
+                        first_name: r.first_name || '',
+                        middle_initial: r.middle_initial || '',
+                        last_name: r.last_name || '',
+                        birthday: r.birthday || '',
+                        weight: parseFloat(r.weight) || 0,
+                        height: parseFloat(r.height) || 0,
+                        sex: r.sex || '',
+                        grade: r.grade_level || r.grade || '',
+                        section: r.section || '',
+                        school_year: r.year || r.school_year || '',
+                        date: r.date_of_weighing || r.date || '',
+                        legislative_district: r.legislative_district || '',
+                        school_district: r.school_district || '',
+                        school_id: r.school_id || '',
+                        school_name: r.school_name || '',
+                        heightSquared: r.height_squared || (r.height ? (r.height * r.height).toFixed(4) : ''),
+                        age: r.age || (ageYears + '|' + ageMonths),
+                        ageYears: ageYears,
+                        ageMonths: ageMonths,
+                        ageDisplay: r.age || (ageYears + '|' + ageMonths),
+                        bmi: parseFloat(r.bmi) || 0,
+                        nutritionalStatus: r.nutritional_status ? r.nutritional_status.toUpperCase() : 'PENDING',
+                        heightForAge: r.height_for_age || 'Normal',
+                        sbfpBeneficiary: (r.sbfp_beneficiary || 'No').toUpperCase()
+                    };
+                });
+                students = mapped;
+                saveStudents();
+                updateUI();
+            } else {
+                students = [];
+                editingIndex = -1;
+                saveStudents();
+                clearStoredStudents();
+                updateUI();
+                cancelEdit();
+            }
+
             try {
                 loadingModal.hide();
             } catch (e) {}
-            
+
             if (result.success) {
-                students = []; 
-                editingIndex = -1;
-                saveStudents(); 
-                clearStoredStudents(); 
-                updateUI(); 
-                cancelEdit();
-                
                 let successMessage = result.message || 'Records submitted successfully!';
                 if (result.created_count !== undefined && result.updated_count !== undefined) {
                     successMessage = `Submitted successfully!\n\nNew records: ${result.created_count}\nUpdated records: ${result.updated_count}\nTotal: ${result.total_count}`;
                 }
-                showAlert('Success', successMessage); 
-                
+                showAlert('Success', successMessage);
+
                 const redirectUrl = window.nutritionalassessmentConfig?.redirect_after;
                 if (redirectUrl) {
-                    setTimeout(() => { 
-                        window.location.href = redirectUrl; 
+                    setTimeout(() => {
+                        window.location.href = redirectUrl;
                     }, 2000);
                 } else {
                     setTimeout(() => {
                         window.location.reload();
                     }, 2000);
                 }
-            } else { 
+            } else {
                 let errorMessage = result.message || 'Error submitting records.';
                 if (result.errors && result.errors.length > 0) {
                     errorMessage += '\n\nErrors:\n' + result.errors.slice(0, 5).join('\n');
@@ -582,13 +663,13 @@
                         errorMessage += `\n... and ${result.errors.length - 5} more errors.`;
                     }
                 }
-                showAlert('Error', errorMessage); 
+                showAlert('Error', errorMessage);
             }
-        } catch (e) { 
+        } catch (e) {
             try {
                 if (loadingModal) loadingModal.hide();
             } catch (err) {}
-            showAlert('Network Error', 'Error communicating with server: ' + e.message); 
+            showAlert('Network Error', 'Error communicating with server: ' + e.message);
         }
     }
 
@@ -736,9 +817,10 @@
             })
             .then(data => {
                 if (data.success) {
+                    if (data.students && data.students.length > 0 && data.students[0].date) {
+                        localStorage.setItem('last_weighing_date', data.students[0].date);
+                    }
                     addExtractedStudentsDirectly(data.students || [], data.message);
-                } else {
-                    showAlert('Processing Error', data.message);
                 }
             })
             .catch(error => {
@@ -789,7 +871,7 @@
         }
     }
     
-    // Add extracted students to the list - PRESERVE UPPERCASE
+    // Add extracted students to the list
     function addExtractedStudentsDirectly(extractedStudents, message) {
         if (extractedStudents.length === 0) {
             showAlert('No Students', 'No valid student data found in the file.');
@@ -801,7 +883,7 @@
 
         const weighingDateFromExcel = extractedStudents[0]?.date;
         const dateInput = document.getElementById('date');
-        if (dateInput && weighingDateFromExcel && !dateInput.value) {
+        if (dateInput && weighingDateFromExcel) {
             dateInput.value = weighingDateFromExcel;
         }
 
@@ -914,18 +996,23 @@
                 school_district: document.getElementById('school_district')?.value || '',
                 school_id: document.getElementById('school_id')?.value || '',
                 school_name: document.getElementById('school_name')?.value || '',
-                heightSquared: extractedStudent.height_squared || (extractedStudent.height ? (extractedStudent.height * extractedStudent.height).toFixed(4) : null),
+                heightSquared: extractedStudent.height_squared ? parseFloat(extractedStudent.height_squared) : (extractedStudent.height ? parseFloat((extractedStudent.height * extractedStudent.height).toFixed(4)) : null),
                 age: ageDisplay,
                 ageYears: ageYears,
                 ageMonths: ageMonths,
                 ageDisplay: ageDisplay,
-                bmi: extractedStudent.bmi,
-                nutritionalStatus: extractedStudent.nutritional_status ? extractedStudent.nutritional_status.toUpperCase() : 'NOT SPECIFIED',
+                bmi: parseFloat(extractedStudent.bmi) || 0,
+                nutritionalStatus: extractedStudent.nutritional_status ? extractedStudent.nutritional_status.toUpperCase() : 'PENDING',
                 heightForAge: extractedStudent.height_for_age ? extractedStudent.height_for_age.toUpperCase() : 'NOT SPECIFIED',
                 sbfpBeneficiary: extractedStudent.sbfp_beneficiary || ((extractedStudent.nutritional_status === 'Severely Wasted' || extractedStudent.nutritional_status === 'Wasted') ? 'YES' : 'NO')
             };
 
             students.push(student);
+            const newIndex = students.length - 1;
+            // If nutritional status not provided by extractor, request server classification
+            if (!extractedStudent.nutritional_status) {
+                fetchClassificationForStudent(newIndex);
+            }
             addedCount++;
         });
 
@@ -966,7 +1053,41 @@
         }
         
         loadStudents(); 
+        // Apply URL parameters (if any) to pre-fill the form when opened from SBFP dashboard
+        try {
+            applyUrlParamsToForm();
+        } catch (e) { console.warn('applyUrlParamsToForm error', e); }
         updateUI();
+
+        // If opened with a weigh_date param, pre-fill the date and focus first name
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dateInput = document.getElementById('date');
+            
+            // 1. URL date parameter has highest priority
+            if (urlParams.has('date')) {
+                dateInput.value = decodeURIComponent(urlParams.get('date'));
+            }
+            // 2. Otherwise, use existing assessment date from server
+            else if (existingWeighingDate) {
+                dateInput.value = existingWeighingDate;
+                localStorage.setItem('last_weighing_date', existingWeighingDate);
+            }
+            // 3. Otherwise, use stored date from localStorage
+            else {
+                const storedDate = localStorage.getItem('last_weighing_date');
+                if (storedDate && dateInput && !dateInput.value) {
+                    dateInput.value = storedDate;
+                }
+
+                const firstNameInput = document.getElementById('first_name');
+                if (firstNameInput) {
+                    try { firstNameInput.focus(); } catch (e) {}
+                }
+            }
+        } catch (e) {
+            console.warn('Error parsing weigh_date param', e);
+        }
 
         const assessmentForm = document.getElementById('assessmentForm');
         if (assessmentForm) {
@@ -1040,6 +1161,49 @@
             switchToMidline.addEventListener('click', function() { switchAssessmentType('midline'); });
         }
     });
+
+    // Apply common query params to the form so Add Student opens with the correct grade/section
+    function applyUrlParamsToForm() {
+        const params = new URLSearchParams(window.location.search);
+        const grade = params.get('grade');
+        const section = params.get('section');
+        const school_year = params.get('school_year');
+        const dateParam = params.get('date');
+        const legislative_district = params.get('legislative_district');
+        const school_district = params.get('school_district');
+        const school_id = params.get('school_id');
+        const school_name = params.get('school_name');
+
+        if (grade && document.getElementById('grade')) {
+            document.getElementById('grade').value = decodeURIComponent(grade);
+        }
+        if (section && document.getElementById('section')) {
+            document.getElementById('section').value = decodeURIComponent(section);
+        }
+        if (school_year && document.getElementById('school_year')) {
+            document.getElementById('school_year').value = decodeURIComponent(school_year);
+        }
+        if (legislative_district && document.getElementById('legislative_district')) {
+            document.getElementById('legislative_district').value = decodeURIComponent(legislative_district);
+        }
+        if (school_district && document.getElementById('school_district')) {
+            document.getElementById('school_district').value = decodeURIComponent(school_district);
+        }
+        if (school_id && document.getElementById('school_id')) {
+            document.getElementById('school_id').value = decodeURIComponent(school_id);
+        }
+        if (school_name && document.getElementById('school_name')) {
+            document.getElementById('school_name').value = decodeURIComponent(school_name);
+        }
+        // If date param provided use it, otherwise default to today if empty
+        const dateInput = document.getElementById('date');
+        if (dateParam && dateInput) {
+            dateInput.value = decodeURIComponent(dateParam);
+        } else if (dateInput && !dateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+        }
+    }
 
     // Make functions globally available
     window.editStudent = editStudent;

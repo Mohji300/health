@@ -224,7 +224,7 @@ class user_model extends CI_Model {
         // Return true if query ran (even if 0 rows affected).
         return ($this->db->affected_rows() >= 0);
     }
-
+    
     public function reset_all_school_info_completed()
     {
         $data = [
@@ -233,6 +233,19 @@ class user_model extends CI_Model {
         ];
         $this->db->where_not_in('role', ['super_admin', 'admin', 'district', 'division']);
         return $this->db->update('users', $data);
+    }
+    //clear all school-related fields for all users (including admins) and reset school_info_completed to 0
+    public function reset_all_school_data()
+    {
+        $data = [
+            'school_address'         => null,
+            'school_level'           => null,
+            'school_head_name'       => null,
+            'school_info_completed'  => 0,
+            'updated_at'             => date('Y-m-d H:i:s')
+        ];
+        // Apply to all users (including admins) – adjust if needed
+        return $this->db->update($this->table, $data);
     }
 
     /**

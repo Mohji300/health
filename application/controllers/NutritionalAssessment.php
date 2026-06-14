@@ -70,6 +70,25 @@ class Nutritionalassessment extends CI_Controller {
                 . 'It is recommended to create a baseline assessment first.');
         }
 
+        // Inside index() method, after loading existing_assessments
+        $existing_weighing_date = null;
+        if ($data['has_existing_assessment']) {
+            $this->db->select('date_of_weighing');
+            $this->db->where('legislative_district', $data['legislative_district']);
+            $this->db->where('school_district', $data['school_district']);
+            $this->db->where('grade_level', $data['grade']);
+            $this->db->where('section', $data['section']);
+            $this->db->where('assessment_type', $data['assessment_type']);
+            $this->db->where('is_deleted', 0);
+            $this->db->order_by('date_of_weighing', 'DESC');
+            $this->db->limit(1);
+            $query = $this->db->get('nutritional_assessments');
+            if ($query->num_rows() > 0) {
+                $existing_weighing_date = $query->row()->date_of_weighing;
+            }
+        }
+        $data['existing_weighing_date'] = $existing_weighing_date;
+
         // Load view with form
         $this->load->view('nutritional_assessment', $data);
     }
@@ -134,7 +153,7 @@ class Nutritionalassessment extends CI_Controller {
         
         // Calculate derived values using WHO standards
         $heightSquared = number_format(($height * $height), 4);
-        $bmi = round($weight / ($height * $height), 1);
+        $bmi = round($weight / ($height * $height), 2);
         
         // Calculate age in months using weighing date
         $ageInMonths = $this->calculateAgeInMonths($birthday, $date_of_weighing);
@@ -188,15 +207,21 @@ class Nutritionalassessment extends CI_Controller {
         }
 
         if ($this->nutritional_assessment_model->create($assessment_data)) {
+            // Fetch inserted record to return authoritative values (BMI, nutritional_status, etc.)
+            $insertId = $this->db->insert_id();
+            $this->db->where('id', $insertId);
+            $record = $this->db->get('nutritional_assessments')->row();
+
             return $this->output
                 ->set_output(json_encode([
-                    'success' => true, 
-                    'message' => ucfirst($assessment_data['assessment_type']) . ' assessment saved successfully!'
+                    'success' => true,
+                    'message' => ucfirst($assessment_data['assessment_type']) . ' assessment saved successfully!',
+                    'record' => $record
                 ]));
         } else {
             return $this->output
                 ->set_output(json_encode([
-                    'success' => false, 
+                    'success' => false,
                     'message' => 'Error saving assessment'
                 ]));
         }
@@ -255,6 +280,8 @@ class Nutritionalassessment extends CI_Controller {
         $updated_count = 0;
         $duplicate_count = 0;
         $errors = [];
+        $created_records = [];
+        $updated_records = [];
 
         // Get school data from first student for logging
         $first_student = $students[0] ?? [];
@@ -283,7 +310,7 @@ class Nutritionalassessment extends CI_Controller {
                 
                 // Calculate derived values using WHO standards
                 $heightSquared = number_format(($height * $height), 4);
-                $bmi = round($weight / ($height * $height), 1);
+                $bmi = round($weight / ($height * $height), 2);
                 
                 // Calculate age in months using weighing date
                 $ageInMonths = $this->calculateAgeInMonths($birthday, $date_of_weighing);
@@ -335,6 +362,10 @@ class Nutritionalassessment extends CI_Controller {
                     $this->db->where('id', $existing_assessment->id);
                     if ($this->db->update('nutritional_assessments', $assessment_data)) {
                         $updated_count++;
+                        // fetch updated record
+                        $this->db->where('id', $existing_assessment->id);
+                        $rec = $this->db->get('nutritional_assessments')->row();
+                        if ($rec) $updated_records[] = $rec;
                     } else {
                         $db_error = $this->db->error();
                         $errors[] = "Row " . ($idx + 1) . ": " . $student['name'] . " - Failed to update existing record: " . $db_error['message'];
@@ -342,6 +373,10 @@ class Nutritionalassessment extends CI_Controller {
                 } else {
                     if ($this->nutritional_assessment_model->create($assessment_data)) {
                         $created_count++;
+                        $insertId = $this->db->insert_id();
+                        $this->db->where('id', $insertId);
+                        $rec = $this->db->get('nutritional_assessments')->row();
+                        if ($rec) $created_records[] = $rec;
                     } else {
                         $db_error = $this->db->error();
                         $errors[] = "Row " . ($idx + 1) . ": " . $student['name'] . " - Database error: " . ($db_error['message'] ?? 'Unknown error');
@@ -356,6 +391,8 @@ class Nutritionalassessment extends CI_Controller {
             'success' => ($created_count > 0 || $updated_count > 0),
             'created_count' => $created_count,
             'updated_count' => $updated_count,
+            'created_records' => $created_records,
+            'updated_records' => $updated_records,
             'duplicate_count' => $duplicate_count,
             'total_count' => count($students),
             'assessment_type' => $assessment_type,
@@ -519,6 +556,55 @@ class Nutritionalassessment extends CI_Controller {
         }
         
         $this->load->view('nutritional_assessment_view', $data);
+    }
+
+    /**
+     * Classify a student (calculate BMI and WHO nutritional status) without saving
+     * Expects POST: birthday, weight, height, sex, date (weighing date)
+     */
+    public function classify()
+    {
+        $this->output->set_content_type('application/json');
+
+        $birthday = $this->input->post('birthday');
+        $weight = floatval($this->input->post('weight'));
+        $height = floatval($this->input->post('height'));
+        $sex = $this->input->post('sex');
+        $date_of_weighing = $this->input->post('date');
+
+        if (empty($birthday) || $weight <= 0 || $height <= 0 || empty($sex) || empty($date_of_weighing)) {
+            return $this->output->set_output(json_encode([
+                'success' => false,
+                'message' => 'Missing or invalid parameters for classification'
+            ]));
+        }
+
+        $bmi = round($weight / ($height * $height), 2);
+        $ageInMonths = $this->calculateAgeInMonths($birthday, $date_of_weighing);
+        $nutritional_status = getWHO_BMIClassification($bmi, $ageInMonths, $sex);
+        $heightForAge = $this->calculateHeightForAge($height, $ageInMonths, $sex);
+
+        if ($nutritional_status === null) {
+            return $this->output->set_output(json_encode([
+                'success' => false,
+                'message' => 'Unable to classify: invalid inputs',
+                'details' => [
+                    'bmi' => $bmi,
+                    'ageInMonths' => $ageInMonths,
+                    'sex' => $sex,
+                    'birthday' => $birthday,
+                    'date_of_weighing' => $date_of_weighing
+                ]
+            ]));
+        }
+
+        return $this->output->set_output(json_encode([
+            'success' => true,
+            'bmi' => $bmi,
+            'nutritional_status' => $nutritional_status,
+            'height_for_age' => $heightForAge,
+            'ageInMonths' => $ageInMonths
+        ]));
     }
 
     public function debug_bulk_store()

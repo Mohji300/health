@@ -91,7 +91,7 @@
                   <div class="col-md-6">
                       <div class="mb-3">
                           <label for="date" class="form-label fw-bold">Date of Weighing:</label>
-                          <input type="date" id="date" name="date" class="form-control" required>
+                          <input type="date" id="date" name="date" class="form-control" required value="<?= htmlspecialchars($this->input->get('date') ?? '') ?>">
                       </div>
                       <div class="row mb-3">
                       <div class="col-md-5">
@@ -229,6 +229,13 @@
                 </table>
               </div>
 
+              <!-- Server-side Errors Panel (populated after submission) -->
+              <div id="serverErrorsPanel" class="alert alert-danger d-none mt-3" role="alert">
+                <h5 class="mb-2">Submission Errors</h5>
+                <p id="serverErrorsMessage">The following records could not be saved:</p>
+                <ul id="serverErrorsList" class="mb-0"></ul>
+              </div>
+
               <div class="row mt-3">
                 <div class="col-12 text-end">
                   <button type="button" id="clearAllBtn" class="btn btn-danger me-2" disabled>
@@ -339,10 +346,12 @@
       window.nutritionalassessmentConfig = {
         urls: {
           process_excel: '<?= site_url("nutritional_upload/process_excel"); ?>',
-          bulk_store: '<?= site_url("nutritionalassessment/bulk_store"); ?>'
+          bulk_store: '<?= site_url("nutritionalassessment/bulk_store"); ?>',
+          classify: '<?= site_url("nutritionalassessment/classify"); ?>'
         },
         redirect_after: '<?= site_url("sbfp/dashboard"); ?>'
       };
+      var existingWeighingDate = '<?php echo isset($existing_weighing_date) ? $existing_weighing_date : ''; ?>';
     </script>
     
     <script src="<?= base_url('assets/js/nutritional_assessment.js'); ?>"></script>
