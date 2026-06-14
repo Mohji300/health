@@ -209,12 +209,30 @@ class Superadmincontroller extends CI_Controller {
         }
 
         $this->load->model('user_model');
-        $result = $this->user_model->reset_all_school_info_completed();
+        $result = $this->user_model->reset_all_school_data();
 
         if ($result) {
-            $this->session->set_flashdata('success', 'Successfully reset school_info_completed for all users.');
+            $this->session->set_flashdata('success', 'All users\' school info cleared and completion flag reset.');
         } else {
-            $this->session->set_flashdata('error', 'Failed to reset school_info_completed for all users.');
+            $this->session->set_flashdata('error', 'Failed to clear school info for users.');
+        }
+
+        redirect('superadmin');
+    }
+
+    public function delete_all_nutritional_assessments()
+    {
+        if ($this->input->method() != 'post') {
+            show_404();
+        }
+
+        $this->load->model('nutritional_assessment_model'); // assuming you have this model
+        $deleted = $this->nutritional_assessment_model->delete_all_assessments();
+
+        if ($deleted) {
+            $this->session->set_flashdata('success', 'All nutritional assessment records have been permanently deleted.');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to delete nutritional assessment records.');
         }
 
         redirect('superadmin');

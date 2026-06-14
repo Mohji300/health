@@ -172,6 +172,9 @@
                     <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#resetAllSchoolInfoModal">
                       <i class="fas fa-undo-alt me-1"></i> Reset All School Info
                     </button>
+                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#resetNutritionalModal">
+                      <i class="fas fa-trash-alt me-1"></i> Reset Nutritional Data
+                    </button>
                   </div>
                 </div>
                 <div class="card-body">
@@ -323,6 +326,29 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Reset Nutritional Data Modal -->
+    <div class="modal fade" id="resetNutritionalModal" tabindex="-1" aria-labelledby="resetNutritionalModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="resetNutritionalModalLabel">Delete All Nutritional Assessment Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to <strong class="text-danger">PERMANENTLY DELETE ALL</strong> records from the <code>nutritional_assessments</code> table?</p>
+                    <p>This action <strong>cannot be undone</strong>. All student assessments, SBFP beneficiaries, and associated data will be lost.</p>
+                    <p class="text-warning fw-bold">Back up your data before proceeding.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="post" action="<?php echo site_url('superadmincontroller/delete_all_nutritional_assessments'); ?>">
+                        <button type="submit" class="btn btn-danger">Delete All Permanently</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Delete Confirmation Modal -->
