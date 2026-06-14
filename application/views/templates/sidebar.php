@@ -169,6 +169,11 @@
           <span class="main-sidebar-text"> Nutritional Data</span>
         </a>
       </li>
+
+        <a href="<?php echo site_url('shd_reports'); ?>"
+           class="nav-link rounded-2 mb-1 <?php echo is_active_page('shd_reports', $current_uri) ? 'active' : ''; ?>">
+          <i class="fas fa-cogs"></i>
+          <span class="main-sidebar-text"> Shd Reports</span>
       <?php endif; ?>
 
       <!-- ADMIN REPORT TOOLS - Admin Only -->
