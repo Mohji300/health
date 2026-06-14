@@ -16,7 +16,8 @@
       <?php $this->load->view('templates/sidebar'); ?>
       <div id="page-content-wrapper" class="w-100">
         <div class="container-fluid py-4">
-
+          <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
           <!-- Reports Header -->
           <div class="card bg-gradient-primary text-white mb-4">
             <div class="card-body">
@@ -26,8 +27,6 @@
           </div>
 
           <!-- Statistics Cards -->
-          <div class="row mb-4">
-            <div class="col-xl-3 col-md-6 mb-4">
               <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body">
                   <div class="row no-gutters align-items-center">
