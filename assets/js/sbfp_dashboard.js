@@ -113,6 +113,4 @@ $(document).ready(function() {
             }
         });
     });
-
-    // Note: lock/lock-toggle functionality removed; replaced by Add Student button in the UI.
 });

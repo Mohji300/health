@@ -387,8 +387,8 @@ foreach ($submitted as $s) {
                                     </button>
                                 <?php else: ?>
                                     
-                                    <!-- Add Student Button (replaces previous Lock button) -->
-                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type . '&date=' . urlencode(date('Y-m-d'))); ?>"
+                                    <!-- Add Student Button (no date parameter) -->
+                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>"
                                       class="btn btn-primary btn-sm add-student-btn"
                                       title="Add Student">
                                       <i class="fas fa-user-plus"></i>
