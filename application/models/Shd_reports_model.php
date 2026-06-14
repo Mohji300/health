@@ -10,32 +10,44 @@ class Shd_reports_model extends CI_Model {
     }
 
     /**
-     * Return reports matching optional date range filters.
-     * Currently returns an empty array if no matching table/data exists.
+     * Create a new school report (empty record)
      */
-    public function get_reports_with_filters($date_from = null, $date_to = null)
+    public function create_school_report($data)
     {
-        // Placeholder implementation - adapt to actual DB schema
-        // If the assessments table is not present, return an empty array
-        // so the frontend can render without database connectivity.
-        try {
-            if (!$this->db->table_exists('assessments')) {
-                return [];
-            }
+        $this->db->insert('school_reports', [
+            'school_name' => $data['school_name'],
+            'school_year' => $data['school_year'],
+            'report_data' => null,
+            'created_at' => date('Y-m-d H:i:s')
+        ]);
+        return $this->db->insert_id();
+    }
 
-            $this->db->from('assessments');
-            if (!empty($date_from)) {
-                $this->db->where('date_of_weighing >=', $date_from);
-            }
-            if (!empty($date_to)) {
-                $this->db->where('date_of_weighing <=', $date_to);
-            }
-            $this->db->limit(1000);
-            $query = $this->db->get();
-            return $query->result();
-        } catch (Exception $e) {
-            log_message('error', 'Shd_reports_model:get_reports_with_filters error: '.$e->getMessage());
-            return [];
-        }
+    /**
+     * Get one report by ID
+     */
+    public function get_report($id)
+    {
+        return $this->db->get_where('school_reports', ['id' => $id])->row();
+    }
+
+    /**
+     * Update the entire report_data JSON
+     */
+    public function update_report_data($id, $json_data)
+    {
+        $this->db->where('id', $id);
+        return $this->db->update('school_reports', [
+            'report_data' => $json_data,
+            'updated_at' => date('Y-m-d H:i:s')
+        ]);
+    }
+
+    /**
+     * List all reports (for main listing)
+     */
+    public function list_all_reports()
+    {
+        return $this->db->order_by('created_at', 'DESC')->get('school_reports')->result();
     }
 }
