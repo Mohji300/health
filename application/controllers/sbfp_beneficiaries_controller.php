@@ -186,6 +186,19 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             $school_name_filter,
             $district_filter
         );
+
+        // Format BMI and height (convert meters to cm)
+        foreach ($data['beneficiaries'] as &$student) {
+            // BMI: two decimals, truncated
+            if (isset($student['bmi'])) {
+                $student['bmi'] = $this->format_bmi($student['bmi']);
+            }
+            // Height: convert meters to centimeters
+            if (isset($student['height'])) {
+                $student['height'] = $this->format_height_cm($student['height']);
+            }
+        }
+        unset($student);
         
         $normal_count = 0;
         $intervention_count = 0;
@@ -199,6 +212,9 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         }
         $data['normal_count'] = $normal_count;
         $data['intervention_count'] = $intervention_count;
+        // Get summary stats (includes 'tall' HFA count)
+        $summary_stats = $this->sbfp_beneficiaries_model->get_summary_stats($assessment_type, $model_school_name);
+        $data['tall_count'] = ($summary_stats && isset($summary_stats->tall)) ? (int)$summary_stats->tall : 0;
         
         $data['schools'] = $this->sbfp_beneficiaries_model->get_schools_by_role(
             $user_role,
@@ -217,7 +233,7 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $this->db->select('DISTINCT(school_name)');
         $this->db->from('nutritional_assessments');
         $this->db->where('is_deleted', 0);
-        $this->db->where('sbfp_beneficiary', 'Yes');
+        $this->db->where("(sbfp_beneficiary = 'Yes' OR grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
 
         if ($user_role === 'district' && !empty($district)) {
             $this->db->where('school_district', $district);
@@ -244,7 +260,7 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $this->db->where('is_deleted', 0);
         $this->db->where('school_district IS NOT NULL');
         $this->db->where('school_district !=', '');
-        $this->db->where('sbfp_beneficiary', 'Yes');
+        $this->db->where("(sbfp_beneficiary = 'Yes' OR grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         
         $this->db->order_by('school_district', 'ASC');
         $query = $this->db->get();
@@ -260,8 +276,23 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $this->db->where('is_deleted', 0);
         $this->db->where('grade_level IS NOT NULL');
         $this->db->where('grade_level !=', '');
-        $this->db->where('sbfp_beneficiary', 'Yes');
-        $this->db->order_by('grade_level', 'ASC');
+        $this->db->where("(sbfp_beneficiary = 'Yes' OR grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+        // Order grade levels using custom sequence
+        $this->db->order_by("CASE
+            WHEN grade_level = 'Kindergarten' THEN 0
+            WHEN grade_level = 'Grade 1' THEN 1
+            WHEN grade_level = 'Grade 2' THEN 2
+            WHEN grade_level = 'Grade 3' THEN 3
+            WHEN grade_level = 'Grade 4' THEN 4
+            WHEN grade_level = 'Grade 5' THEN 5
+            WHEN grade_level = 'Grade 6' THEN 6
+            WHEN grade_level = 'Grade 7' THEN 7
+            WHEN grade_level = 'Grade 8' THEN 8
+            WHEN grade_level = 'Grade 9' THEN 9
+            WHEN grade_level = 'Grade 10' THEN 10
+            WHEN grade_level = 'Grade 11' THEN 11
+            WHEN grade_level = 'Grade 12' THEN 12
+            ELSE 99 END", '', FALSE);
         $query = $this->db->get();
         return $query->result_array();
     }
@@ -819,12 +850,12 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
                     $weight = !empty($student['weight']) ? number_format($student['weight'], 1) : '';
                     $sheet->setCellValue('I' . $currentRow, $weight);
                     
-                    // Column J: Height (cm)
-                    $height = !empty($student['height']) ? number_format($student['height'], 1) : '';
+                    // Column J: Height (cm) – convert from meters to cm, show 2 decimals
+                    $height = !empty($student['height']) ? $this->format_height_cm($student['height']) : '';
                     $sheet->setCellValue('J' . $currentRow, $height);
-                    
-                    // Column K: BMI
-                    $bmi = !empty($student['bmi']) ? number_format($student['bmi'], 1) : '';
+
+                    // Column K: BMI – 2 decimals, truncated
+                    $bmi = !empty($student['bmi']) ? $this->format_bmi($student['bmi']) : '';
                     $sheet->setCellValue('K' . $currentRow, $bmi);
                     
                     // Column L: BMI-A (Nutritional Status)
@@ -994,8 +1025,8 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
                     
                     $sheet->setCellValue('G' . $currentRow, $student['age'] ?? '');
                     $sheet->setCellValue('H' . $currentRow, !empty($student['weight']) ? number_format($student['weight'], 1) : '');
-                    $sheet->setCellValue('I' . $currentRow, !empty($student['height']) ? number_format($student['height'], 1) : '');
-                    $sheet->setCellValue('J' . $currentRow, !empty($student['bmi']) ? number_format($student['bmi'], 1) : '');
+                    $sheet->setCellValue('I' . $currentRow, !empty($student['height']) ? $this->format_height_cm($student['height']) : '');
+                    $sheet->setCellValue('J' . $currentRow, !empty($student['bmi']) ? $this->format_bmi($student['bmi']) : '');
                     $sheet->setCellValue('K' . $currentRow, $student['nutritional_status'] ?? '');
                     $sheet->setCellValue('L' . $currentRow, $student['height_for_age'] ?? '');
                     
@@ -1240,4 +1271,27 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         
         $this->load->view('print_sbfp_beneficiaries', $data);
     }
+        /**
+         * Truncate BMI to 2 decimal places without rounding.
+         * Returns empty string if value is not numeric.
+         */
+        private function format_bmi($bmi) {
+            if (!is_numeric($bmi)) {
+                return '';
+            }
+            $truncated = floor($bmi * 100) / 100;
+            return number_format($truncated, 2, '.', '');
+        }
+
+        /**
+         * Convert height from meters to centimeters and format to 2 decimals.
+         * Returns empty string if value is not numeric.
+         */
+        private function format_height_cm($height_meters) {
+            if (!is_numeric($height_meters)) {
+                return '';
+            }
+            $cm = $height_meters * 100;
+            return number_format($cm, 1, '.', '');
+        }
 }

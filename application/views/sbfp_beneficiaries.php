@@ -10,7 +10,6 @@ $midline_count = isset($midline_count) ? $midline_count : 0;
 $endline_count = isset($endline_count) ? $endline_count : 0;
 
 $school_level = isset($school_level) ? $school_level : 'all';
-$school_year = isset($school_year) ? $school_year : '';
 ?>
 <!doctype html>
 <html lang="en">
@@ -36,7 +35,7 @@ $school_year = isset($school_year) ? $school_year : '';
               <div class="d-flex justify-content-between align-items-center">
                 <div>
                   <h1 class="h2 font-weight-bold mb-2">SBFP Beneficiaries Master List<?php echo !empty($selected_school) ? ' — ' . htmlspecialchars($selected_school) : ''; ?></h1>
-                  <p class="mb-0 opacity-8">School-Based Feeding Program (SY <?php echo $school_year; ?>) - <?php echo ucfirst($assessment_type); ?> Data</p>
+                  <p class="mb-0 opacity-8">School-Based Feeding Program - <?php echo ucfirst($assessment_type); ?> Data</p>
                 </div>
               </div>
             </div>
@@ -63,11 +62,11 @@ $school_year = isset($school_year) ? $school_year : '';
                 </h5>
                 <p class="mb-0">
                   <?php if ($is_baseline): ?>
-                    | Baseline Assessment (SY <?php echo $school_year; ?>)
+                    | Baseline Assessment
                   <?php elseif ($is_midline): ?>
-                    | Midline Assessment (SY <?php echo $school_year; ?>)
+                    | Midline Assessment
                   <?php else: ?>
-                    | Endline Assessment (SY <?php echo $school_year; ?>)
+                    | Endline Assessment
                   <?php endif; ?>
                 </p>
               </div>
@@ -136,6 +135,22 @@ $school_year = isset($school_year) ? $school_year : '';
                       </div>
                   </div>
               </div>
+              
+                <div class="col-xl-3 col-md-6 mb-4">
+                  <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                      <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                          <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Height for Age: Tall</div>
+                          <div class="h5 mb-0 font-weight-bold text-gray-800"><?= isset($tall_count) ? $tall_count : 0 ?></div>
+                        </div>
+                        <div class="col-auto">
+                          <i class="fas fa-arrow-up fa-2x text-gray-300"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
           </div>
 
           <!-- Filter Section -->
@@ -350,14 +365,23 @@ $school_year = isset($school_year) ? $school_year : '';
                         default: $ns_class = 'badge-secondary';
                       }
                       
-                      // Determine HFA badge class
-                      $hfa_class = '';
-                      switch($student['height_for_age']) {
-                        case 'Severely Stunted': $hfa_class = 'badge-severely-wasted'; break;
-                        case 'Stunted': $hfa_class = 'badge-wasted'; break;
-                        case 'Normal': $hfa_class = 'badge-normal'; break;
-                        case 'Tall': $hfa_class = 'badge-info'; break;
-                        default: $hfa_class = 'badge-secondary';
+                      // Determine HFA badge class and display text (handle case variations and 'above normal')
+                      $hfa_raw = isset($student['height_for_age']) ? trim($student['height_for_age']) : '';
+                      $hfa_lc = strtolower($hfa_raw);
+                      $hfa_class = 'badge-secondary';
+                      $hfa_display = $hfa_raw;
+                      if ($hfa_lc === 'severely stunted') {
+                        $hfa_class = 'badge-severely-wasted';
+                        $hfa_display = 'Severely Stunted';
+                      } elseif ($hfa_lc === 'stunted') {
+                        $hfa_class = 'badge-wasted';
+                        $hfa_display = 'Stunted';
+                      } elseif ($hfa_lc === 'normal') {
+                        $hfa_class = 'badge-normal';
+                        $hfa_display = 'Normal';
+                      } elseif ($hfa_lc === 'tall' || $hfa_lc === 'above normal') {
+                        $hfa_class = 'badge-info';
+                        $hfa_display = 'Tall';
                       }
                       
                       // Format dates
@@ -373,13 +397,13 @@ $school_year = isset($school_year) ? $school_year : '';
                       <td class="text-center"><?= $weighing_date ?></td>
                       <td class="text-center"><?= htmlspecialchars($student['age']) ?></td>
                       <td class="text-center"><?= number_format($student['weight'], 1) ?></td>
-                      <td class="text-center"><?= number_format($student['height'], 1) ?></td>
-                      <td class="text-center"><?= number_format($student['bmi'], 1) ?></td>
+                      <td class="text-center"><?= $student['height']; ?></td>
+                      <td class="text-center"><?= $student['bmi']; ?></td>
                       <td class="text-center">
                         <span class="badge <?= $ns_class ?>"><?= $student['nutritional_status'] ?></span>
                       </td>
                       <td class="text-center">
-                        <span class="badge <?= $hfa_class ?>"><?= $student['height_for_age'] ?></span>
+                        <span class="badge <?= $hfa_class ?>"><?= htmlspecialchars($hfa_display) ?></span>
                       </td>
                       <?php
                         $assessment_id = isset($student['id']) ? $student['id'] : (isset($student['assessment_id']) ? $student['assessment_id'] : '');
@@ -458,7 +482,7 @@ $school_year = isset($school_year) ? $school_year : '';
           </div>
           <div class="modal-body">
             <h6><i class="fas fa-list-alt me-2"></i>SBFP Master List Beneficiaries</h6>
-            <p>This form contains the complete list of beneficiaries for the School-Based Feeding Program (SBFP) for SY <?php echo $school_year; ?>.</p>
+            <p>This form contains the complete list of beneficiaries for the School-Based Feeding Program (SBFP)</p>
             
             <div class="row mt-3">
               <div class="col-md-6">

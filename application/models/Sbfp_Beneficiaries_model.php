@@ -21,7 +21,8 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where('n.sbfp_beneficiary', 'Yes');
+        // Treat Kindergarten and Grade 1 as beneficiaries regardless of the sbfp_beneficiary flag
+        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         
         // Apply role-based filtering (mandatory)
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
@@ -32,8 +33,22 @@ class sbfp_beneficiaries_model extends CI_Model {
         // Apply school level filtering (grade restrictions)
         $this->apply_school_level_filter($school_level);
         
-        $this->db->order_by('n.school_name', 'ASC');
-        $this->db->order_by('n.grade_level', 'ASC');
+        // Custom grade order: Kindergarten, Grade 1, Grade 2, ... Grade 12
+        $this->db->order_by("CASE
+            WHEN n.grade_level = 'Kindergarten' THEN 0
+            WHEN n.grade_level = 'Grade 1' THEN 1
+            WHEN n.grade_level = 'Grade 2' THEN 2
+            WHEN n.grade_level = 'Grade 3' THEN 3
+            WHEN n.grade_level = 'Grade 4' THEN 4
+            WHEN n.grade_level = 'Grade 5' THEN 5
+            WHEN n.grade_level = 'Grade 6' THEN 6
+            WHEN n.grade_level = 'Grade 7' THEN 7
+            WHEN n.grade_level = 'Grade 8' THEN 8
+            WHEN n.grade_level = 'Grade 9' THEN 9
+            WHEN n.grade_level = 'Grade 10' THEN 10
+            WHEN n.grade_level = 'Grade 11' THEN 11
+            WHEN n.grade_level = 'Grade 12' THEN 12
+            ELSE 99 END", '', FALSE);
         $this->db->order_by('n.name', 'ASC');
         
         $query = $this->db->get();
@@ -158,7 +173,7 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where('n.sbfp_beneficiary', 'Yes');
+        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         
         // Apply role-based filtering
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
@@ -180,7 +195,7 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where('n.sbfp_beneficiary', 'Yes');
+        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         
         // Apply role-based filtering
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
@@ -203,7 +218,7 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->select('DISTINCT(n.school_name)');
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.is_deleted', 0);
-        $this->db->where('n.sbfp_beneficiary', 'Yes');
+        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         
         log_message('debug', 'Getting schools by role - Role: ' . $user_role . ', District: ' . $district);
         
@@ -231,7 +246,7 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where('n.sbfp_beneficiary', 'Yes');
+        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         
         if (!empty($school_name)) {
             $this->db->where('n.school_name', $school_name);
@@ -250,15 +265,28 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where('n.sbfp_beneficiary', 'Yes');
+        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         $this->db->where('LOWER(n.nutritional_status)', strtolower($nutritional_status));
         
         if (!empty($school_name)) {
             $this->db->where('n.school_name', $school_name);
         }
         
-        $this->db->order_by('n.school_name', 'ASC');
-        $this->db->order_by('n.grade_level', 'ASC');
+        $this->db->order_by("CASE
+            WHEN n.grade_level = 'Kindergarten' THEN 0
+            WHEN n.grade_level = 'Grade 1' THEN 1
+            WHEN n.grade_level = 'Grade 2' THEN 2
+            WHEN n.grade_level = 'Grade 3' THEN 3
+            WHEN n.grade_level = 'Grade 4' THEN 4
+            WHEN n.grade_level = 'Grade 5' THEN 5
+            WHEN n.grade_level = 'Grade 6' THEN 6
+            WHEN n.grade_level = 'Grade 7' THEN 7
+            WHEN n.grade_level = 'Grade 8' THEN 8
+            WHEN n.grade_level = 'Grade 9' THEN 9
+            WHEN n.grade_level = 'Grade 10' THEN 10
+            WHEN n.grade_level = 'Grade 11' THEN 11
+            WHEN n.grade_level = 'Grade 12' THEN 12
+            ELSE 99 END", '', FALSE);
         $this->db->order_by('n.name', 'ASC');
         
         $query = $this->db->get();
@@ -276,6 +304,7 @@ class sbfp_beneficiaries_model extends CI_Model {
             SUM(CASE WHEN LOWER(n.nutritional_status) = "normal" THEN 1 ELSE 0 END) as normal,
             SUM(CASE WHEN LOWER(n.nutritional_status) = "overweight" THEN 1 ELSE 0 END) as overweight,
             SUM(CASE WHEN LOWER(n.nutritional_status) = "obese" THEN 1 ELSE 0 END) as obese,
+            SUM(CASE WHEN LOWER(n.height_for_age) = "tall" THEN 1 ELSE 0 END) as tall,
             SUM(CASE WHEN n.sex = "M" THEN 1 ELSE 0 END) as male_count,
             SUM(CASE WHEN n.sex = "F" THEN 1 ELSE 0 END) as female_count
         ');
@@ -283,7 +312,7 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where('n.sbfp_beneficiary', 'Yes');
+        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         
         if (!empty($school_name)) {
             $this->db->where('n.school_name', $school_name);
@@ -301,14 +330,29 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where('n.sbfp_beneficiary', 'Yes');
+        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         
         if (!empty($school_name)) {
             $this->db->where('n.school_name', $school_name);
         }
         
         $this->db->group_by('n.grade_level');
-        $this->db->order_by('n.grade_level', 'ASC');
+        // Order groups using the same custom ordering
+        $this->db->order_by("CASE
+            WHEN n.grade_level = 'Kindergarten' THEN 0
+            WHEN n.grade_level = 'Grade 1' THEN 1
+            WHEN n.grade_level = 'Grade 2' THEN 2
+            WHEN n.grade_level = 'Grade 3' THEN 3
+            WHEN n.grade_level = 'Grade 4' THEN 4
+            WHEN n.grade_level = 'Grade 5' THEN 5
+            WHEN n.grade_level = 'Grade 6' THEN 6
+            WHEN n.grade_level = 'Grade 7' THEN 7
+            WHEN n.grade_level = 'Grade 8' THEN 8
+            WHEN n.grade_level = 'Grade 9' THEN 9
+            WHEN n.grade_level = 'Grade 10' THEN 10
+            WHEN n.grade_level = 'Grade 11' THEN 11
+            WHEN n.grade_level = 'Grade 12' THEN 12
+            ELSE 99 END", '', FALSE);
         
         $query = $this->db->get();
         return $query->result_array();
@@ -342,13 +386,27 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where('n.sbfp_beneficiary', 'Yes');
+        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         
         // Apply role-based filtering
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
         
         $this->db->order_by('n.school_name', 'ASC');
-        $this->db->order_by('n.grade_level', 'ASC');
+        $this->db->order_by("CASE
+            WHEN n.grade_level = 'Kindergarten' THEN 0
+            WHEN n.grade_level = 'Grade 1' THEN 1
+            WHEN n.grade_level = 'Grade 2' THEN 2
+            WHEN n.grade_level = 'Grade 3' THEN 3
+            WHEN n.grade_level = 'Grade 4' THEN 4
+            WHEN n.grade_level = 'Grade 5' THEN 5
+            WHEN n.grade_level = 'Grade 6' THEN 6
+            WHEN n.grade_level = 'Grade 7' THEN 7
+            WHEN n.grade_level = 'Grade 8' THEN 8
+            WHEN n.grade_level = 'Grade 9' THEN 9
+            WHEN n.grade_level = 'Grade 10' THEN 10
+            WHEN n.grade_level = 'Grade 11' THEN 11
+            WHEN n.grade_level = 'Grade 12' THEN 12
+            ELSE 99 END", '', FALSE);
         $this->db->order_by('n.section', 'ASC');
         $this->db->order_by('n.name', 'ASC');
         
@@ -360,7 +418,7 @@ class sbfp_beneficiaries_model extends CI_Model {
     public function count_by_assessment($assessment_type) {
         $this->db->where('assessment_type', $assessment_type);
         $this->db->where('is_deleted', 0);
-        $this->db->where('sbfp_beneficiary', 'Yes');
+        $this->db->where("(sbfp_beneficiary = 'Yes' OR grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         return $this->db->count_all_results('nutritional_assessments');
     }
     
@@ -368,7 +426,7 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->select('DISTINCT(school_name)');
         $this->db->from('nutritional_assessments');
         $this->db->where('is_deleted', 0);
-        $this->db->where('sbfp_beneficiary', 'Yes');
+        $this->db->where("(sbfp_beneficiary = 'Yes' OR grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         $this->db->order_by('school_name', 'ASC');
         $query = $this->db->get();
         return $query->result_array();
@@ -379,7 +437,7 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments');
         $this->db->where('assessment_type', $assessment_type);
         $this->db->where('is_deleted', 0);
-        $this->db->where('sbfp_beneficiary', 'Yes');
+        $this->db->where("(sbfp_beneficiary = 'Yes' OR grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
         $this->db->group_by('nutritional_status');
         $query = $this->db->get();
         return $query->result_array();

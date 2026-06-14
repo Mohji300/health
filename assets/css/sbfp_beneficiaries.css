@@ -49,6 +49,7 @@
 .badge-normal { background-color: #198754; color: white; }
 .badge-overweight { background-color: #0dcaf0; color: white; }
 .badge-obese { background-color: #6f42c1; color: white; }
+.badge-info { background-color: #0dcaf0; color: white; }
 
 @page { size: A4 landscape; margin: 8mm; }
 @media print {
