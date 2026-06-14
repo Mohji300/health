@@ -114,52 +114,5 @@ $(document).ready(function() {
         });
     });
 
-    // Toggle Lock functionality
-    $('.toggle-lock').click(function() {
-        var grade = $(this).data('grade');
-        var section = $(this).data('section');
-        var school_year = $(this).data('school_year');
-        var type = $(this).data('type');
-        var button = $(this);
-
-        var originalHtml = button.html();
-        button.html('<i class="fas fa-spinner fa-spin"></i>');
-        button.prop('disabled', true);
-
-        $.ajax({
-            url: window.sbfp_dashboard_controllerConfig.urls.toggle_lock,
-            method: 'POST',
-            data: {
-                grade: grade,
-                section: section,
-                school_year: school_year,
-                assessment_type: type
-            },
-            dataType: 'json',
-            success: function(response) {
-                console.log('Lock response:', response);
-                if (response.success) {
-                    if (button.find('i').hasClass('fa-lock')) {
-                        button.html('<i class="fas fa-unlock"></i>');
-                        button.removeClass('btn-warning').addClass('btn-success');
-                    } else {
-                        button.html('<i class="fas fa-lock"></i>');
-                        button.removeClass('btn-success').addClass('btn-warning');
-                    }
-                    alert('Assessment ' + response.message.toLowerCase());
-                } else {
-                    alert('Error: ' + response.message);
-                    button.html(originalHtml);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Lock AJAX error:', error);
-                alert('Error communicating with server');
-                button.html(originalHtml);
-            },
-            complete: function() {
-                button.prop('disabled', false);
-            }
-        });
-    });
+    // Note: lock/lock-toggle functionality removed; replaced by Add Student button in the UI.
 });

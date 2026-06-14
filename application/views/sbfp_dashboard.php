@@ -387,15 +387,12 @@ foreach ($submitted as $s) {
                                     </button>
                                 <?php else: ?>
                                     
-                                    <!-- Lock Button -->
-                                    <button class="btn btn-warning btn-sm toggle-lock"
-                                            data-grade="<?php echo htmlspecialchars($item->grade); ?>"
-                                            data-section="<?php echo htmlspecialchars($item->section); ?>"
-                                            data-school_year="<?php echo htmlspecialchars($item->school_year ?? ''); ?>"
-                                            data-type="<?php echo $assessment_type; ?>"
-                                            title="Lock/Unlock Assessment">
-                                        <i class="fas fa-lock"></i>
-                                    </button>
+                                    <!-- Add Student Button (replaces previous Lock button) -->
+                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type . '&date=' . urlencode(date('Y-m-d'))); ?>"
+                                      class="btn btn-primary btn-sm add-student-btn"
+                                      title="Add Student">
+                                      <i class="fas fa-user-plus"></i>
+                                    </a>
                                     
                                     <!-- Delete Assessment Button -->
                                     <button class="btn btn-danger btn-sm delete-assessment btn-delete"

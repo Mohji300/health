@@ -101,7 +101,8 @@ class Sbfp_dashboard_controller extends CI_Controller {
                 try {
                     $data['submittedAssessments'] = $this->nutritional_assessment_model->get_submitted_summary(
                         $user->legislative_district, 
-                        $user->school_district
+                        $user->school_district,
+                        $user->school_id
                     );
                 } catch (Exception $e) {
                     log_message('error', 'Error fetching assessments: ' . $e->getMessage());
@@ -323,6 +324,7 @@ class Sbfp_dashboard_controller extends CI_Controller {
             $deleted = $this->nutritional_assessment_model->delete_assessment(
                 $user->legislative_district,
                 $user->school_district,
+                $user->school_id,
                 $grade,
                 $section,
                 $school_year,
@@ -614,6 +616,7 @@ class Sbfp_dashboard_controller extends CI_Controller {
             $types = $this->nutritional_assessment_model->get_assessment_types(
                 $user->legislative_district,
                 $user->school_district,
+                $user->school_id,
                 $grade,
                 $section
             );
@@ -667,6 +670,7 @@ class Sbfp_dashboard_controller extends CI_Controller {
             $data = $this->nutritional_assessment_model->get_by_section(
                 $user->legislative_district,
                 $user->school_district,
+                $user->school_id,
                 $grade,
                 $section,
                 null,
