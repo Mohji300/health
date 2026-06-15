@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <link rel="stylesheet" href="<?= base_url('assets/css/division-reports.css'); ?>">
+    <link rel="stylesheet" href="<?= base_url(ASSETS_PATH . '/css/division-reports.css'); ?>">
   </head>
   <body class="bg-light">
     <div class="d-flex" id="wrapper">
@@ -416,6 +416,6 @@
             hasReports: <?php echo !empty($reports) ? 'true' : 'false'; ?>
         };
     </script>
-    <script src="<?= base_url('assets/js/division-reports.js'); ?>"></script>
+    <script src="<?= base_url(ASSETS_PATH . '/js/division-reports.js'); ?>"></script>
   </body>
 </html>

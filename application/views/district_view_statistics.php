@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <link rel="stylesheet" href="<?= base_url('assets/css/district_view_statistics.css'); ?>">
+    <link rel="stylesheet" href="<?= base_url(ASSETS_PATH . '/css/district_view_statistics.css'); ?>">
   </head>
   <body class="bg-light">
     <div class="d-flex" id="wrapper">
@@ -450,6 +450,6 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-    <script src="<?= base_url('assets/js/district_view_statistics.js'); ?>"></script>
+    <script src="<?= base_url(ASSETS_PATH . '/js/district_view_statistics.js'); ?>"></script>
   </body>
 </html>

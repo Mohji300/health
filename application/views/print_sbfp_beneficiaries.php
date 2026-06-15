@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>SBFP Form 1A - <?php echo ucfirst($assessment_type); ?> Print</title>
-    <link rel="stylesheet" href="<?= base_url('assets/css/print-sbfp.css'); ?>">
+    <link rel="stylesheet" href="<?= base_url(ASSETS_PATH . '/css/print-sbfp.css'); ?>">
 </head>
 <body>
     <div class="header">
@@ -121,6 +121,6 @@
             hasData: <?php echo !empty($beneficiaries) ? 'true' : 'false'; ?>
         };
     </script>
-    <script src="<?= base_url('assets/js/print-sbfp.js'); ?>"></script>
+    <script src="<?= base_url(ASSETS_PATH . '/js/print-sbfp.js'); ?>"></script>
 </body>
 </html>

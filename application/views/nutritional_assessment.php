@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <link rel="stylesheet" href="<?= base_url('assets/css/nutritional_assessment.css'); ?>">
+    <link rel="stylesheet" href="<?= base_url(ASSETS_PATH . '/css/nutritional_assessment.css'); ?>">
   </head>
   <body class="bg-light">
     <div class="d-flex" id="wrapper">
@@ -354,7 +354,7 @@
       var existingWeighingDate = '<?php echo isset($existing_weighing_date) ? $existing_weighing_date : ''; ?>';
     </script>
     
-    <script src="<?= base_url('assets/js/nutritional_assessment.js'); ?>"></script>
+    <script src="<?= base_url(ASSETS_PATH . '/js/nutritional_assessment.js'); ?>"></script>
     
   </body>
 </html>

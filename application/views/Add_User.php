@@ -172,4 +172,4 @@
 </div>
 
 <!-- Include external JavaScript -->
-<script src="<?php echo base_url('assets/js/add-user.js'); ?>"></script>
+<script src="<?php echo base_url(ASSETS_PATH . '/js/add-user.js'); ?>"></script>

@@ -39,7 +39,7 @@ function getAssessmentBadgeClass($type) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <link rel="stylesheet" href="<?= base_url('assets/css/archive.css'); ?>">
+    <link rel="stylesheet" href="<?= base_url(ASSETS_PATH . '/css/archive.css'); ?>">
   </head>
   <body class="bg-light">
     <div class="d-flex" id="wrapper">
@@ -409,7 +409,7 @@ function getAssessmentBadgeClass($type) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="<?= base_url('assets/js/archive.js'); ?>"></script>
+    <script src="<?= base_url(ASSETS_PATH . '/js/archive.js'); ?>"></script>
     <script>
       // Pass PHP variables to JavaScript
       const userRole = '<?= $user_role ?>';

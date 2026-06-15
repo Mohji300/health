@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <link rel="stylesheet" href="<?= base_url('assets/css/nutritional-upload.css'); ?>">
+    <link rel="stylesheet" href="<?= base_url(ASSETS_PATH . '/css/nutritional-upload.css'); ?>">
 </head>
 <body>
     <div class="container mt-4">
@@ -88,6 +88,6 @@
             allowedExtensions: ['xlsx', 'xls', 'csv']
         };
     </script>
-    <script src="<?= base_url('assets/js/nutritional-upload.js'); ?>"></script>
+    <script src="<?= base_url(ASSETS_PATH . '/js/nutritional-upload.js'); ?>"></script>
 </body>
 </html>

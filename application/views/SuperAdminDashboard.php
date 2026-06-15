@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <link rel="stylesheet" href="<?= base_url('assets/css/superadmin_dashboard.css'); ?>">
+    <link rel="stylesheet" href="<?= base_url(ASSETS_PATH . '/css/superadmin_dashboard.css'); ?>">
   </head>
   <body class="bg-light">
     <div id="wrapper">
@@ -383,6 +383,6 @@
       reset_user_base: '<?= site_url("superadmincontroller/reset_user_data/"); ?>'
     };
     </script>
-    <script src="<?= base_url('assets/js/superadmin_dashboard.js'); ?>"></script>
+    <script src="<?= base_url(ASSETS_PATH . '/js/superadmin_dashboard.js'); ?>"></script>
   </body>
 </html>

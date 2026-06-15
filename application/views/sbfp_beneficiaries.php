@@ -21,7 +21,7 @@ $school_level = isset($school_level) ? $school_level : 'all';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-    <link rel="stylesheet" href="<?= base_url('assets/css/sbfp_beneficiaries.css'); ?>">
+    <link rel="stylesheet" href="<?= base_url(ASSETS_PATH . '/css/sbfp_beneficiaries.css'); ?>">
   </head>
   <body class="bg-light">
     <div class="d-flex" id="wrapper">
@@ -344,6 +344,10 @@ $school_level = isset($school_level) ? $school_level : 'all';
                       <th class="col-bmi">BMI</th>
                       <th class="col-ns">Nutritional Status</th>
                       <th class="col-hfa">Height for Age</th>
+                      <th class="col-classification">Classification of Beneficiary (Primary or Secondary)</th>
+                      <th class="col-pregnant">Pregnant (Yes or No)</th>
+                      <th class="col-child">With 0-1 Year-Old Child/ren (Yes or No)</th>
+                      <th class="col-dewormed">Dewormed (Yes or No)</th>
                       <th class="col-consent">Parent's Consent for Milk</th>
                       <th class="col-4ps">Participation in 4Ps</th>
                       <th class="col-previous">Beneficiary of SBFP in Previous Years</th>
@@ -402,11 +406,32 @@ $school_level = isset($school_level) ? $school_level : 'all';
                       <td class="text-center">
                         <span class="badge <?= $ns_class ?>"><?= $student['nutritional_status'] ?></span>
                       </td>
+
                       <td class="text-center">
                         <span class="badge <?= $hfa_class ?>"><?= htmlspecialchars($hfa_display) ?></span>
                       </td>
+
                       <?php
                         $assessment_id = isset($student['id']) ? $student['id'] : (isset($student['assessment_id']) ? $student['assessment_id'] : '');
+
+                        // Determine values for classification, pregnancy, child under 0-1, and dewormed
+                        $ClassificationOfBeneficiary = '';
+                        foreach (['classification_of_beneficiary_(Primary or Secondary)','classification_of_beneficiary','beneficiary_classification','classification_primary_secondary'] as $c) {
+                          if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $ClassificationOfBeneficiary = $student[$c]; break; }
+                        }
+
+                        $pregnantValue = '';
+                        foreach (['pregnant','is_pregnant','pregnancy_status','pregnancy'] as $c) {
+                          if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $pregnantValue = $student[$c]; break; }
+                        }
+                        $child01Value = '';
+                        foreach (['with_0_1_year_old_child','with_0_1_children','has_child_0_1','child_0_1'] as $c) {
+                          if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $child01Value = $student[$c]; break; }
+                        }
+                        $dewormedValue = '';
+                        foreach (['dewormed','is_dewormed','deworming'] as $c) {
+                          if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $dewormedValue = $student[$c]; break; }
+                        }
 
                         $parentConsentValue = '';
                         foreach (['parent_consent','parents_consent','parent_consent_for_milk','parent_consent_milk'] as $c) {
@@ -421,6 +446,34 @@ $school_level = isset($school_level) ? $school_level : 'all';
                           if (isset($student[$c]) && $student[$c] !== null && $student[$c] !== '') { $previousSbfpValue = $student[$c]; break; }
                         }
                       ?>
+
+                      <td class="text-center">
+                          <div class="btn-group btn-group-sm sbfp-flag-group" role="group" data-assessment-id="<?= htmlspecialchars($assessment_id) ?>">
+                              <button type="button" class="btn sbfp-flag-btn <?= (strtolower($ClassificationOfBeneficiary) === 'primary') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="classification_of_beneficiary" data-value="Primary">Primary</button>
+                              <button type="button" class="btn sbfp-flag-btn <?= (strtolower($ClassificationOfBeneficiary) === 'secondary') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="classification_of_beneficiary" data-value="Secondary">Secondary</button>
+                          </div>
+                      </td>
+
+                      <td class="text-center">
+                        <div class="btn-group btn-group-sm sbfp-flag-group" role="group" data-assessment-id="<?= htmlspecialchars($assessment_id) ?>">
+                          <button type="button" class="btn sbfp-flag-btn <?= ($pregnantValue === 'Yes') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="pregnant" data-value="Yes">Yes</button>
+                          <button type="button" class="btn sbfp-flag-btn <?= ($pregnantValue === 'No') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="pregnant" data-value="No">No</button>
+                        </div>
+                      </td>
+
+                      <td class="text-center">
+                        <div class="btn-group btn-group-sm sbfp-flag-group" role="group" data-assessment-id="<?= htmlspecialchars($assessment_id) ?>">
+                          <button type="button" class="btn sbfp-flag-btn <?= ($child01Value === 'Yes') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="with_0_1_year_old_child" data-value="Yes">Yes</button>
+                          <button type="button" class="btn sbfp-flag-btn <?= ($child01Value === 'No') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="with_0_1_year_old_child" data-value="No">No</button>
+                        </div>
+                      </td>
+
+                      <td class="text-center">
+                        <div class="btn-group btn-group-sm sbfp-flag-group" role="group" data-assessment-id="<?= htmlspecialchars($assessment_id) ?>">
+                          <button type="button" class="btn sbfp-flag-btn <?= ($dewormedValue === 'Yes') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="dewormed" data-value="Yes">Yes</button>
+                          <button type="button" class="btn sbfp-flag-btn <?= ($dewormedValue === 'No') ? 'btn-primary' : 'btn-outline-secondary' ?>" data-field="dewormed" data-value="No">No</button>
+                        </div>
+                      </td>
 
                       <td class="text-center">
                         <div class="btn-group btn-group-sm sbfp-flag-group" role="group" data-assessment-id="<?= htmlspecialchars($assessment_id) ?>">
@@ -447,7 +500,7 @@ $school_level = isset($school_level) ? $school_level : 'all';
                     
                     <?php else: ?>
                     <tr>
-                      <td colspan="15" class="text-center text-muted py-4">
+                      <td colspan="19" class="text-center text-muted py-4">
                         <i class="fas fa-database fa-2x mb-3 d-block"></i>
                         No <?php echo $assessment_type; ?> data found for the selected filter.
                         <?php if ($assessment_type == 'midline'): ?>
@@ -547,6 +600,6 @@ $school_level = isset($school_level) ? $school_level : 'all';
         available_schools: <?= json_encode($available_schools); ?>
     };
     </script>
-    <script src="<?= base_url('assets/js/sbfp_beneficiaries.js'); ?>"></script>
+    <script src="<?= base_url(ASSETS_PATH . '/js/sbfp_beneficiaries.js'); ?>"></script>
   </body>
 </html>

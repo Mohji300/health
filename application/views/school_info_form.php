@@ -6,7 +6,7 @@
     <title><?php echo $title; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo base_url('assets/css/school-info.css'); ?>">
+    <link rel="stylesheet" href="<?php echo base_url(ASSETS_PATH . '/css/school-info.css'); ?>">
 </head>
 <body class="gradient-bg">
     <div class="container py-5">
@@ -277,6 +277,6 @@
         const userSchoolDistrict = '<?php echo $user->school_district; ?>';
         const userLegislativeDistrict = '<?php echo $user->legislative_district; ?>';
     </script>
-    <script src="<?php echo base_url('assets/js/school-info.js'); ?>"></script>
+    <script src="<?php echo base_url(ASSETS_PATH . '/js/school-info.js'); ?>"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed'); ?>
 
-<link rel="stylesheet" href="<?php echo base_url('assets/css/sidebar.css'); ?>">
+<link rel="stylesheet" href="<?php echo base_url(ASSETS_PATH . '/css/sidebar.css'); ?>">
 
 <!-- Toggle Button -->
 <button id="sidebarToggle"
@@ -14,7 +14,7 @@
 
   <!-- Header -->
   <div class="text-center py-4 border-bottom border-gray-700 px-2" style="margin-top:0.5in;">
-        <img src="<?php echo base_url('assets/images/sdo.png'); ?>" 
+        <img src="<?php echo base_url(ASSETS_PATH . '/images/sdo.png'); ?>" 
           alt="School Logo" 
           class="mb-3 avatar-circle">
     <div class="main-sidebar-text">
@@ -257,4 +257,4 @@
 
 <div id="sidebarSpacer"></div>
 
-<script src="<?php echo base_url('assets/js/sidebar.js'); ?>"></script>
+<script src="<?php echo base_url(ASSETS_PATH . '/js/sidebar.js'); ?>"></script>

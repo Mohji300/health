@@ -14,7 +14,7 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="<?php echo base_url('assets/css/enrollment.css'); ?>">
+    <link rel="stylesheet" href="<?php echo base_url(ASSETS_PATH . '/css/enrollment.css'); ?>">
 </head>
 
 <body class="bg-light">
@@ -197,6 +197,6 @@
 <script>
     window.BASE_URL = '<?php echo base_url(); ?>';
 </script>
-<script src="<?php echo base_url('assets/js/enrollment.js'); ?>"></script>
+<script src="<?php echo base_url(ASSETS_PATH . '/js/enrollment.js'); ?>"></script>
 </body>
 </html>

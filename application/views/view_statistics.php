@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
-<link rel="stylesheet" href="<?= base_url('assets/css/view_statistics.css'); ?>">
+<link rel="stylesheet" href="<?= base_url(ASSETS_PATH . '/css/view_statistics.css'); ?>">
 </head>
 
 <body>
@@ -427,6 +427,6 @@
   <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-  <script src="<?= base_url('assets/js/view_statistics.js'); ?>"></script>
+  <script src="<?= base_url(ASSETS_PATH . '/js/view_statistics.js'); ?>"></script>
 </body>
 </html>
