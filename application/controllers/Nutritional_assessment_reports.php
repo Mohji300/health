@@ -105,7 +105,7 @@ class Nutritional_assessment_reports extends CI_Controller {
             $this->load->library('phpspreadsheet_lib');
 
             // Define template path
-            $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
+            $templatePath = FCPATH . ASSETS_PATH . '/excel_templates/nutritional_report_template.xlsx';
             
             // Load the template using the library
             $spreadsheet = $this->phpspreadsheet_lib->loadTemplate($templatePath);
@@ -487,7 +487,7 @@ class Nutritional_assessment_reports extends CI_Controller {
             $actual_year = $assessments[0]->year ?? $year;
 
             // Define template path
-            $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
+            $templatePath = FCPATH . ASSETS_PATH . '/excel_templates/nutritional_report_template.xlsx';
             
             if (!file_exists($templatePath)) {
                 show_error('Template file not found at: ' . $templatePath);

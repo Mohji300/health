@@ -117,10 +117,10 @@ class Division_reports_controller extends CI_Controller {
             }
 
             // Define template path
-            $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
+            $templatePath = FCPATH . ASSETS_PATH . '/excel_templates/nutritional_report_template.xlsx';
             
             if (!file_exists($templatePath)) {
-                show_error('Template file not found. Please ensure nutritional_report_template.xlsx is in assets/templates/');
+                show_error('Template file not found. Please ensure nutritional_report_template.xlsx exists at: ' . $templatePath);
             }
 
             // Load the template
@@ -528,7 +528,7 @@ class Division_reports_controller extends CI_Controller {
             $actual_year = $assessments[0]->year ?? $year;
 
             // Load the template
-            $templatePath = FCPATH . 'assets/templates/nutritional_report_template.xlsx';
+            $templatePath = FCPATH . ASSETS_PATH . '/templates/nutritional_report_template.xlsx';
             
             if (!file_exists($templatePath)) {
                 show_error('Template file not found at: ' . $templatePath);
