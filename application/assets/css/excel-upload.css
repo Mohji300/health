@@ -1,0 +1,365 @@
+/* Excel Upload CSS */
+
+/* Main Container */
+.upload-container {
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 25px;
+    border: 2px dashed #007bff;
+    border-radius: 10px;
+    background-color: #f8f9fa;
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Stats Cards */
+.stats-card {
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.stats-card h3 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.stats-card p {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+/* Alerts */
+.alert {
+    margin-bottom: 20px;
+    border: none;
+    border-radius: 8px;
+    animation: slideDown 0.3s ease-out;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+/* Card Headers */
+.card-header {
+    font-weight: 600;
+    border-bottom: none;
+}
+
+.card-header.bg-primary {
+    background: linear-gradient(45deg, #007bff, #0056b3) !important;
+}
+
+.card-header.bg-info {
+    background: linear-gradient(45deg, #17a2b8, #117a8b) !important;
+}
+
+.card-header.bg-warning {
+    background: linear-gradient(45deg, #ffc107, #d39e00) !important;
+}
+
+.card-header.bg-secondary {
+    background: linear-gradient(45deg, #6c757d, #545b62) !important;
+}
+
+/* Preview Table */
+.preview-table {
+    font-size: 0.85rem;
+}
+
+.preview-table thead th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.preview-table tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+/* Form Elements */
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-text {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Buttons */
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-success {
+    background: linear-gradient(45deg, #28a745, #1e7e34);
+    border: none;
+}
+
+.btn-danger {
+    background: linear-gradient(45deg, #dc3545, #bd2130);
+    border: none;
+}
+
+.clear-data-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.clear-data-btn:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+
+.clear-data-btn:hover:after {
+    width: 100%;
+    height: 100%;
+}
+
+/* List Group */
+.list-group-item {
+    border: none;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.list-group-item:hover {
+    border-left-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.list-group-item ul {
+    list-style-type: none;
+    padding-left: 20px;
+}
+
+.list-group-item ul li {
+    padding: 3px 0;
+    position: relative;
+}
+
+.list-group-item ul li:before {
+    content: "•";
+    color: #007bff;
+    font-weight: bold;
+    position: absolute;
+    left: -15px;
+}
+
+/* Instructions */
+ol.small {
+    padding-left: 20px;
+}
+
+ol.small li {
+    margin-bottom: 5px;
+}
+
+/* Icons */
+.fa-file-csv {
+    font-size: 2rem;
+    margin-right: 10px;
+}
+
+.fa-info-circle,
+.fa-table {
+    margin-right: 5px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .upload-container {
+        margin: 15px;
+        padding: 15px;
+    }
+    
+    .stats-card h3 {
+        font-size: 2rem;
+    }
+    
+    .btn-lg {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .preview-table {
+        font-size: 0.75rem;
+    }
+    
+    .card-header h5 {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .stats-card h3 {
+        font-size: 1.5rem;
+    }
+    
+    .stats-card p {
+        font-size: 0.8rem;
+    }
+    
+    .list-group-item {
+        font-size: 0.85rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .upload-container {
+        border: 1px solid #000;
+        background: white;
+    }
+    
+    .btn,
+    .alert,
+    .card-header {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+/* Custom Scrollbar */
+.upload-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.upload-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.upload-container::-webkit-scrollbar-thumb {
+    background: #007bff;
+    border-radius: 4px;
+}
+
+.upload-container::-webkit-scrollbar-thumb:hover {
+    background: #0056b3;
+}
+
+/* Loading State (for future AJAX uploads) */
+.uploading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.uploading:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin-top: -15px;
+    margin-left: -15px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Tooltip Styles (if needed) */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+[data-tooltip]:before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    background: #333;
+    color: white;
+    font-size: 12px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+[data-tooltip]:hover:before {
+    opacity: 1;
+    visibility: visible;
+    bottom: 150%;
+}

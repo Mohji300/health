@@ -1,0 +1,220 @@
+/* School Information Form Styles */
+
+.gradient-bg {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.form-container {
+    max-width: 500px;
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.school-icon {
+    color: #4f46e5;
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
+}
+
+.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.btn-primary {
+    background-color: #4f46e5;
+    border-color: #4f46e5;
+}
+
+.btn-primary:hover {
+    background-color: #4338ca;
+    border-color: #4338ca;
+}
+
+.btn-primary:disabled {
+    background-color: #4f46e5;
+    border-color: #4f46e5;
+    opacity: 0.65;
+}
+
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Alert Styles */
+.alert-dismissible .btn-close {
+    padding: 1.25rem;
+}
+
+.alert-heading {
+    font-weight: 600;
+}
+
+/* Form Field Spacing */
+.space-y-4 > * + * {
+    margin-top: 1.5rem;
+}
+
+/* Input Group Styles */
+.input-group-text {
+    background-color: #f8f9fa;
+    border-color: #ced4da;
+}
+
+/* Textarea Styles */
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Select Styles */
+select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2rem;
+}
+
+/* Readonly Input Styles */
+input[readonly] {
+    background-color: #e9ecef;
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+/* Disabled Select Styles */
+select:disabled {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+
+/* Help Text Styles */
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Spinner Styles */
+.spinner-border {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-width: 0.2rem;
+}
+
+/* Responsive Styles */
+@media (max-width: 576px) {
+    .form-container {
+        max-width: 100%;
+        margin: 0 1rem;
+        padding: 1.5rem !important;
+    }
+    
+    .school-icon {
+        font-size: 2.5rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    p {
+        font-size: 0.9rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .form-container {
+        max-width: 600px;
+    }
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-container {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Button Hover Effect */
+.btn-primary {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.btn-primary:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+
+.btn-primary:hover:after {
+    width: 100%;
+    height: 100%;
+}
+
+/* Validation Styles */
+.invalid-feedback {
+    display: block;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    color: #dc3545;
+}
+
+/* Success Animation */
+@keyframes successPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
+    }
+}
+
+.btn-success {
+    animation: successPulse 1s;
+}
+
+/* Custom Checkbox/Radio Styles (if needed) */
+.form-check-input:checked {
+    background-color: #4f46e5;
+    border-color: #4f46e5;
+}
+
+.form-check-input:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
+}
