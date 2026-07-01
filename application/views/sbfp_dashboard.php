@@ -393,6 +393,12 @@ foreach ($submitted as $s) {
                                       title="Add Student">
                                       <i class="fas fa-user-plus"></i>
                                     </a>
+                                    <!-- Manage Beneficiaries Button -->
+                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&section_id=' . $item->id . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type . '&mode=beneficiary'); ?>"
+                                      class="btn btn-info btn-sm"
+                                      title="Manage Beneficiaries">
+                                      <i class="fas fa-users"></i> Beneficiaries
+                                    </a>
                                     
                                     <!-- Delete Assessment Button -->
                                     <button class="btn btn-danger btn-sm delete-assessment btn-delete"
