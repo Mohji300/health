@@ -63,6 +63,22 @@ class section_model extends CI_Model {
         return $this->db->insert($this->table, $data);
     }
 
+    public function get_section_id($grade, $section, $school_year, $legislative_district, $school_district, $user_id)
+    {
+        $this->db->select('id');
+        $this->db->where('grade', $grade);
+        $this->db->where('section', $section);
+        $this->db->where('year', $school_year);
+        $this->db->where('legislative_district', $legislative_district);
+        $this->db->where('school_district', $school_district);
+        $this->db->where('user_id', $user_id);
+        $query = $this->db->get('grade_sections');
+        if ($query->num_rows() > 0) {
+            return $query->row()->id;
+        }
+        return null;
+    }
+
     /**
      * Delete a section by ID
      */
@@ -102,40 +118,31 @@ class section_model extends CI_Model {
         return $this->db->get($this->table)->result();
     }
 
-    // Checks for deleted assessments and removes sections accordingly
     public function check_and_remove_sections_with_deleted_assessments($user_id)
     {
-        // Get user info
-        $this->load->model('user_model');
         $user = $this->user_model->get_user_by_id($user_id);
-        
-        if (!$user) {
-            return false;
-        }
-        
-        // Get all sections for this user
+        if (!$user) return false;
+
         $sections = $this->get_by_user($user_id);
-        
         $removed_count = 0;
-        
+
         foreach ($sections as $section) {
-            // Check if there's a deleted assessment for this section
-            $this->db->where('legislative_district', $user->legislative_district);
-            $this->db->where('school_district', $user->school_district);
-            $this->db->where('grade_level', $section->grade);
-            $this->db->where('section', $section->section);
-            $this->db->where('is_deleted', 1); // Check for deleted assessments
-            
-            $deleted_assessment = $this->db->get('nutritional_assessments')->row();
-            
-            // If a deleted assessment exists for this section, remove the section
-            if ($deleted_assessment) {
+            // Total assessments for this section
+            $this->db->where('section_id', $section->id);
+            $total = $this->db->count_all_results('nutritional_assessments');
+
+            if ($total == 0) continue; // brand new section, keep it
+
+            // Active (non-deleted) assessments
+            $this->db->where('section_id', $section->id);
+            $this->db->where('is_deleted', 0);
+            $active = $this->db->count_all_results('nutritional_assessments');
+
+            if ($active == 0) {
                 $this->delete_section($section->id);
                 $removed_count++;
             }
         }
-        
         return $removed_count;
     }
-
 }
