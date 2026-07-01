@@ -169,12 +169,14 @@
                     <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#updateAllModal">
                       <i class="fas fa-sync-alt me-1"></i> Update All Roles
                     </button>
-                    <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#resetAllSchoolInfoModal">
-                      <i class="fas fa-undo-alt me-1"></i> Reset All School Info
-                    </button>
-                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#resetNutritionalModal">
-                      <i class="fas fa-trash-alt me-1"></i> Reset Nutritional Data
-                    </button>
+                    <!-- Reset All School Info -->
+                    <?= form_open('superadmin/reset-school-info'); ?>
+                        <button type="submit" class="btn btn-warning">Reset All</button>
+                    <?= form_close(); ?>
+                    <!-- Delete All Nutritional Assessments -->
+                    <?= form_open('superadmin/delete-all-assessments'); ?>
+                        <button type="submit" class="btn btn-danger">Delete All Permanently</button>
+                    <?= form_close(); ?>
                   </div>
                 </div>
                 <div class="card-body">
@@ -270,7 +272,7 @@
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
 
             <!-- Form that will submit a JSON payload of users -->
-            <form id="bulkUpdateForm" method="post" action="<?php echo site_url('superadmin/update_all_roles'); ?>">
+            <form id="bulkUpdateForm" method="post" action="<?php echo site_url('superadmin/update-all-roles'); ?>">
               <input type="hidden" name="users" id="bulkUsersInput" value="">
               <button type="button" id="submitBulkPayload" class="btn btn-info">Submit Payload</button>
               <button type="submit" name="server_driven" value="1" class="btn btn-success">Server-driven Update</button>
@@ -320,9 +322,9 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <form id="resetAllSchoolInfoForm" method="post" action="<?php echo site_url('superadmincontroller/reset_all_school_info'); ?>">
-              <button type="submit" class="btn btn-warning">Reset All</button>
-            </form>
+            <?= form_open('superadmin/reset-school-info'); ?>
+                <button type="submit" class="btn btn-warning">Reset All</button>
+            <?= form_close(); ?>
           </div>
         </div>
       </div>
@@ -334,7 +336,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="resetNutritionalModalLabel">Delete All Nutritional Assessment Data</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>  
                 </div>
                 <div class="modal-body">
                     <p>Are you sure you want to <strong class="text-danger">PERMANENTLY DELETE ALL</strong> records from the <code>nutritional_assessments</code> table?</p>
@@ -343,9 +345,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <form method="post" action="<?php echo site_url('superadmincontroller/delete_all_nutritional_assessments'); ?>">
-                        <button type="submit" class="btn btn-danger">Delete All Permanently</button>
-                    </form>
+                  <?= form_open('superadmin/delete-all-assessments'); ?>
+                      <button type="submit" class="btn btn-danger">Delete All Permanently</button>
+                  <?= form_close(); ?>
                 </div>
             </div>
         </div>
@@ -379,8 +381,8 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script>
     window.SuperAdminConfig = {
-      delete_user_base: '<?= site_url("superadmincontroller/delete_user/"); ?>',
-      reset_user_base: '<?= site_url("superadmincontroller/reset_user_data/"); ?>'
+      delete_user_base: '<?= site_url("superadmin/delete-user/"); ?>',
+      reset_user_base: '<?= site_url("superadmin/reset-user-data/"); ?>'
     };
     </script>
     <script src="<?= base_url(ASSETS_PATH . '/js/superadmin_dashboard.js'); ?>"></script>
