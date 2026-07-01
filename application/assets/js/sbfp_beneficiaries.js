@@ -2,6 +2,21 @@
 $(document).ready(function() {
     var hasData = (window.SbfpBeneficiariesConfig && window.SbfpBeneficiariesConfig.hasData) ? true : false;
 
+    function buildFilterUrl(gradeLevel, schoolName, district, sectionId) {
+    var url = new URL(window.location.href);
+    // Remove old parameters
+    url.searchParams.delete('grade_level');
+    url.searchParams.delete('school_name');
+    url.searchParams.delete('district');
+    url.searchParams.delete('section_id');
+    // Set new ones (only if not empty)
+    if (gradeLevel) url.searchParams.set('grade_level', gradeLevel);
+    if (schoolName) url.searchParams.set('school_name', schoolName);
+    if (district) url.searchParams.set('district', district);
+    if (sectionId) url.searchParams.set('section_id', sectionId);
+    return url.toString();
+    }
+
     if (hasData) {
         $('#beneficiariesTable').DataTable({
             pageLength: 26,
@@ -31,6 +46,11 @@ $(document).ready(function() {
         clearAllFilters();
     });
 
+    // Section filter change
+    $('#sectionFilter').change(function() {
+        applyFilters();
+    });
+
     $('#assessmentTypeSelect').on('change', function() {
         var newType = $(this).val();
         $.ajax({
@@ -49,6 +69,31 @@ $(document).ready(function() {
                 alert('Error switching assessment type. Please try again.');
             }
         });
+    });
+
+    // When the print form is submitted, gather local flags and set the hidden field
+    $('#printForm').on('submit', function() {
+        var overrides = {};
+        try {
+            for (var i = 0; i < localStorage.length; i++) {
+                var key = localStorage.key(i);
+                if (!key) continue;
+                if (key.indexOf('sbfp_flag_') === 0) {
+                    var parts = key.split('_');
+                    if (parts.length >= 4) {
+                        var id = parts[2];
+                        var field = parts.slice(3).join('_');
+                        var val = localStorage.getItem(key);
+                        if (!overrides[id]) overrides[id] = {};
+                        overrides[id][field] = val;
+                    }
+                }
+            }
+        } catch (ex) {
+            console.warn('Could not read localStorage for print overrides', ex);
+        }
+        $('#printLocalFlags').val(JSON.stringify(overrides));
+        // The form will submit; no need to prevent default
     });
     
     // Grade level filter change
@@ -118,13 +163,19 @@ $(document).ready(function() {
         var gradeLevel = $('#gradeLevelFilter').val();
         var schoolName = $('#schoolNameFilter').length ? $('#schoolNameFilter').val() : '';
         var district = $('#districtFilter').length ? $('#districtFilter').val() : '';
-        
-        // Show loading indicator
+        var sectionId = $('#sectionFilter').val(); // ✅ new
+
+        // Show loading overlay
         showLoadingOverlay();
-        
-        // Determine which filters to apply based on user role
+
         var userRole = window.SbfpBeneficiariesConfig.user_role;
-        
+
+        // Function to redirect after all filters are set
+        function redirectWithFilters() {
+            var url = buildFilterUrl(gradeLevel, schoolName, district, sectionId);
+            window.location.href = url;
+        }
+
         // Apply grade level filter (always)
         if (gradeLevel !== undefined) {
             $.ajax({
@@ -151,7 +202,7 @@ $(document).ready(function() {
                                         data: { district: district },
                                         dataType: 'json',
                                         success: function() {
-                                            window.location.reload();
+                                            redirectWithFilters();
                                         },
                                         error: function() {
                                             hideLoadingOverlay();
@@ -159,7 +210,7 @@ $(document).ready(function() {
                                         }
                                     });
                                 } else {
-                                    window.location.reload();
+                                    redirectWithFilters();
                                 }
                             },
                             error: function() {
@@ -168,7 +219,7 @@ $(document).ready(function() {
                             }
                         });
                     } else {
-                        window.location.reload();
+                        redirectWithFilters();
                     }
                 },
                 error: function() {
@@ -177,7 +228,7 @@ $(document).ready(function() {
                 }
             });
         } else {
-            window.location.reload();
+            redirectWithFilters();
         }
     }
     
@@ -209,14 +260,13 @@ $(document).ready(function() {
                 $('#gradeLevelFilter').val('');
                 break;
             case 'school':
-                if ($('#schoolNameFilter').length) {
-                    $('#schoolNameFilter').val('');
-                }
+                if ($('#schoolNameFilter').length) $('#schoolNameFilter').val('');
                 break;
             case 'district':
-                if ($('#districtFilter').length) {
-                    $('#districtFilter').val('');
-                }
+                if ($('#districtFilter').length) $('#districtFilter').val('');
+                break;
+            case 'section':
+                if ($('#sectionFilter').length) $('#sectionFilter').val('');
                 break;
         }
         applyFilters();
@@ -258,8 +308,7 @@ $(document).ready(function() {
 
         try {
             localStorage.setItem('sbfp_flag_' + assessmentId + '_' + field, value);
-        } catch (e) {
-        }
+        } catch (e) {}
 
         // UI: disable group while updating
         var buttons = group.find('.sbfp-flag-btn');
@@ -274,14 +323,19 @@ $(document).ready(function() {
             data: { id: assessmentId, field: field, value: value },
             dataType: 'json',
             success: function(resp) {
-                if (resp && resp.success) {
-                    showNotification('Saved', 'success');
-                } else {
-                    showNotification('Save failed: ' + (resp.message || 'Unknown error'), 'danger');
-                }
+                // --- All pop-ups commented out ---
+                // if (resp && resp.success) {
+                //     showNotification('Saved', 'success');
+                // } else {
+                //     showNotification('Save failed: ' + (resp.message || 'Unknown error'), 'danger');
+                // }
+                // Optional: still log to console for debugging
+                console.log('Flag update response:', resp);
             },
             error: function(xhr, status, err) {
-                showNotification('Save failed. Please try again.', 'danger');
+                // --- All error pop-ups commented out ---
+                // showNotification('Save failed. Please try again.', 'danger');
+                console.warn('Flag update AJAX error:', err);
             },
             complete: function() {
                 buttons.prop('disabled', false);

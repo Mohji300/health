@@ -233,6 +233,22 @@ $school_level = isset($school_level) ? $school_level : 'all';
                   </div>
                   <?php endif; ?>
 
+                  <!-- Section Filter -->
+                  <div class="col-md-4 mb-3">
+                      <label class="form-label fw-bold">
+                          <i class="fas fa-layer-group me-1"></i> Section
+                      </label>
+                      <select id="sectionFilter" class="form-select">
+                          <option value="">All Sections</option>
+                          <?php foreach ($sections as $sec): ?>
+                              <option value="<?= $sec->id ?>" 
+                                  <?= ($section_id == $sec->id) ? 'selected' : '' ?>>
+                                  <?= htmlspecialchars($sec->section) ?>
+                              </option>
+                          <?php endforeach; ?>
+                      </select>
+                  </div>
+
                   <!-- Filter Buttons -->
                   <div class="col-md-12 mt-2">
                       <button type="button" id="applyFiltersBtn" class="btn btn-primary btn-sm">
@@ -319,9 +335,21 @@ $school_level = isset($school_level) ? $school_level : 'all';
                       <button type="button" id="exportExcelBtn" class="btn btn-success btn-sm">
                           <i class="fas fa-file-excel me-1"></i> Export to Excel
                       </button>
-                      <a href="<?= site_url('sbfp_beneficiaries_controller/print_report') ?>" target="_blank" class="btn btn-outline-info btn-sm no-print">
-                          <i class="fas fa-print me-1"></i> Print Form
-                      </a>
+                      <?php 
+                      $print_url = site_url('sbfp_beneficiaries_controller/print_report');
+                      $params = [];
+                      if (!empty($grade_level_filter)) $params['grade_level'] = $grade_level_filter;
+                      if (!empty($school_name_filter)) $params['school_name'] = $school_name_filter;
+                      if (!empty($district_filter)) $params['district'] = $district_filter;
+                      if (!empty($section_id)) $params['section_id'] = $section_id;
+                      if ($params) $print_url .= '?' . http_build_query($params);
+                      ?>
+                      <form id="printForm" method="POST" action="<?= $print_url ?>" target="_blank" style="display:inline;">
+                          <input type="hidden" name="local_flags" id="printLocalFlags" value="">
+                          <button type="submit" class="btn btn-outline-info btn-sm no-print">
+                              <i class="fas fa-print me-1"></i> Print Form
+                          </button>
+                      </form>
                     </div>
                 </div>
             </div>

@@ -23,23 +23,28 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $session_school_name = $this->session->userdata('school_name');
         $session_school_id = $this->session->userdata('school_id');
         $session_district = $this->session->userdata('school_district');
+        $session_legislative_district = $this->session->userdata('legislative_district');
+        $section_id = $this->input->get('section_id', TRUE);
 
         $user_role = 'school';
         $school_name = '';
         $school_id = '';
         $school_district = '';
-
+        $legislative_district = '';
+        
         if (!empty($auth_user)) {
             if (is_object($auth_user)) {
                 $user_role = !empty($auth_user->role) ? $auth_user->role : $user_role;
                 $school_name = !empty($auth_user->name) ? $auth_user->name : $school_name;
                 $school_id = !empty($auth_user->school_id) ? $auth_user->school_id : $school_id;
                 $school_district = !empty($auth_user->school_district) ? $auth_user->school_district : $school_district;
+                $legislative_district = !empty($auth_user->legislative_district) ? $auth_user->legislative_district : $legislative_district;
             } elseif (is_array($auth_user)) {
                 $user_role = !empty($auth_user['role']) ? $auth_user['role'] : $user_role;
                 $school_name = !empty($auth_user['name']) ? $auth_user['name'] : $school_name;
                 $school_id = !empty($auth_user['school_id']) ? $auth_user['school_id'] : $school_id;
                 $school_district = !empty($auth_user['school_district']) ? $auth_user['school_district'] : $school_district;
+                $legislative_district = !empty($auth_user['legislative_district']) ? $auth_user['legislative_district'] : $legislative_district;
             }
         }
 
@@ -64,17 +69,40 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
                 $school_name = !empty($user_data['name']) ? $user_data['name'] : $school_name;
                 $school_id = !empty($user_data['school_id']) ? $user_data['school_id'] : $school_id;
                 $school_district = !empty($user_data['school_district']) ? $user_data['school_district'] : $school_district;
+                $legislative_district = !empty($user_data['legislative_district']) ? $user_data['legislative_district'] : $legislative_district;
+            }
+        }
+
+        //  FORCE school_id from database if still empty
+        if (empty($school_id) && !empty($user_id)) {
+            $this->db->select('school_id, name, school_district, legislative_district');
+            $this->db->from('users');
+            $this->db->where('id', $user_id);
+            $user_query = $this->db->get();
+            if ($user_query->num_rows() > 0) {
+                $user_row = $user_query->row();
+                $school_id = $user_row->school_id;
+                $school_name = $user_row->name;
+                $school_district = $user_row->school_district;
+                $legislative_district = $user_row->legislative_district;
+                // Update session with correct values
+                $this->session->set_userdata('school_id', $school_id);
+                $this->session->set_userdata('school_name', $school_name);
+                $this->session->set_userdata('school_district', $school_district);
+                $this->session->set_userdata('legislative_district', $legislative_district);
+                log_message('debug', ' Forced school_id from DB: ' . $school_id);
             }
         }
 
         if ($user_role === 'district' && empty($school_district)) {
-            $this->db->select('school_district');
+            $this->db->select('school_district, legislative_district');
             $this->db->from('users');
             $this->db->where('id', $user_id);
             $district_query = $this->db->get();
             if ($district_query->num_rows() > 0) {
                 $district_row = $district_query->row();
                 $school_district = !empty($district_row->school_district) ? $district_row->school_district : '';
+                $legislative_district = !empty($district_row->legislative_district) ? $district_row->legislative_district : '';
             }
         }
 
@@ -105,6 +133,8 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
 
         $selected_school = $this->session->userdata('selected_school') ?: '';
         $data['selected_school'] = $selected_school;
+        
+        //  ALWAYS pass school_name for school users
         $model_school_name = $school_name;
         if ($user_role === 'district') {
             $model_school_name = '';
@@ -114,6 +144,7 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $data['school_id'] = $school_id;
         $data['district'] = $school_district;
         $data['school_name'] = $school_name;
+        $data['legislative_district'] = $legislative_district;
         $data['grade_level_filter'] = $grade_level_filter;
         $data['school_name_filter'] = $school_name_filter;
         $data['district_filter'] = $district_filter;
@@ -131,7 +162,8 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             $selected_school,
             $grade_level_filter,
             $school_name_filter,
-            $district_filter
+            $district_filter,
+            $section_id
         );
 
         $data['baseline_count'] = $this->sbfp_beneficiaries_model->count_by_assessment_with_filter(
@@ -144,7 +176,8 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             $selected_school,
             $grade_level_filter,
             $school_name_filter,
-            $district_filter
+            $district_filter,
+            $section_id
         );
         
         $data['midline_count'] = $this->sbfp_beneficiaries_model->count_by_assessment_with_filter(
@@ -157,7 +190,8 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             $selected_school,
             $grade_level_filter,
             $school_name_filter,
-            $district_filter
+            $district_filter,
+            $section_id
         );
         
         $data['endline_count'] = $this->sbfp_beneficiaries_model->count_by_assessment_with_filter(
@@ -170,7 +204,8 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             $selected_school,
             $grade_level_filter,
             $school_name_filter,
-            $district_filter
+            $district_filter,
+            $section_id
         );
         
         // Get nutritional stats with filters
@@ -184,7 +219,8 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             $selected_school,
             $grade_level_filter,
             $school_name_filter,
-            $district_filter
+            $district_filter,
+            $section_id
         );
 
         // Format BMI and height (convert meters to cm)
@@ -212,8 +248,10 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         }
         $data['normal_count'] = $normal_count;
         $data['intervention_count'] = $intervention_count;
+        
         // Get summary stats (includes 'tall' HFA count)
-        $summary_stats = $this->sbfp_beneficiaries_model->get_summary_stats($assessment_type, $model_school_name);
+        //  Pass BOTH school_name AND school_id
+        $summary_stats = $this->sbfp_beneficiaries_model->get_summary_stats($assessment_type, $model_school_name, $school_id);
         $data['tall_count'] = ($summary_stats && isset($summary_stats->tall)) ? (int)$summary_stats->tall : 0;
         
         $data['schools'] = $this->sbfp_beneficiaries_model->get_schools_by_role(
@@ -222,15 +260,22 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             $school_district
         );
         $data['school_count'] = count($data['schools']);
+
+        $data['sections'] = $this->sbfp_beneficiaries_model->get_sections(
+        $assessment_type,
+        $school_id,
+        $grade_level_filter,
+        $school_name
+        );
+        $data['section_id'] = $section_id;
         
         $this->load->view('sbfp_beneficiaries', $data);
     }
-    
     /**
      * Get available schools for filter dropdown based on user role
      */
     private function get_available_schools($user_role, $school_id, $district) {
-        $this->db->select('DISTINCT(school_name)');
+        $this->db->select('DISTINCT(school_name), school_id');
         $this->db->from('nutritional_assessments');
         $this->db->where('is_deleted', 0);
         $this->db->where("(sbfp_beneficiary = 'Yes' OR grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
@@ -647,7 +692,10 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
                 $school_id,
                 $school_district,
                 $selected_school,
-                $district_filter
+                $grade_level_filter,
+                $school_name_filter,
+                $district_filter,
+                $section_id
             );
 
             log_message('debug', 'Beneficiaries found for export: ' . count($beneficiaries));
@@ -1124,38 +1172,98 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             redirect('login');
         }
 
-        $auth_user = $this->session->userdata('auth_user');
         $user_id = $this->session->userdata('user_id');
+        $auth_user = $this->session->userdata('auth_user');
+        $session_role = $this->session->userdata('role');
+        $session_school_name = $this->session->userdata('school_name');
+        $session_school_id = $this->session->userdata('school_id');
+        $session_district = $this->session->userdata('school_district');
+        $session_legislative_district = $this->session->userdata('legislative_district');
+        $section_id = $this->input->get('section_id', TRUE);
 
         $user_role = 'school';
         $school_name = '';
         $school_id = '';
         $school_district = '';
-        
+        $legislative_district = '';
+
         if (!empty($auth_user)) {
             if (is_object($auth_user)) {
                 $user_role = !empty($auth_user->role) ? $auth_user->role : $user_role;
                 $school_name = !empty($auth_user->name) ? $auth_user->name : $school_name;
                 $school_id = !empty($auth_user->school_id) ? $auth_user->school_id : $school_id;
                 $school_district = !empty($auth_user->school_district) ? $auth_user->school_district : $school_district;
+                $legislative_district = !empty($auth_user->legislative_district) ? $auth_user->legislative_district : $legislative_district;
             } elseif (is_array($auth_user)) {
                 $user_role = !empty($auth_user['role']) ? $auth_user['role'] : $user_role;
                 $school_name = !empty($auth_user['name']) ? $auth_user['name'] : $school_name;
                 $school_id = !empty($auth_user['school_id']) ? $auth_user['school_id'] : $school_id;
                 $school_district = !empty($auth_user['school_district']) ? $auth_user['school_district'] : $school_district;
+                $legislative_district = !empty($auth_user['legislative_district']) ? $auth_user['legislative_district'] : $legislative_district;
             }
         }
 
-        $session_district = $this->session->userdata('school_district');
+        if (empty($user_role) || $user_role === 'school') {
+            if (!empty($session_role)) {
+                $user_role = $session_role;
+            }
+        }
+
+        if (empty($school_name) && !empty($session_school_name)) {
+            $school_name = $session_school_name;
+        }
+
         if (!empty($session_district)) {
             $school_district = $session_district;
+        }
+
+        if (empty($school_district) || (empty($school_name) && $user_role === 'school') || empty($user_role)) {
+            $user_data = $this->get_user_data_from_db($user_id);
+            if (!empty($user_data)) {
+                $user_role = !empty($user_data['role']) ? $user_data['role'] : $user_role;
+                $school_name = !empty($user_data['name']) ? $user_data['name'] : $school_name;
+                $school_id = !empty($user_data['school_id']) ? $user_data['school_id'] : $school_id;
+                $school_district = !empty($user_data['school_district']) ? $user_data['school_district'] : $school_district;
+                $legislative_district = !empty($user_data['legislative_district']) ? $user_data['legislative_district'] : $legislative_district;
+            }
+        }
+
+        // Force school_id from database if still empty
+        if (empty($school_id) && !empty($user_id)) {
+            $this->db->select('school_id, name, school_district, legislative_district');
+            $this->db->from('users');
+            $this->db->where('id', $user_id);
+            $user_query = $this->db->get();
+            if ($user_query->num_rows() > 0) {
+                $user_row = $user_query->row();
+                $school_id = $user_row->school_id;
+                $school_name = $user_row->name;
+                $school_district = $user_row->school_district;
+                $legislative_district = $user_row->legislative_district;
+                $this->session->set_userdata('school_id', $school_id);
+                $this->session->set_userdata('school_name', $school_name);
+                $this->session->set_userdata('school_district', $school_district);
+                $this->session->set_userdata('legislative_district', $legislative_district);
+            }
+        }
+
+        if ($user_role === 'district' && empty($school_district)) {
+            $this->db->select('school_district, legislative_district');
+            $this->db->from('users');
+            $this->db->where('id', $user_id);
+            $district_query = $this->db->get();
+            if ($district_query->num_rows() > 0) {
+                $district_row = $district_query->row();
+                $school_district = !empty($district_row->school_district) ? $district_row->school_district : '';
+                $legislative_district = !empty($district_row->legislative_district) ? $district_row->legislative_district : '';
+            }
         }
 
         $model_school_name = $school_name;
         if ($user_role === 'district') {
             $model_school_name = '';
         }
-        
+
         $data = array();
         $assessment_type = $this->session->userdata('assessment_type') ?: 'baseline';
         $data['assessment_type'] = $assessment_type;
@@ -1163,12 +1271,11 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $data['is_midline'] = ($assessment_type == 'midline');
         $data['is_endline'] = ($assessment_type == 'endline');
 
-        // Get the new filters
+        // Read filters from SESSION only (same as index) – but keep section_id from GET
         $grade_level_filter = $this->session->userdata('grade_level_filter') ?: '';
         $school_name_filter = $this->session->userdata('school_name_filter') ?: '';
         $district_filter = $this->session->userdata('district_filter') ?: '';
 
-        // GET SCHOOL YEAR FOR PRINT REPORT
         $data['school_year'] = $this->get_current_school_year();
 
         $school_level = $this->session->userdata('school_level') ?: 'all';
@@ -1176,13 +1283,18 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             $school_level = 'all';
         }
         $data['school_level'] = $school_level;
-        
+
         $selected_school = $this->session->userdata('selected_school') ?: '';
         $data['selected_school'] = $selected_school;
 
         $data['user_role'] = $user_role;
         $data['school_name'] = $school_name;
-        
+        $data['section_id'] = $section_id;
+        $data['grade_level_filter'] = $grade_level_filter;
+        $data['school_name_filter'] = $school_name_filter;
+        $data['district_filter'] = $district_filter;
+
+        // Get beneficiaries with all filters
         $data['beneficiaries'] = $this->sbfp_beneficiaries_model->get_beneficiaries(
             $assessment_type,
             $model_school_name,
@@ -1191,9 +1303,65 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             $school_id,
             $school_district,
             $selected_school,
-            $district_filter
+            $grade_level_filter,
+            $school_name_filter,
+            $district_filter,
+            $section_id
         );
-        
+
+        // Retrieve local flags from POST (sent by JavaScript)
+        $localFlags = [];
+        $localFlagsRaw = $this->input->post('local_flags');
+        if (!empty($localFlagsRaw)) {
+            $decoded = json_decode($localFlagsRaw, true);
+            if (is_array($decoded)) {
+                $localFlags = $decoded;
+                log_message('debug', 'Print local flags received: ' . print_r($localFlags, true));
+            }
+        }
+
+        // Apply local overrides to beneficiaries (same logic as export_excel)
+        foreach ($data['beneficiaries'] as &$student) {
+            $studentId = $student['id'] ?? ($student['assessment_id'] ?? '');
+            if (!empty($studentId) && isset($localFlags[$studentId]) && is_array($localFlags[$studentId])) {
+                $over = $localFlags[$studentId];
+                // For each flag field, if override exists, assign it to the student array
+                if (isset($over['classification_of_beneficiary'])) {
+                    $student['classification_of_beneficiary'] = $over['classification_of_beneficiary'];
+                }
+                if (isset($over['pregnant'])) {
+                    $student['pregnant'] = $over['pregnant'];
+                }
+                if (isset($over['with_0_1_year_old_child'])) {
+                    $student['with_0_1_year_old_child'] = $over['with_0_1_year_old_child'];
+                }
+                if (isset($over['dewormed'])) {
+                    $student['dewormed'] = $over['dewormed'];
+                }
+                if (isset($over['parent_consent_milk'])) {
+                    $student['parent_consent_milk'] = $over['parent_consent_milk'];
+                }
+                if (isset($over['participation_4ps'])) {
+                    $student['participation_4ps'] = $over['participation_4ps'];
+                }
+                if (isset($over['previous_sbfp'])) {
+                    $student['previous_sbfp'] = $over['previous_sbfp'];
+                }
+            }
+        }
+        unset($student);
+
+        // Format BMI and height
+        foreach ($data['beneficiaries'] as &$student) {
+            if (isset($student['bmi'])) {
+                $student['bmi'] = $this->format_bmi($student['bmi']);
+            }
+            if (isset($student['height'])) {
+                $student['height'] = $this->format_height_cm($student['height']);
+            }
+        }
+        unset($student);
+
         $this->load->view('print_sbfp_beneficiaries', $data);
     }
         /**

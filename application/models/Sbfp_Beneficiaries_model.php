@@ -11,18 +11,24 @@ class sbfp_beneficiaries_model extends CI_Model {
     /**
      * Get beneficiaries with role-based filtering and additional filters
      */
-    public function get_beneficiaries($assessment_type = 'baseline', $school_name = '', $school_level = 'all', $user_role = 'school', $school_id = '', $district = '', $selected_school = '', $grade_level_filter = '', $school_name_filter = '', $district_filter = '') {
-        
-        log_message('debug', '=== GET_BENEFICIARIES CALLED ===');
-        log_message('debug', 'Params: assessment_type=' . $assessment_type . ', school_name=' . $school_name . ', school_level=' . $school_level . ', user_role=' . $user_role . ', district=' . $district);
-        log_message('debug', 'Filters: grade_level=' . $grade_level_filter . ', school_name_filter=' . $school_name_filter . ', district_filter=' . $district_filter);
+    public function get_beneficiaries($assessment_type = 'baseline', $school_name = '', $school_level = 'all', $user_role = 'school', $school_id = '', $district = '', $selected_school = '', $grade_level_filter = '', $school_name_filter = '', $district_filter = '', $section_id = '') {
         
         $this->db->select('n.*');
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
         // Treat Kindergarten and Grade 1 as beneficiaries regardless of the sbfp_beneficiary flag
-        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+        $this->db->group_start();
+        $this->db->where_in('n.nutritional_status', ['Severely Wasted', 'Wasted']);
+        $this->db->or_where('n.sbfp_beneficiary', 'Yes');
+        $this->db->group_end();
+        // Enforce explicit school_id filtering when provided (prevents name collisions)
+        if (!empty($school_id)) {
+            $this->db->where('n.school_id', $school_id);
+        }
+        if (!empty($section_id)) {
+            $this->db->where('n.section_id', $section_id);
+        }
         
         // Apply role-based filtering (mandatory)
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
@@ -53,11 +59,7 @@ class sbfp_beneficiaries_model extends CI_Model {
         
         $query = $this->db->get();
         
-        log_message('debug', 'SQL Query: ' . $this->db->last_query());
-        
         $results = $query->result_array();
-        
-        log_message('debug', 'Results found: ' . count($results));
         
         return $results;
     }
@@ -90,47 +92,45 @@ class sbfp_beneficiaries_model extends CI_Model {
      */
     private function apply_role_filter($user_role, $school_id, $district, $school_name = '', $selected_school = '') {
         
-        log_message('debug', 'Applying role filter - User Role: ' . $user_role . ', District: ' . $district);
+        $user_role_lower = strtolower($user_role);
         
-        switch($user_role) {
+        switch($user_role_lower) {
             case 'school':
-                // School users ONLY see their own school's data
-                if (!empty($school_name)) {
-                    $this->db->where('n.school_name', $school_name);
-                    log_message('debug', 'School filter: school_name = ' . $school_name);
-                } elseif (!empty($school_id)) {
+            case 'user':
+                //  ALWAYS filter by school_id if available
+                if (!empty($school_id)) {
                     $this->db->where('n.school_id', $school_id);
-                    log_message('debug', 'School filter: school_id = ' . $school_id);
+                }
+                
+                //  ALSO filter by school_name for extra safety
+                if (!empty($school_name)) {
+                    $this->db->where('n.school_name', $school_name);                  
+                }
+                
+                //  If no filters available, show nothing
+                if (empty($school_id) && empty($school_name)) {
+                    $this->db->where('1=0');
                 }
                 break;
                 
             case 'district':
-                // District users see all schools in their district
                 if (!empty($district)) {
                     $this->db->where('n.school_district', $district);
                     log_message('debug', 'District filter: school_district = ' . $district);
                 } else {
-                    log_message('debug', 'WARNING: District user with empty district value!');
                     $this->db->where('1=0');
                 }
                 break;
                 
             case 'division':
             case 'admin':
-                // Division/Admin users see all data
                 if (!empty($selected_school)) {
                     $this->db->like('n.school_name', $selected_school);
-                    log_message('debug', 'Admin filter: selected_school = ' . $selected_school);
                 }
                 break;
                 
             default:
-                // Default security
-                if (!empty($school_name)) {
-                    $this->db->where('n.school_name', $school_name);
-                } elseif (!empty($school_id)) {
-                    $this->db->where('n.school_id', $school_id);
-                }
+                $this->db->where('1=0');
                 break;
         }
     }
@@ -166,14 +166,45 @@ class sbfp_beneficiaries_model extends CI_Model {
         }
     }
     
+    // Get distinct sections for a given assessment type and school
+    public function get_sections($assessment_type, $school_id, $grade_level = '', $school_name = '') {
+        $this->db->distinct();
+        $this->db->select('section_id as id, section');
+        $this->db->from('nutritional_assessments');
+        $this->db->where('assessment_type', $assessment_type);
+        $this->db->where('is_deleted', 0);
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
+        if (!empty($school_name)) {
+            $this->db->where('school_name', $school_name);
+        }
+        if (!empty($grade_level)) {
+            $this->db->where('grade_level', $grade_level);
+        }
+        $this->db->where('section_id IS NOT NULL');
+        $this->db->where('section !=', '');
+        $this->db->order_by('section', 'ASC');
+        $query = $this->db->get();
+        return $query->result();
+    }
+    
     /**
      * Count assessments by type with role-based filtering
      */
-    public function count_by_assessment_with_filter($assessment_type, $school_name = '', $school_level = 'all', $user_role = 'school', $school_id = '', $district = '', $selected_school = '', $grade_level_filter = '', $school_name_filter = '', $district_filter = '') {
+    public function count_by_assessment_with_filter($assessment_type, $school_name = '', $school_level = 'all', $user_role = 'school', $school_id = '', $district = '', $selected_school = '', $grade_level_filter = '', $school_name_filter = '', $district_filter = '', $section_id = '') {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+
+        $this->db->group_start();
+        $this->db->where_in('n.nutritional_status', ['Severely Wasted', 'Wasted']);
+        $this->db->or_where('n.sbfp_beneficiary', 'Yes');
+        $this->db->group_end();
+
+        if (!empty($section_id)) {
+        $this->db->where('n.section_id', $section_id);
+        }
         
         // Apply role-based filtering
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
@@ -190,12 +221,19 @@ class sbfp_beneficiaries_model extends CI_Model {
     /**
      * Get nutritional statistics with role-based filtering
      */
-    public function get_nutritional_stats_with_filter($assessment_type, $school_name = '', $school_level = 'all', $user_role = 'school', $school_id = '', $district = '', $selected_school = '', $grade_level_filter = '', $school_name_filter = '', $district_filter = '') {
+    public function get_nutritional_stats_with_filter($assessment_type, $school_name = '', $school_level = 'all', $user_role = 'school', $school_id = '', $district = '', $selected_school = '', $grade_level_filter = '', $school_name_filter = '', $district_filter = '', $section_id = '') {
         $this->db->select('n.nutritional_status, COUNT(*) as count');
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+        $this->db->group_start();
+        $this->db->where_in('n.nutritional_status', ['Severely Wasted', 'Wasted']);
+        $this->db->or_where('n.sbfp_beneficiary', 'Yes');
+        $this->db->group_end();
+
+        if (!empty($section_id)) {
+        $this->db->where('n.section_id', $section_id);
+        }
         
         // Apply role-based filtering
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
@@ -218,7 +256,11 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->select('DISTINCT(n.school_name)');
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.is_deleted', 0);
-        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+
+        $this->db->group_start();
+        $this->db->where_in('n.nutritional_status', ['Severely Wasted', 'Wasted']);
+        $this->db->or_where('n.sbfp_beneficiary', 'Yes');
+        $this->db->group_end();
         
         log_message('debug', 'Getting schools by role - Role: ' . $user_role . ', District: ' . $district);
         
@@ -241,15 +283,26 @@ class sbfp_beneficiaries_model extends CI_Model {
     /**
      * Get SBFP beneficiary count by school
      */
-    public function get_count_by_school($assessment_type = 'baseline', $school_name = '') {
+    public function get_count_by_school($assessment_type = 'baseline', $school_name = '', $school_id = '') {
         $this->db->select('COUNT(*) as count');
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+
+        $this->db->group_start();
+        $this->db->where_in('n.nutritional_status', ['Severely Wasted', 'Wasted']);
+        $this->db->or_where('n.sbfp_beneficiary', 'Yes');
+        $this->db->group_end();
+
+        if (!empty($school_id)) {
+            $this->db->where('n.school_id', $school_id);
+        }
         
         if (!empty($school_name)) {
             $this->db->where('n.school_name', $school_name);
+        }
+        if (!empty($school_id)) {
+            $this->db->where('n.school_id', $school_id);
         }
         
         $query = $this->db->get();
@@ -260,16 +313,27 @@ class sbfp_beneficiaries_model extends CI_Model {
     /**
      * Get SBFP beneficiaries by nutritional status
      */
-    public function get_beneficiaries_by_status($nutritional_status, $assessment_type = 'baseline', $school_name = '') {
+    public function get_beneficiaries_by_status($nutritional_status, $assessment_type = 'baseline', $school_name = '', $school_id = '', $section_id = '') {
         $this->db->select('n.*');
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+
+        $this->db->group_start();
+        $this->db->where_in('n.nutritional_status', ['Severely Wasted', 'Wasted']);
+        $this->db->or_where('n.sbfp_beneficiary', 'Yes');
+        $this->db->group_end();
+
         $this->db->where('LOWER(n.nutritional_status)', strtolower($nutritional_status));
         
         if (!empty($school_name)) {
             $this->db->where('n.school_name', $school_name);
+        }
+        if (!empty($school_id)) {
+            $this->db->where('n.school_id', $school_id);
+        }
+        if (!empty($section_id)) {
+            $this->db->where('n.section_id', $section_id);
         }
         
         $this->db->order_by("CASE
@@ -296,7 +360,7 @@ class sbfp_beneficiaries_model extends CI_Model {
     /**
      * Get summary statistics for SBFP beneficiaries
      */
-    public function get_summary_stats($assessment_type = 'baseline', $school_name = '') {
+    public function get_summary_stats($assessment_type = 'baseline', $school_name = '', $school_id = '') {
         $this->db->select('
             COUNT(*) as total_beneficiaries,
             SUM(CASE WHEN LOWER(n.nutritional_status) = "severely wasted" THEN 1 ELSE 0 END) as severely_wasted,
@@ -312,10 +376,17 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+
+        $this->db->group_start();
+        $this->db->where_in('n.nutritional_status', ['Severely Wasted', 'Wasted']);
+        $this->db->or_where('n.sbfp_beneficiary', 'Yes');
+        $this->db->group_end();
         
         if (!empty($school_name)) {
             $this->db->where('n.school_name', $school_name);
+        }
+        if (!empty($school_id)) {
+            $this->db->where('n.school_id', $school_id);
         }
         
         $query = $this->db->get();
@@ -325,15 +396,22 @@ class sbfp_beneficiaries_model extends CI_Model {
     /**
      * Get grade level distribution for SBFP beneficiaries
      */
-    public function get_grade_distribution($assessment_type = 'baseline', $school_name = '') {
+    public function get_grade_distribution($assessment_type = 'baseline', $school_name = '', $school_id = '') {
         $this->db->select('n.grade_level, COUNT(*) as count');
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+
+        $this->db->group_start();
+        $this->db->where_in('n.nutritional_status', ['Severely Wasted', 'Wasted']);
+        $this->db->or_where('n.sbfp_beneficiary', 'Yes');
+        $this->db->group_end();
         
         if (!empty($school_name)) {
             $this->db->where('n.school_name', $school_name);
+        }
+        if (!empty($school_id)) {
+            $this->db->where('n.school_id', $school_id);
         }
         
         $this->db->group_by('n.grade_level');
@@ -361,7 +439,7 @@ class sbfp_beneficiaries_model extends CI_Model {
     /**
      * Export SBFP beneficiaries data
      */
-    public function export_beneficiaries($assessment_type = 'baseline', $school_name = '', $user_role = 'school', $school_id = '', $district = '', $selected_school = '') {
+    public function export_beneficiaries($assessment_type = 'baseline', $school_name = '', $user_role = 'school', $school_id = '', $district = '', $selected_school = '', $section_id = '') {
         $this->db->select('
             n.school_name,
             n.school_id,
@@ -386,7 +464,15 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where("(n.sbfp_beneficiary = 'Yes' OR n.grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+
+        $this->db->group_start();
+        $this->db->where_in('n.nutritional_status', ['Severely Wasted', 'Wasted']);
+        $this->db->or_where('n.sbfp_beneficiary', 'Yes');
+        $this->db->group_end();
+
+        if (!empty($section_id)) {
+        $this->db->where('n.section_id', $section_id);
+        }
         
         // Apply role-based filtering
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
