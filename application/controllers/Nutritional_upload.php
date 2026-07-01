@@ -314,7 +314,7 @@ class Nutritional_upload extends CI_Controller {
                 // Calculate nutritional values
                 $bmi = $this->calculateBMI($weight, $height);
                 $ageInMonths = $this->calculateAgeInMonths($birthday);
-                $nutritionalStatus = $this->getBMIClassification($bmi, $ageInMonths, $sex);
+                $nutritionalStatus = getWHO_BMIClassification($bmi, $ageInMonths, $sex, $weight);
                 $heightForAge = $this->getHeightForAgeClassification($height, $ageInMonths, $sex);
                 
                 $studentData = $this->createStudentData(
@@ -334,6 +334,12 @@ class Nutritional_upload extends CI_Controller {
         }
         
         return $extractedStudents;
+        error_log("Excel student: $name, using weighing_date = " . $this->weighing_date);   
+        $rawBirthday = $this->getCellValue($row, $columnIndices['birthdayIndex']);
+        $birthday = $this->formatExcelDate($rawBirthday);
+        if ($birthday == '2020-06-12') {
+            error_log("DEBUG Excel: Row $rowNumber, raw birthday = $rawBirthday, formatted = $birthday, weighing_date = " . $this->weighing_date);
+        }
     }
     
 
@@ -404,49 +410,49 @@ class Nutritional_upload extends CI_Controller {
         return round($bmi, 2);
     }
     
-    /**
-     * Get BMI classification based on age and sex
-     */
-    private function getBMIClassification($bmi, $ageInMonths, $sex) {
-        if ($bmi === null || $ageInMonths === null || empty($sex)) {
-            return 'Normal';
-        }
+    // /**
+    //  * Get BMI classification based on age and sex
+    //  */
+    // private function getBMIClassification($bmi, $ageInMonths, $sex) {
+    //     if ($bmi === null || $ageInMonths === null || empty($sex)) {
+    //         return 'Normal';
+    //     }
         
-        if ($ageInMonths < 72) {
-            return $this->getSimpleBMIClassification($bmi);
-        }
+    //     if ($ageInMonths < 72) {
+    //         return $this->getSimpleBMIClassification($bmi);
+    //     }
         
-        $cutoffs = getWHO_BMICutoffs($ageInMonths, $sex);
+    //     $cutoffs = getWHO_BMICutoffs($ageInMonths, $sex);
         
-        if (!$cutoffs) {
-            return 'Normal';
-        }
+    //     if (!$cutoffs) {
+    //         return 'Normal';
+    //     }
         
-        if ($bmi <= $cutoffs['severe_wasted']) {
-            return 'Severely Wasted';
-        } elseif ($bmi >= $cutoffs['wasted_from'] && $bmi <= $cutoffs['wasted_to']) {
-            return 'Wasted';
-        } elseif ($bmi >= $cutoffs['normal_from'] && $bmi <= $cutoffs['normal_to']) {
-            return 'Normal';
-        } elseif ($bmi >= $cutoffs['overweight_from'] && $bmi <= $cutoffs['overweight_to']) {
-            return 'Overweight';
-        } elseif ($bmi >= $cutoffs['obese']) {
-            return 'Obese';
-        } else {
-            return 'Normal';
-        }
-    }
+    //     if ($bmi <= $cutoffs['severe_wasted']) {
+    //         return 'Severely Wasted';
+    //     } elseif ($bmi >= $cutoffs['wasted_from'] && $bmi <= $cutoffs['wasted_to']) {
+    //         return 'Wasted';
+    //     } elseif ($bmi >= $cutoffs['normal_from'] && $bmi <= $cutoffs['normal_to']) {
+    //         return 'Normal';
+    //     } elseif ($bmi >= $cutoffs['overweight_from'] && $bmi <= $cutoffs['overweight_to']) {
+    //         return 'Overweight';
+    //     } elseif ($bmi >= $cutoffs['obese']) {
+    //         return 'Obese';
+    //     } else {
+    //         return 'Normal';
+    //     }
+    // }
     
-    /**
-     * Simple BMI classification for children under 6
-     */
-    private function getSimpleBMIClassification($bmi) {
-        if ($bmi < 14) return 'Severely Wasted';
-        if ($bmi < 16) return 'Wasted';
-        if ($bmi < 19) return 'Normal';
-        if ($bmi < 22) return 'Overweight';
-        return 'Obese';
-    }
+    // /**
+    //  * Simple BMI classification for children under 6
+    //  */
+    // private function getSimpleBMIClassification($bmi) {
+    //     if ($bmi < 14) return 'Severely Wasted';
+    //     if ($bmi < 16) return 'Wasted';
+    //     if ($bmi < 19) return 'Normal';
+    //     if ($bmi < 22) return 'Overweight';
+    //     return 'Obese';
+    // }
     
     /**
      * Get Height-for-Age classification
