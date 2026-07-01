@@ -76,9 +76,12 @@ $route['superadmin'] = 'superadmincontroller/index';
 $route['superadmin/dashboard'] = 'superadmincontroller/index';
 $route['superadmin/add-user'] = 'superadmincontroller/add_user';
 $route['superadmin/edit-user/(:num)'] = 'superadmincontroller/edit_user/$1';
-$route['superadmin/update-role/(:num)'] = 'superadmincontroller/update_user_role/$1';
+$route['superadmin/update_user_role/(:num)'] = 'superadmincontroller/update_user_role/$1';
 $route['superadmin/update-all-roles'] = 'superadmincontroller/update_all_roles';
 $route['superadmin/delete-user/(:num)'] = 'superadmincontroller/delete_user/$1';
+$route['superadmin/delete-all-assessments'] = 'superadmincontroller/delete_all_nutritional_assessments';
+$route['superadmin/reset-school-info'] = 'superadmincontroller/reset_all_school_info';
+$route['superadmin/reset-user-data/(:num)'] = 'superadmincontroller/reset_user_data/$1';
 
 // ========================
 // USER DASHBOARD ROUTES
@@ -121,6 +124,8 @@ $route['dashboard'] = 'superadmincontroller/index';
 $route['dashboard/update_user_role/(:num)'] = 'superadmincontroller/update_user_role/$1';
 $route['dashboard/update_all_roles'] = 'superadmincontroller/update_all_roles';
 $route['dashboard/delete_user/(:num)'] = 'superadmincontroller/delete_user/$1';
+$route['dashboard/delete-all-assessments'] = 'superadmincontroller/delete_all_assessments';
+$route['dashboard/reset-school-info'] = 'superadmincontroller/reset_school_info';
 
 // ========================
 // OTHER MODULE ROUTES
@@ -246,3 +251,5 @@ $route['archive/get_record_details/(:num)'] = 'archive_controller/get_record_det
 $route['archive/restore_record/(:num)'] = 'archive_controller/restore_record/$1';
 $route['archive/export'] = 'archive_controller/export_archive';
 
+$route['migrate'] = 'migrate/index';
+$route['migrate/(:any)'] = 'migrate/$1';
