@@ -11,7 +11,7 @@ class Nutritional_assessment_reports extends CI_Controller {
         $this->load->helper(['url', 'form']);
         $this->load->library('session');
         
-        // Check if user is logged in and is admin/superadmin
+        // Check if user is logged in
         if (!$this->session->userdata('user_id')) {
             redirect('auth/login');
         }
@@ -23,16 +23,22 @@ class Nutritional_assessment_reports extends CI_Controller {
     public function index()
     {
         $data = [];
+
+        // Get user session data
+        $session_school = $this->session->userdata('school_name');
+        $session_school_id = $this->session->userdata('school_id');
+        $role = $this->session->userdata('role');
         
         // Get filter parameters 
         $legislative_district = $this->input->get('legislative_district', TRUE);
         $school_district = $this->input->get('school_district', TRUE);
         $school_name = $this->input->get('school_name', TRUE);
+        $school_id = $this->input->get('school_id', TRUE);
 
-        $session_school = $this->session->userdata('school_name');
-        $role = $this->session->userdata('role');
+        // For non-admin users, force filter to their school
         if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
             $school_name = $session_school;
+            $school_id = $session_school_id;
         }
 
         $grade_level = $this->input->get('grade_level', TRUE);
@@ -47,7 +53,8 @@ class Nutritional_assessment_reports extends CI_Controller {
             $grade_level,
             $date_from,
             $date_to,
-            $assessment_type  
+            $assessment_type,
+            $school_id  
         );
 
         if (in_array($role, ['admin', 'super_admin', 'district', 'division'])) {
@@ -56,11 +63,10 @@ class Nutritional_assessment_reports extends CI_Controller {
             $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names();
             $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels();
         } else {
-            // For regular users, only show options from their school
-            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts_by_user($session_school);
-            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts_by_user($session_school);
-            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names_by_user($session_school, $role);
-            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels_by_user($session_school);
+            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts_by_user($session_school, $session_school_id);
+            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts_by_user($session_school, $session_school_id);
+            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names_by_user($session_school, $role, $session_school_id);
+            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels_by_user($session_school, $session_school_id);
         }
         
         // Add assessment types for filter
@@ -71,21 +77,22 @@ class Nutritional_assessment_reports extends CI_Controller {
             'endline' => 'Endline'
         ];
 
-        // Statistics
-        $data['total_assessments'] = $this->nutritional_assessment_model->get_total_assessments_count();
-        $data['total_schools'] = $this->nutritional_assessment_model->get_total_schools_count();
-        $data['total_students'] = $this->nutritional_assessment_model->get_total_students_count();
+        // Statistics - filtered by user's school
+        $data['total_assessments'] = $this->nutritional_assessment_model->get_total_assessments_count($school_id);
+        $data['total_schools'] = $this->nutritional_assessment_model->get_total_schools_count($school_id);
+        $data['total_students'] = $this->nutritional_assessment_model->get_total_students_count($school_id);
         
-        // Get counts by assessment type
-        $data['baseline_count'] = $this->nutritional_assessment_model->get_assessment_type_count('baseline');
-        $data['midline_count'] = $this->nutritional_assessment_model->get_assessment_type_count('midline');
-        $data['endline_count'] = $this->nutritional_assessment_model->get_assessment_type_count('endline');
+        // Get counts by assessment type - filtered by school_id
+        $data['baseline_count'] = $this->nutritional_assessment_model->get_assessment_type_count('baseline', $school_id);
+        $data['midline_count'] = $this->nutritional_assessment_model->get_assessment_type_count('midline', $school_id);
+        $data['endline_count'] = $this->nutritional_assessment_model->get_assessment_type_count('endline', $school_id);
 
         // Pass filter values back to view
         $data['current_filters'] = [
             'legislative_district' => $legislative_district,
             'school_district' => $school_district,
             'school_name' => $school_name,
+            'school_id' => $school_id,
             'grade_level' => $grade_level,
             'assessment_type' => $assessment_type,
             'date_from' => $date_from,
@@ -101,6 +108,11 @@ class Nutritional_assessment_reports extends CI_Controller {
     public function export()
     {
         try {
+            // Get user session data
+            $session_school = $this->session->userdata('school_name');
+            $session_school_id = $this->session->userdata('school_id');
+            $role = $this->session->userdata('role');
+
             // Load the PhpSpreadsheet library
             $this->load->library('phpspreadsheet_lib');
 
@@ -115,10 +127,17 @@ class Nutritional_assessment_reports extends CI_Controller {
             $legislative_district = $this->input->get('legislative_district', TRUE);
             $school_district = $this->input->get('school_district', TRUE);
             $school_name = $this->input->get('school_name', TRUE);
+            $school_id = $this->input->get('school_id', TRUE);
             $grade_level = $this->input->get('grade_level', TRUE);
             $assessment_type = $this->input->get('assessment_type', TRUE);
             $date_from = $this->input->get('date_from', TRUE);
             $date_to = $this->input->get('date_to', TRUE);
+
+            // For non-admin users, force filter to their school
+            if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
+                $school_name = $session_school;
+                $school_id = $session_school_id;
+            }
 
             // Get data with filters
             $reports = $this->nutritional_assessment_model->get_export_data_with_filters(
@@ -128,7 +147,8 @@ class Nutritional_assessment_reports extends CI_Controller {
                 $grade_level,
                 $date_from,
                 $date_to,
-                $assessment_type
+                $assessment_type,
+                $school_id
             );
 
             if (empty($reports)) {
@@ -451,6 +471,11 @@ class Nutritional_assessment_reports extends CI_Controller {
     public function export_detail()
     {
         try {
+            // Get user session data for security
+            $session_school = $this->session->userdata('school_name');
+            $session_school_id = $this->session->userdata('school_id');
+            $role = $this->session->userdata('role');
+
             // Load the PhpSpreadsheet library
             $this->load->library('phpspreadsheet_lib');
 
@@ -462,6 +487,12 @@ class Nutritional_assessment_reports extends CI_Controller {
             $section = $this->input->get('section', TRUE);
             $year = $this->input->get('year', TRUE);
             $assessment_type = $this->input->get('assessment_type', TRUE) ?: 'baseline';
+
+            // For non-admin users, force filter to their school
+            if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
+                $school_name = $session_school;
+                $school_id = $session_school_id;
+            }
 
             // Validate required parameters
             if (!$legislative_district || !$school_district || !$school_name || !$grade_level || !$section) {
@@ -789,11 +820,16 @@ class Nutritional_assessment_reports extends CI_Controller {
      * Get nutritional statistics summary
      */
     public function statistics() {
+        // Get user session data
+        $session_school = $this->session->userdata('school_name');
+        $session_school_id = $this->session->userdata('school_id');
+        $role = $this->session->userdata('role');
 
         $filters = [
             'legislative_district' => $this->input->get('legislative_district'),
             'school_district' => $this->input->get('school_district'),
             'school_name' => $this->input->get('school_name'),
+            'school_id' => $this->input->get('school_id'),
             'grade_level' => $this->input->get('grade_level'),
             'assessment_type' => $this->input->get('assessment_type'),
             'date_from' => $this->input->get('date_from'),
@@ -801,12 +837,10 @@ class Nutritional_assessment_reports extends CI_Controller {
             'nutritional_status' => $this->input->get('nutritional_status')
         ];
 
-        $session_school = $this->session->userdata('school_name');
-        $role = $this->session->userdata('role');
-        
         // For non-admin users, force filter to their school
         if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
             $filters['school_name'] = $session_school;
+            $filters['school_id'] = $session_school_id;
         }
 
         // Get UNFILTERED aggregated statistics for the summary cards
@@ -851,16 +885,17 @@ class Nutritional_assessment_reports extends CI_Controller {
         $data['total_overweight'] = $unfiltered_stats->overweight ?? 0;
         $data['total_obese'] = $unfiltered_stats->obese ?? 0;
 
+        // Get filter dropdown options - filtered by user's school
         if (in_array($role, ['admin', 'super_admin'])) {
             $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts();
             $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts();
             $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names();
             $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels();
         } else {
-            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts_by_user($session_school);
-            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts_by_user($session_school);
-            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names_by_user($session_school, $role);
-            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels_by_user($session_school);
+            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts_by_user($session_school, $session_school_id);
+            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts_by_user($session_school, $session_school_id);
+            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names_by_user($session_school, $role, $session_school_id);
+            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels_by_user($session_school, $session_school_id);
         }
 
         $data['assessment_types'] = [
@@ -879,11 +914,16 @@ class Nutritional_assessment_reports extends CI_Controller {
      * Export statistics to CSV
      */
     public function export_statistics() {
+        // Get user session data
+        $session_school = $this->session->userdata('school_name');
+        $session_school_id = $this->session->userdata('school_id');
+        $role = $this->session->userdata('role');
 
         $filters = [
             'legislative_district' => $this->input->get('legislative_district'),
             'school_district' => $this->input->get('school_district'),
             'school_name' => $this->input->get('school_name'),
+            'school_id' => $this->input->get('school_id'),
             'grade_level' => $this->input->get('grade_level'),
             'assessment_type' => $this->input->get('assessment_type'),
             'date_from' => $this->input->get('date_from'),
@@ -891,15 +931,19 @@ class Nutritional_assessment_reports extends CI_Controller {
             'nutritional_status' => $this->input->get('nutritional_status')
         ];
 
+        // For non-admin users, force filter to their school
+        if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
+            $filters['school_name'] = $session_school;
+            $filters['school_id'] = $session_school_id;
+        }
+
         // Get students based on nutritional status filter
         $status_filter = $filters['nutritional_status'] ?? '';
         $students_to_export = [];
         
         if ($status_filter === '') {
-            // When "All Statuses" is selected, export all students
             $students_to_export = $this->nutritional_assessment_model->get_all_students_for_export($filters);
         } else if ($status_filter === 'sbfp_beneficiary') {
-            // When "SBFP Beneficiary" is selected, export only SBFP beneficiaries
             $students_to_export = $this->nutritional_assessment_model->get_sbfp_beneficiaries($filters);
         } else if (!empty($status_filter)) {
             if (in_array($status_filter, ['severely wasted', 'wasted', 'normal', 'overweight', 'obese'])) {
@@ -993,7 +1037,13 @@ class Nutritional_assessment_reports extends CI_Controller {
         $section = $this->input->get('section', TRUE);
 
         $session_school = $this->session->userdata('school_name');
+        $session_school_id = $this->session->userdata('school_id');
         $role = $this->session->userdata('role');
+
+        // For non-admin users, force filter to their school
+        if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
+            $school_name = $session_school;
+        }
 
         $data = [];
         
@@ -1034,10 +1084,10 @@ class Nutritional_assessment_reports extends CI_Controller {
             $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names();
             $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels();
         } else {
-            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts_by_user($session_school);
-            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts_by_user($session_school);
-            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names_by_user($session_school, $role);
-            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels_by_user($session_school);
+            $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts_by_user($session_school, $session_school_id);
+            $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts_by_user($session_school, $session_school_id);
+            $data['school_names'] = $this->nutritional_assessment_model->get_unique_school_names_by_user($session_school, $role, $session_school_id);
+            $data['grade_levels'] = $this->nutritional_assessment_model->get_unique_grade_levels_by_user($session_school, $session_school_id);
         }
 
         $this->load->view('reports/comparison', $data);
