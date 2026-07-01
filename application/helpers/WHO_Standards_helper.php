@@ -1,9 +1,4 @@
 <?php
-/**
- * WHO Growth Standards Helper - EXACT MATCH to Excel Template
- * Contains reference data for BMI-for-Age, Height-for-Age, and Weight-for-Age
- * Extracted directly from the "How to Use" sheet of the Excel template
- */
 
 if (!defined('BASEPATH')) exit('No direct script access allowed');
 
@@ -11,11 +6,13 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
  * Get BMI-for-Age classification based on WHO standards
  * 
  * @param float $bmi Calculated BMI value
- * @param int $ageInMonths Age in months (72-228 months / 6-19 years)
+ * @param int $ageInMonths Age in months (0-228)
  * @param string $sex 'M' or 'F'
- * @return string Classification: 'Severely Wasted', 'Wasted', 'Normal', 'Overweight', 'Obese'
+ * @param float|null $weightKg Weight in kg (required for age < 72 months)
+ * @return string Classification: 'Severely Wasted', 'Wasted', 'Normal', 'Overweight', 'Obese',
+ *                or for under-6: 'Severely Underweight', 'Underweight', 'Normal', 'Overweight'
  */
-function getWHO_BMIClassification($bmi, $ageInMonths, $sex) {
+function getWHO_BMIClassification($bmi, $ageInMonths, $sex, $weightKg = null) {
     if ($bmi === null || $ageInMonths === null || empty($sex)) {
         return 'Normal';
     }
@@ -23,42 +20,67 @@ function getWHO_BMIClassification($bmi, $ageInMonths, $sex) {
     $ageInMonths = (int)$ageInMonths;
     $sex = strtoupper($sex);
     
-    // For children under 6 years (0-71 months), use weight-for-age instead
-    // BMI standards are less reliable for under 5s
+    // For children under 6 years (0-71 months), use weight-for-age and map to wasting terminology
     if ($ageInMonths < 72) {
-        return getSimpleBMIClassification($bmi);
+        if ($weightKg !== null && is_numeric($weightKg)) {
+            $wfa = getWHO_WeightForAgeClassification($weightKg, $ageInMonths, $sex);
+            // Map weight-for-age categories to wasted categories
+            switch ($wfa) {
+                case 'Severely Underweight':
+                    return 'Severely Wasted';
+                case 'Underweight':
+                    return 'Wasted';
+                case 'Normal':
+                    return 'Normal';
+                case 'Overweight':
+                    return 'Overweight';
+                default:
+                    return 'Normal';
+            }
+        } else {
+            // Fallback to simple BMI classification if weight not provided
+            return getSimpleBMIClassification($bmi);
+        }
     }
     
-    // Get cutoff values for the specific age
-    $cutoffs = getWHO_BMICutoffs($ageInMonths, $sex);
+    // For adults (19+ years), use adult BMI classification
+    if ($ageInMonths >= 228) {
+        return getAdultBMIClassification($bmi);
+    }
     
+    // For children 6-18 years, use the standard BMI-for-age cutoffs
+    $cutoffs = getWHO_BMICutoffs($ageInMonths, $sex);
     if (!$cutoffs) {
         return 'Normal';
     }
     
-    // Classify based on BMI value using Excel logic
-    // Severely Wasted: BMI <= severe_wasted
     if ($bmi <= $cutoffs['severe_wasted']) {
         return 'Severely Wasted';
-    }
-    // Wasted: BMI between wasted_from and wasted_to (inclusive)
-    elseif ($bmi >= $cutoffs['wasted_from'] && $bmi <= $cutoffs['wasted_to']) {
+    } elseif ($bmi >= $cutoffs['wasted_from'] && $bmi <= $cutoffs['wasted_to']) {
         return 'Wasted';
-    }
-    // Normal: BMI between normal_from and normal_to (inclusive)
-    elseif ($bmi >= $cutoffs['normal_from'] && $bmi <= $cutoffs['normal_to']) {
+    } elseif ($bmi >= $cutoffs['normal_from'] && $bmi <= $cutoffs['normal_to']) {
         return 'Normal';
-    }
-    // Overweight: BMI between overweight_from and overweight_to (inclusive)
-    elseif ($bmi >= $cutoffs['overweight_from'] && $bmi <= $cutoffs['overweight_to']) {
+    } elseif ($bmi >= $cutoffs['overweight_from'] && $bmi <= $cutoffs['overweight_to']) {
         return 'Overweight';
-    }
-    // Obese: BMI >= obese
-    elseif ($bmi >= $cutoffs['obese']) {
+    } elseif ($bmi >= $cutoffs['obese']) {
         return 'Obese';
-    }
-    else {
+    } else {
         return 'Normal';
+    }
+}
+
+/**
+ * Adult BMI classification (Filipino adult table)
+ */
+function getAdultBMIClassification($bmi) {
+    if ($bmi < 18.5) {
+        return 'Underweight';
+    } elseif ($bmi < 25.0) {
+        return 'Normal';
+    } elseif ($bmi < 30.0) {
+        return 'Overweight';
+    } else {
+        return 'Obese';
     }
 }
 

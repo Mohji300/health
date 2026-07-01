@@ -25,6 +25,7 @@ class Nutritionalassessment extends CI_Controller {
         $data['school_district'] = $this->input->get('school_district', TRUE);
         $data['grade'] = $this->input->get('grade', TRUE);
         $data['section'] = $this->input->get('section', TRUE);
+        $data['section_id'] = $this->input->get('section_id', TRUE);
         $data['school_year'] = $this->input->get('school_year', TRUE);
         $data['school_id'] = $this->input->get('school_id', TRUE) ?: 'N/A'; 
         $data['school_name'] = $this->input->get('school_name', TRUE) ?: 'Unknown School';
@@ -70,7 +71,6 @@ class Nutritionalassessment extends CI_Controller {
                 . 'It is recommended to create a baseline assessment first.');
         }
 
-        // Inside index() method, after loading existing_assessments
         $existing_weighing_date = null;
         if ($data['has_existing_assessment']) {
             $this->db->select('date_of_weighing');
@@ -89,6 +89,26 @@ class Nutritionalassessment extends CI_Controller {
         }
         $data['existing_weighing_date'] = $existing_weighing_date;
 
+        $mode = $this->input->get('mode', TRUE);
+        $data['mode'] = ($mode === 'beneficiary') ? 'beneficiary' : 'default';
+
+        if ($data['mode'] === 'beneficiary') {
+        // Get all students for this section and assessment type
+        $data['students'] = $this->nutritional_assessment_model->get_by_section(
+            $data['legislative_district'],
+            $data['school_district'],
+            $data['grade'],
+            $data['section'],
+            $data['school_year'],
+            $data['assessment_type'],
+            $data['section_id']
+        );
+        // Also pass a flag that we are in beneficiary mode
+        $data['is_beneficiary_mode'] = true;
+    } else {
+        $data['is_beneficiary_mode'] = false;
+    }
+
         // Load view with form
         $this->load->view('nutritional_assessment', $data);
     }
@@ -100,10 +120,11 @@ class Nutritionalassessment extends CI_Controller {
     {
         // Set JSON response header
         $this->output->set_content_type('application/json');
-        
+
+        $last_name = trim($this->input->post('last_name', TRUE));
         $first_name = trim($this->input->post('first_name', TRUE));
         $middle_initial = trim($this->input->post('middle_initial', TRUE));
-        $last_name = trim($this->input->post('last_name', TRUE));
+        
 
         $full_name = $last_name;
         if (!empty($middle_initial)) {
@@ -159,7 +180,7 @@ class Nutritionalassessment extends CI_Controller {
         $ageInMonths = $this->calculateAgeInMonths($birthday, $date_of_weighing);
         
         // Use WHO standards helper for classifications
-        $nutritional_status = getWHO_BMIClassification($bmi, $ageInMonths, $sex);
+        $nutritional_status = getWHO_BMIClassification($bmi, $ageInMonths, $sex, $weight);
         $heightForAge = $this->calculateHeightForAge($height, $ageInMonths, $sex);
         
         // Calculate age display
@@ -194,6 +215,17 @@ class Nutritionalassessment extends CI_Controller {
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s')
         ];
+
+        $this->load->model('section_model');
+        $section_id = $this->section_model->get_section_id(
+            $this->input->post('grade'),
+            $this->input->post('section'),
+            $this->input->post('school_year'),
+            $this->input->post('legislative_district'),
+            $this->input->post('school_district'),
+            $current_user_id
+        );
+        $assessment_data['section_id'] = $section_id;
 
         // Check for duplicate entry
         $is_duplicate = $this->check_duplicate_assessment($assessment_data);
@@ -316,7 +348,7 @@ class Nutritionalassessment extends CI_Controller {
                 $ageInMonths = $this->calculateAgeInMonths($birthday, $date_of_weighing);
                 
                 // Use WHO standards helper for classifications
-                $nutritional_status = getWHO_BMIClassification($bmi, $ageInMonths, $sex);
+                $nutritional_status = getWHO_BMIClassification($bmi, $ageInMonths, $sex, $weight);
                 $heightForAge = $this->calculateHeightForAge($height, $ageInMonths, $sex);
                 
                 // Calculate age display
@@ -349,6 +381,17 @@ class Nutritionalassessment extends CI_Controller {
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
+
+                $this->load->model('section_model');
+                $section_id = $this->section_model->get_section_id(
+                    $assessment_data['grade_level'],
+                    $assessment_data['section'],
+                    $assessment_data['year'],
+                    $assessment_data['legislative_district'],
+                    $assessment_data['school_district'],
+                    $current_user_id
+                );
+                $assessment_data['section_id'] = $section_id;
 
                 if (empty($assessment_data['name']) || empty($assessment_data['birthday']) || 
                     empty($assessment_data['grade_level']) || empty($assessment_data['section'])) {
@@ -406,47 +449,31 @@ class Nutritionalassessment extends CI_Controller {
             ->set_output(json_encode($response));
     }
 
-    /**
-     * Calculate age in months using weighing date
-     */
     private function calculateAgeInMonths($birthday, $weighing_date)
     {
         if (empty($birthday) || empty($weighing_date)) {
             return 0;
         }
-        
         try {
-            $birthDate = new DateTime($birthday);
-            $weighingDate = new DateTime($weighing_date);
-            $interval = $birthDate->diff($weighingDate);
-            
-            $totalMonths = ($interval->y * 12) + $interval->m;
-            
-            if ($interval->invert == 1 || $interval->days < 0) {
-                return 0;
-            }
-            
-            return $totalMonths;
+            $birth = new DateTime($birthday, new DateTimeZone('UTC'));
+            $weigh = new DateTime($weighing_date, new DateTimeZone('UTC'));
+            $diff = $birth->diff($weigh);
+            return ($diff->y * 12) + $diff->m;
         } catch (Exception $e) {
             return 0;
         }
     }
-    
-    /**
-     * Calculate age display string (years|months)
-     */
+
     private function calculateAgeDisplay($birthday, $weighing_date)
     {
         if (empty($birthday) || empty($weighing_date)) {
             return '0|0';
         }
-        
         try {
-            $birthDate = new DateTime($birthday);
-            $weighingDate = new DateTime($weighing_date);
-            $interval = $birthDate->diff($weighingDate);
-            
-            return $interval->y . '|' . $interval->m;
+            $birth = new DateTime($birthday, new DateTimeZone('UTC'));
+            $weigh = new DateTime($weighing_date, new DateTimeZone('UTC'));
+            $diff = $birth->diff($weigh);
+            return $diff->y . '|' . $diff->m;
         } catch (Exception $e) {
             return '0|0';
         }
@@ -560,43 +587,41 @@ class Nutritionalassessment extends CI_Controller {
 
     /**
      * Classify a student (calculate BMI and WHO nutritional status) without saving
-     * Expects POST: birthday, weight, height, sex, date (weighing date)
+     * Expects JSON: birthday, weight, height, sex, date (weighing date)
      */
     public function classify()
     {
+        // Disable CSRF for this endpoint (AJAX without token)
+        $this->config->set_item('csrf_protection', FALSE);
+
         $this->output->set_content_type('application/json');
 
-        $birthday = $this->input->post('birthday');
-        $weight = floatval($this->input->post('weight'));
-        $height = floatval($this->input->post('height'));
-        $sex = $this->input->post('sex');
-        $date_of_weighing = $this->input->post('date');
+        // Read JSON input (or fallback to standard POST)
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!$input) {
+            $input = $this->input->post();
+        }
+
+        // Extract and validate
+        $birthday = $input['birthday'] ?? null;
+        $weight = isset($input['weight']) ? floatval($input['weight']) : null;
+        $height = isset($input['height']) ? floatval($input['height']) : null;
+        $sex = $input['sex'] ?? null;
+        $date_of_weighing = $input['date'] ?? null;
 
         if (empty($birthday) || $weight <= 0 || $height <= 0 || empty($sex) || empty($date_of_weighing)) {
             return $this->output->set_output(json_encode([
                 'success' => false,
-                'message' => 'Missing or invalid parameters for classification'
+                'message' => 'Missing or invalid parameters',
+                'received' => $input
             ]));
         }
 
+        // Calculate
         $bmi = round($weight / ($height * $height), 2);
         $ageInMonths = $this->calculateAgeInMonths($birthday, $date_of_weighing);
-        $nutritional_status = getWHO_BMIClassification($bmi, $ageInMonths, $sex);
+        $nutritional_status = getWHO_BMIClassification($bmi, $ageInMonths, $sex, $weight);
         $heightForAge = $this->calculateHeightForAge($height, $ageInMonths, $sex);
-
-        if ($nutritional_status === null) {
-            return $this->output->set_output(json_encode([
-                'success' => false,
-                'message' => 'Unable to classify: invalid inputs',
-                'details' => [
-                    'bmi' => $bmi,
-                    'ageInMonths' => $ageInMonths,
-                    'sex' => $sex,
-                    'birthday' => $birthday,
-                    'date_of_weighing' => $date_of_weighing
-                ]
-            ]));
-        }
 
         return $this->output->set_output(json_encode([
             'success' => true,
@@ -605,6 +630,54 @@ class Nutritionalassessment extends CI_Controller {
             'height_for_age' => $heightForAge,
             'ageInMonths' => $ageInMonths
         ]));
+    }
+
+    /**
+     * Toggle beneficiary status for a single student (AJAX)
+     */
+    public function toggle_beneficiary()
+    {
+        $this->output->set_content_type('application/json');
+        $id = $this->input->post('id');
+        $beneficiary = $this->input->post('beneficiary'); // 'Yes' or 'No'
+
+        if (empty($id) || !in_array($beneficiary, ['Yes', 'No'])) {
+            return $this->output->set_output(json_encode(['success' => false, 'message' => 'Invalid input']));
+        }
+
+        $updated = $this->nutritional_assessment_model->update_beneficiary_status($id, $beneficiary);
+        if ($updated) {
+            return $this->output->set_output(json_encode(['success' => true]));
+        } else {
+            return $this->output->set_output(json_encode(['success' => false, 'message' => 'Update failed']));
+        }
+    }
+
+    /**
+     * Toggle beneficiary status for all students in a section (AJAX)
+     */
+    public function toggle_all_beneficiaries()
+    {
+        $this->output->set_content_type('application/json');
+        $legislative_district = $this->input->post('legislative_district');
+        $school_district = $this->input->post('school_district');
+        $school_id = $this->input->post('school_id');
+        $grade = $this->input->post('grade');
+        $section = $this->input->post('section');
+        $school_year = $this->input->post('school_year');
+        $assessment_type = $this->input->post('assessment_type');
+        $beneficiary = $this->input->post('beneficiary'); // 'Yes' or 'No'
+
+        $updated = $this->nutritional_assessment_model->update_all_beneficiaries(
+            $legislative_district, $school_district, $school_id, $grade, $section,
+            $school_year, $assessment_type, $beneficiary
+        );
+
+        if ($updated !== false) {
+            return $this->output->set_output(json_encode(['success' => true, 'updated' => $updated]));
+        } else {
+            return $this->output->set_output(json_encode(['success' => false]));
+        }
     }
 
     public function debug_bulk_store()

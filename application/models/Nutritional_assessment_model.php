@@ -101,13 +101,18 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get assessments by section
      */
-    public function get_by_section($legislative_district, $school_district, $grade_level, $section, $school_year = null, $assessment_type = null)
+    public function get_by_section($legislative_district, $school_district, $grade_level, $section, $school_year = null, $assessment_type = null, $section_id = null)
     {
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
         $this->db->where('grade_level', $grade_level);
         $this->db->where('section', $section);
         $this->db->where('is_deleted', 0);
+        
+        // Added section_id filter
+        if (!empty($section_id)) {
+            $this->db->where('section_id', $section_id);
+        }
         
         // Add school_year filter if provided
         if ($school_year && $school_year !== 'N/A' && $school_year !== '') {
@@ -283,9 +288,36 @@ class nutritional_assessment_model extends CI_Model {
     }
 
     /**
+     * Update beneficiary status for a single student by ID
+     */
+    public function update_beneficiary_status($id, $beneficiary)
+    {
+        $this->db->where('id', $id);
+        return $this->db->update('nutritional_assessments', ['sbfp_beneficiary' => $beneficiary]);
+    }
+
+    /**
+     * Update beneficiary status for all students in a section
+     * Returns number of affected rows or false on error
+     */
+    public function update_all_beneficiaries($legislative_district, $school_district, $school_id, $grade, $section, $school_year, $assessment_type, $beneficiary)
+    {
+        $this->db->where('legislative_district', $legislative_district);
+        $this->db->where('school_district', $school_district);
+        $this->db->where('school_id', $school_id);
+        $this->db->where('grade_level', $grade);
+        $this->db->where('section', $section);
+        $this->db->where('year', $school_year);
+        $this->db->where('assessment_type', $assessment_type);
+        $this->db->where('is_deleted', 0);
+        $this->db->update('nutritional_assessments', ['sbfp_beneficiary' => $beneficiary]);
+        return $this->db->affected_rows();
+    }
+
+    /**
      * Get reports with filters for Nutritional Reports page
      */
-    public function get_reports_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null)
+    public function get_reports_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null, $school_id = null)
     {
         $this->db->select('
             school_id,
@@ -317,6 +349,10 @@ class nutritional_assessment_model extends CI_Model {
         if (!empty($school_name)) {
             $this->db->where('school_name', $school_name);
         }
+
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
         if (!empty($grade_level)) {
             $this->db->where('grade_level', $grade_level);
         }
@@ -347,10 +383,10 @@ class nutritional_assessment_model extends CI_Model {
         $this->db->from($this->table);
         $this->db->where('is_deleted', FALSE);
         
-        // Filter for SBFP beneficiaries (Yes) - make sure the column name is correct
+        // Filter for SBFP beneficiaries (Yes)
         $this->db->where('sbfp_beneficiary', 'Yes');
         
-        // Apply other filters EXCEPT nutritional_status (since we're already filtering by SBFP)
+        // Apply other filters
         if (!empty($filters['legislative_district'])) {
             $this->db->where('legislative_district', $filters['legislative_district']);
         }
@@ -359,6 +395,9 @@ class nutritional_assessment_model extends CI_Model {
         }
         if (!empty($filters['school_name'])) {
             $this->db->where('school_name', $filters['school_name']);
+        }
+        if (!empty($filters['school_id'])) {
+            $this->db->where('school_id', $filters['school_id']);
         }
         if (!empty($filters['grade_level'])) {
             $this->db->where('grade_level', $filters['grade_level']);
@@ -372,8 +411,6 @@ class nutritional_assessment_model extends CI_Model {
         if (!empty($filters['date_to'])) {
             $this->db->where('DATE(created_at) <=', $filters['date_to']);
         }
-        
-        // DO NOT apply nutritional_status filter here since we're getting SBFP beneficiaries
         
         $this->db->order_by('school_name', 'ASC');
         $this->db->order_by('grade_level', 'ASC');
@@ -447,22 +484,28 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get total assessments count
      */
-    public function get_total_assessments_count()
+    public function get_total_assessments_count($school_id = null)
     {
         $this->db->where('is_deleted', FALSE);
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
         return $this->db->count_all_results($this->table);
     }
 
     /**
      * Get assessment type count
      */
-    public function get_assessment_type_count($assessment_type = null)
+    public function get_assessment_type_count($assessment_type = null, $school_id = null)
     {
         $this->db->from($this->table);
         $this->db->where('is_deleted', FALSE);
         
         if ($assessment_type) {
             $this->db->where('assessment_type', $assessment_type);
+        }
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
         }
         
         return $this->db->count_all_results();
@@ -471,7 +514,7 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get total schools count
      */
-    public function get_total_schools_count()
+    public function get_total_schools_count($school_id = null)
     {
         $this->db->distinct();
         $this->db->select('school_name');
@@ -479,13 +522,16 @@ class nutritional_assessment_model extends CI_Model {
         $this->db->where('school_name IS NOT NULL');
         $this->db->where('school_name !=', '');
         $this->db->where('is_deleted', FALSE);
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
         return $this->db->count_all_results();
     }
 
     /**
-     * Get total students count (distinct names within schools)
+     * Get total students count
      */
-    public function get_total_students_count()
+    public function get_total_students_count($school_id = null)
     {
         $this->db->distinct();
         $this->db->select('name, birthday, school_name');
@@ -493,6 +539,9 @@ class nutritional_assessment_model extends CI_Model {
         $this->db->where('name IS NOT NULL');
         $this->db->where('name !=', '');
         $this->db->where('is_deleted', FALSE);
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
         return $this->db->count_all_results();
     }
 
@@ -523,6 +572,9 @@ class nutritional_assessment_model extends CI_Model {
         }
         if (!empty($filters['school_name'])) {
             $this->db->where('school_name', $filters['school_name']);
+        }
+        if (!empty($filters['school_id'])) {
+            $this->db->where('school_id', $filters['school_id']);
         }
         if (!empty($filters['grade_level'])) {
             $this->db->where('grade_level', $filters['grade_level']);
@@ -707,6 +759,11 @@ class nutritional_assessment_model extends CI_Model {
             $this->db->where('school_name', $filters['school_name']);
         }
         
+        //  Added school_id filter
+        if (!empty($filters['school_id'])) {
+            $this->db->where('school_id', $filters['school_id']);
+        }
+        
         if (!empty($filters['grade_level'])) {
             $this->db->where('grade_level', $filters['grade_level']);
         }
@@ -832,7 +889,7 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get export data with filters
      */
-    public function get_export_data_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null)
+    public function get_export_data_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null, $school_id = null)
     {
         $this->db->select('*');
         $this->db->from($this->table);
@@ -847,6 +904,10 @@ class nutritional_assessment_model extends CI_Model {
         }
         if (!empty($school_name)) {
             $this->db->where('school_name', $school_name);
+        }
+        //  Added school_id filter
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
         }
         if (!empty($grade_level)) {
             $this->db->where('grade_level', $grade_level);
@@ -872,7 +933,7 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get unique grade levels filtered by user's school
      */
-    public function get_unique_grade_levels_by_user($school_name = null)
+    public function get_unique_grade_levels_by_user($school_name = null, $school_id = null)
     {
         $this->db->distinct();
         $this->db->select('grade_level');
@@ -885,6 +946,9 @@ class nutritional_assessment_model extends CI_Model {
         if (!empty($school_name)) {
             $this->db->where('school_name', $school_name);
         }
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
         
         $this->db->order_by('grade_level', 'ASC');
         return $this->db->get()->result();
@@ -893,7 +957,7 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get unique legislative districts filtered by user's school
      */
-    public function get_unique_legislative_districts_by_user($school_name = null)
+    public function get_unique_legislative_districts_by_user($school_name = null, $school_id = null)
     {
         $this->db->distinct();
         $this->db->select('legislative_district');
@@ -905,6 +969,9 @@ class nutritional_assessment_model extends CI_Model {
         if (!empty($school_name)) {
             $this->db->where('school_name', $school_name);
         }
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
         
         $this->db->order_by('legislative_district', 'ASC');
         return $this->db->get()->result();
@@ -913,7 +980,7 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get unique school districts filtered by user's school
      */
-    public function get_unique_school_districts_by_user($school_name = null)
+    public function get_unique_school_districts_by_user($school_name = null, $school_id = null)
     {
         $this->db->distinct();
         $this->db->select('school_district');
@@ -925,6 +992,9 @@ class nutritional_assessment_model extends CI_Model {
         if (!empty($school_name)) {
             $this->db->where('school_name', $school_name);
         }
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
         
         $this->db->order_by('school_district', 'ASC');
         return $this->db->get()->result();
@@ -933,10 +1003,10 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get unique school names (only schools the user has access to)
      */
-    public function get_unique_school_names_by_user($session_school = null, $role = null)
+    public function get_unique_school_names_by_user($session_school = null, $role = null, $school_id = null)
     {
         $this->db->distinct();
-        $this->db->select('school_name');
+        $this->db->select('school_name, school_id');
         $this->db->from($this->table);
         $this->db->where('school_name IS NOT NULL');
         $this->db->where('school_name !=', '');
@@ -945,6 +1015,9 @@ class nutritional_assessment_model extends CI_Model {
         // For non-admin users, only show their school
         if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
             $this->db->where('school_name', $session_school);
+        }
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
         }
         
         $this->db->order_by('school_name', 'ASC');

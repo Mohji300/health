@@ -57,6 +57,14 @@
                 ageYears--; 
                 ageMonths += 12; 
             }
+                const days = wdate.getDate() - bdate.getDate();
+                if (days < 0) {
+                    ageMonths--;
+                    if (ageMonths < 0) {
+                        ageMonths += 12;
+                        ageYears--;
+                    }
+                }
         }
 
         const heightSq = (height * height).toFixed(4);
@@ -136,11 +144,12 @@
         }
 
         if (editingIndex >= 0 && editingIndex < students.length) {
-            students[editingIndex] = student;
+            const idx = editingIndex;
+            students[idx] = student;
             saveStudents();
+            fetchClassificationForStudent(idx);
             cancelEdit();
             showAlert('Success', 'Student record updated successfully!');
-            fetchClassificationForStudent(editingIndex);
         } else {
             students.push(student);
             saveStudents();
@@ -149,44 +158,101 @@
             fetchClassificationForStudent(students.length - 1);
         }
         updateUI();
+        fetchClassificationForStudent(editingIndex);
     }
 
-    // Request server-side classification for a student and update the local record
     function fetchClassificationForStudent(index) {
-        if (index < 0 || index >= students.length) return;
+        if (index < 0 || index >= students.length) {
+            return;
+        }
         const student = students[index];
-        const classifyUrl = window.nutritionalassessmentConfig?.urls?.classify;
-        if (!classifyUrl) return;
 
-        const payload = new URLSearchParams();
-        payload.append('birthday', student.birthday || '');
-        payload.append('weight', student.weight || '');
-        payload.append('height', student.height || '');
-        payload.append('sex', student.sex || '');
-        payload.append('date', student.date || '');
+        const classifyUrl = window.nutritionalassessmentConfig?.urls?.classify;
+        if (!classifyUrl) {
+            return;
+        }
+
+        // Guard against missing fields
+        if (!student.birthday || !student.weight || !student.height || !student.sex || !student.date) {
+            student.nutritionalStatus = 'NORMAL';
+            student.heightForAge = 'NORMAL';
+            saveStudents();
+            updateUI();
+            return;
+        }
+
+        const payload = {
+            birthday: student.birthday,
+            weight: student.weight,
+            height: student.height,
+            sex: student.sex,
+            date: student.date
+        };
 
         fetch(classifyUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: payload.toString()
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(payload)
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+            return res.json();
+        })
         .then(data => {
             if (data && data.success) {
-                // Update local student with authoritative values
+                // Update student with authoritative values
                 student.bmi = parseFloat(data.bmi);
                 student.nutritionalStatus = (data.nutritional_status || '').toUpperCase();
-                if (data.height_for_age) student.heightForAge = data.height_for_age.toUpperCase();
+                student.heightForAge = (data.height_for_age || 'Normal').toUpperCase();
+
+                // Update beneficiary
+                const nutStatus = student.nutritionalStatus;
+                const hfa = student.heightForAge;
+                student.sbfpBeneficiary = (nutStatus === 'SEVERELY WASTED' || nutStatus === 'WASTED') ? 'YES' : 'NO';
+
                 saveStudents();
                 updateUI();
+                // Show a brief success notification (optional)
+                showNotification('Classification updated', 'success');
             } else {
-                // Keep PENDING or show an inline note if needed
-                console.warn('Classification failed for student', index, data.message || data);
+                const msg = data.message || 'Classification failed';
+                // Fallback to NORMAL
+                student.nutritionalStatus = 'NORMAL';
+                student.heightForAge = 'NORMAL';
+                saveStudents();
+                updateUI();
+                showAlert('Classification Error', msg);
             }
         })
         .catch(err => {
-            console.error('Classification request failed', err);
+            // Retry logic (max 2 attempts)
+            if (!student._classificationRetries) student._classificationRetries = 0;
+            if (student._classificationRetries < 2) {
+                student._classificationRetries++;
+                setTimeout(() => fetchClassificationForStudent(index), 2000);
+            } else {
+                student.nutritionalStatus = 'NORMAL';
+                student.heightForAge = 'NORMAL';
+                saveStudents();
+                updateUI();
+                showAlert('Classification Failed', 'Could not classify after multiple attempts.');
+            }
         });
+    }
+
+    function showNotification(msg, type) {
+        var alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show position-fixed top-0 end-0 m-3';
+        alertDiv.style.zIndex = 9999;
+        alertDiv.innerHTML = msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        document.body.appendChild(alertDiv);
+        setTimeout(function() {
+            alertDiv.classList.remove('show');
+            setTimeout(function() { alertDiv.remove(); }, 300);
+        }, 3000);
     }
 
     function editStudent(index) {
@@ -524,12 +590,11 @@
                 const studentData = {};
 
                 let fullName = '';
-                if (student.first_name) {
-                    fullName = student.first_name;
+                if (student.last_name) {
+                    fullName = student.last_name + ', ' + (student.first_name || '');
                     if (student.middle_initial) {
                         fullName += ' ' + student.middle_initial + '.';
                     }
-                    fullName += ' ' + (student.last_name || '');
                 } else if (student.name) {
                     fullName = student.name;
                 }
@@ -901,15 +966,14 @@
                     ageYears--;
                     ageMonths += 12;
                 }
-                ageDisplay = ageYears + '|' + ageMonths;
-            } else if (birthday) {
-                const bdate = new Date(birthday);
-                const today = new Date();
-                ageYears = today.getFullYear() - bdate.getFullYear();
-                ageMonths = today.getMonth() - bdate.getMonth();
-                if (ageMonths < 0) {
-                    ageYears--;
-                    ageMonths += 12;
+                // Day adjustment
+                const days = weighingDate.getDate() - bdate.getDate();
+                if (days < 0) {
+                    ageMonths--;
+                    if (ageMonths < 0) {
+                        ageMonths += 12;
+                        ageYears--;
+                    }
                 }
                 ageDisplay = ageYears + '|' + ageMonths;
             }
@@ -1004,7 +1068,7 @@
                 bmi: parseFloat(extractedStudent.bmi) || 0,
                 nutritionalStatus: extractedStudent.nutritional_status ? extractedStudent.nutritional_status.toUpperCase() : 'PENDING',
                 heightForAge: extractedStudent.height_for_age ? extractedStudent.height_for_age.toUpperCase() : 'NOT SPECIFIED',
-                sbfpBeneficiary: extractedStudent.sbfp_beneficiary || ((extractedStudent.nutritional_status === 'Severely Wasted' || extractedStudent.nutritional_status === 'Wasted') ? 'YES' : 'NO')
+                sbfpBeneficiary: (extractedStudent.nutritional_status === 'Severely Wasted' || extractedStudent.nutritional_status === 'Wasted') ? 'YES' : 'NO'
             };
 
             students.push(student);
