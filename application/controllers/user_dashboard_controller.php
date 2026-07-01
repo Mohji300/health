@@ -36,38 +36,57 @@ class User_dashboard_controller extends CI_Controller {
         
         $user_id = $this->session->userdata('user_id');
 
+        // Define school_id first
+        $school_id = $this->session->userdata('school_id');
+        $school_name = $this->input->get('school_name') ?: $this->session->userdata('school_name') ?: null;
+
+        // Force school_id from database if empty
+        if (empty($school_id) && !empty($user_id)) {
+            $this->db->select('school_id, name, school_district, legislative_district, school_level');
+            $this->db->from('users');
+            $this->db->where('id', $user_id);
+            $user_query = $this->db->get();
+            if ($user_query->num_rows() > 0) {
+                $user_row = $user_query->row();
+                $school_id = $user_row->school_id;
+                $school_name = $user_row->name;
+                // Update session with correct values
+                $this->session->set_userdata('school_id', $school_id);
+                $this->session->set_userdata('school_name', $school_name);
+                
+            }
+        }
+
         $user_school_level = $this->get_user_school_level($user_id);
-
         $session_school_level = $this->session->userdata('school_level');
-
         $filter_school_level = $this->input->get('school_level');
         
         if ($filter_school_level) {
-
             $school_level = $filter_school_level;
-  
             $this->session->set_userdata('school_level', $school_level);
         } else {
-            // If session has school_level and it's not 'all', use it
             if ($session_school_level && $session_school_level !== 'all') {
                 $school_level = $session_school_level;
             } else {
-                // Otherwise, use the user's actual school level from the database
                 $school_level = $user_school_level;
-                // Update session with the correct value
                 $this->session->set_userdata('school_level', $school_level);
             }
         }
         
-        $school_name = $this->input->get('school_name') ?: $this->session->userdata('school_name') ?: null;
-
-        // Pass school_level to model
-        $result = $this->nutritional_model->get_processed_data($assessment_type, $school_name, $school_level);
+        // Pass school_id to model
+        $result = $this->nutritional_model->get_processed_data(
+            $assessment_type, 
+            $school_name, 
+            $school_level,
+            $school_id
+        );
 
         $data = [];
         $data['assessment_type'] = $assessment_type;
         $data['school_level'] = $school_level;
         $data['user_actual_school_level'] = $user_school_level;
+        $data['school_id'] = $school_id;  // Pass to view
+        $data['school_name'] = $school_name;  // Pass to view
         
         // Set display mode based on school level
         $display_mode = 'normal'; // default
@@ -89,10 +108,25 @@ class User_dashboard_controller extends CI_Controller {
         $data['processed_count'] = $result['processed_count'];
         $data['selected_school'] = $school_name;
         
-        // Get assessment counts with school_level filter
-        $data['baseline_count'] = $this->nutritional_model->get_assessment_count_by_type('baseline', $school_name, $school_level);
-        $data['midline_count'] = $this->nutritional_model->get_assessment_count_by_type('midline', $school_name, $school_level);
-        $data['endline_count'] = $this->nutritional_model->get_assessment_count_by_type('endline', $school_name, $school_level);
+        // Get assessment counts with school_level and school_id filters
+        $data['baseline_count'] = $this->nutritional_model->get_assessment_count_by_type(
+            'baseline', 
+            $school_name, 
+            $school_level,
+            $school_id
+        );
+        $data['midline_count'] = $this->nutritional_model->get_assessment_count_by_type(
+            'midline', 
+            $school_name, 
+            $school_level,
+            $school_id
+        );
+        $data['endline_count'] = $this->nutritional_model->get_assessment_count_by_type(
+            'endline', 
+            $school_name, 
+            $school_level,
+            $school_id
+        );
         
         $this->load->view('user_dashboard', $data);
     }
@@ -106,7 +140,6 @@ class User_dashboard_controller extends CI_Controller {
             return 'all';
         }
         
-        // Query the users table to get the school level for this user
         $this->db->select('school_level');
         $this->db->from('users');
         $this->db->where('id', $user_id);
@@ -116,20 +149,20 @@ class User_dashboard_controller extends CI_Controller {
         if ($query->num_rows() > 0) {
             $row = $query->row();
             
-            // Check if school_level exists and is not null
             if (isset($row->school_level) && !empty($row->school_level)) {
                 $school_level = trim($row->school_level);
-
-                if (strtolower($school_level) === 'elementary') {
+                $school_level_lower = strtolower($school_level);
+                
+                if ($school_level_lower === 'elementary') {
                     return 'elementary';
-                } elseif (strtolower($school_level) === 'secondary') {
+                } elseif ($school_level_lower === 'secondary') {
                     return 'secondary';
-                } elseif (strtolower($school_level) === 'integrated') {
+                } elseif ($school_level_lower === 'integrated') {
                     return 'integrated';
-                } elseif (strtolower($school_level) === 'stand alone shs' || 
-                          strtolower($school_level) === 'standalone_shs' || 
-                          strtolower($school_level) === 'shs' || 
-                          strtolower($school_level) === 'senior high school') {
+                } elseif ($school_level_lower === 'stand alone shs' || 
+                          $school_level_lower === 'standalone_shs' || 
+                          $school_level_lower === 'shs' || 
+                          $school_level_lower === 'senior high school') {
                     return 'stand alone shs';
                 } else {
                     return 'all';
@@ -137,11 +170,9 @@ class User_dashboard_controller extends CI_Controller {
             }
         }
         
-        // If no school level found, return 'all'
         return 'all';
     }
     
-    // Update the validation in set_school_level method
     public function set_school_level()
     {
         if (!$this->input->is_ajax_request()) {
@@ -151,7 +182,6 @@ class User_dashboard_controller extends CI_Controller {
         
         $school_level = $this->input->post('school_level', TRUE);
         
-        // Update validation for new levels
         $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary', 'shs_only', 'stand alone shs'];
         if (!in_array($school_level, $valid_levels)) {
             $this->output->set_content_type('application/json')->set_output(json_encode([
@@ -170,9 +200,6 @@ class User_dashboard_controller extends CI_Controller {
         ]));
     }
 
-    /**
-     * AJAX: Set assessment type in session
-     */
     public function set_assessment_type()
     {
         if (!$this->input->is_ajax_request()) {
@@ -190,7 +217,6 @@ class User_dashboard_controller extends CI_Controller {
             return;
         }
 
-        // Save to session using the same key used elsewhere
         $this->session->set_userdata('assessment_type', $assessment_type);
 
         $this->output->set_content_type('application/json')->set_output(json_encode([
@@ -199,9 +225,6 @@ class User_dashboard_controller extends CI_Controller {
         ]));
     }
     
-    /**
-     * Get filtered processed data by assessment type (for AJAX)
-     */
     public function get_filtered_data($type = 'baseline')
     {
         if (!$this->input->is_ajax_request()) {
@@ -209,12 +232,10 @@ class User_dashboard_controller extends CI_Controller {
             return;
         }
         
-        // Validate type
         if (!in_array($type, ['baseline', 'midline', 'endline'])) {
             $type = 'baseline';
         }
         
-        // Fetch processed nutritional data from model with assessment_type filter
         $result = $this->nutritional_model->get_processed_data($type);
         
         $this->output->set_content_type('application/json')->set_output(json_encode([
@@ -227,16 +248,12 @@ class User_dashboard_controller extends CI_Controller {
         ]));
     }
     
-    /**
-     * Temporary method to fix session
-     */
     public function fix_session()
     {
         $user_id = $this->session->userdata('user_id');
         
         if ($user_id) {
-            // Get school level from database
-            $this->db->select('school_level');
+            $this->db->select('school_level, school_id, name, school_district');
             $this->db->from('users');
             $this->db->where('id', $user_id);
             $query = $this->db->get();
@@ -244,17 +261,18 @@ class User_dashboard_controller extends CI_Controller {
             if ($query->num_rows() > 0) {
                 $row = $query->row();
                 $school_level = trim($row->school_level);
+                $school_id = $row->school_id;
+                $school_name = $row->name;
                 
-                // Update session with the EXACT database value
                 $this->session->set_userdata('school_level', $school_level);
+                $this->session->set_userdata('school_id', $school_id);
+                $this->session->set_userdata('school_name', $school_name);
                 
-                echo "Session fixed! School level set to: " . $school_level;
-                echo "<br><br>";
-                echo "Current session data:<br>";
-                echo "<pre>";
-                print_r($this->session->userdata());
-                echo "</pre>";
-                echo "<br><br><a href='" . site_url('users') . "'>Go to Dashboard</a>";
+                echo "Session fixed!<br>";
+                echo "School level set to: " . $school_level . "<br>";
+                echo "School ID set to: " . $school_id . "<br>";
+                echo "School Name set to: " . $school_name . "<br><br>";
+                echo "<a href='" . site_url('users') . "'>Go to Dashboard</a>";
             } else {
                 echo "User not found in database";
             }
