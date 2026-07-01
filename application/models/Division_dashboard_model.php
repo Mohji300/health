@@ -9,102 +9,170 @@ class division_dashboard_model extends CI_Model {
     }
     
     /**
-     * ENHANCED: Get nutritional data for entire division with assessment type AND school level filter
+     * Build division nutritional data using a single aggregated query.
+     * The dashboard displays the full BMI and HFA breakdown for all assessed students.
      */
-    public function get_division_nutritional_data($assessment_type = 'baseline', $school_level = 'all') {
-        // Check if table exists
+    public function get_division_nutritional_data($assessment_type = 'baseline', $school_level = 'all', $legislative_district_id = null) {
         if (!$this->db->table_exists('nutritional_assessments')) {
-            return array();
+            return [];
         }
-        
-        // Define grade levels
+
         $grades = ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'SPED',
-                  'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+                   'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 
         if ($school_level === 'shs_only') {
-        $grades = ['Grade 11', 'Grade 12'];
+            $grades = ['Grade 11', 'Grade 12'];
         }
 
-        $data = array();
-        
+        $data = [];
         foreach ($grades as $grade) {
-            // Apply school level filter to base query
-            $this->apply_school_level_filter($school_level, $grade);
-            
-            // Get data for each grade with gender breakdown
-            $query = $this->db->select("
-                COUNT(*) as enrolment,
-                SUM(CASE WHEN sex = 'M' THEN 1 ELSE 0 END) as male_count,
-                SUM(CASE WHEN sex = 'F' THEN 1 ELSE 0 END) as female_count,
-                SUM(CASE WHEN nutritional_status = 'Severely Wasted' THEN 1 ELSE 0 END) as severely_wasted,
-                SUM(CASE WHEN nutritional_status = 'Wasted' THEN 1 ELSE 0 END) as wasted,
-                SUM(CASE WHEN nutritional_status = 'Normal' THEN 1 ELSE 0 END) as normal_bmi,
-                SUM(CASE WHEN nutritional_status = 'Overweight' THEN 1 ELSE 0 END) as overweight,
-                SUM(CASE WHEN nutritional_status = 'Obese' THEN 1 ELSE 0 END) as obese,
-                SUM(CASE WHEN height_for_age = 'Severely Stunted' THEN 1 ELSE 0 END) as severely_stunted,
-                SUM(CASE WHEN height_for_age = 'Stunted' THEN 1 ELSE 0 END) as stunted,
-                SUM(CASE WHEN height_for_age = 'Normal' THEN 1 ELSE 0 END) as normal_hfa,
-                SUM(CASE WHEN height_for_age = 'Tall' THEN 1 ELSE 0 END) as tall,
-                COUNT(*) as pupils_height
-            ")
-            ->from('nutritional_assessments')
-            ->where('is_deleted', 0)
-            ->where('assessment_type', $assessment_type)
-            ->where('grade_level', $grade)
-            ->get();
-            
-            $row = $query->row();
-            
-            // Create data structure for each gender and total
-            $data[$grade . '_m'] = array(
-                'enrolment' => (int)($row->male_count ?? 0),
-                'pupils_weighed' => (int)($row->male_count ?? 0),
-                'severely_wasted' => $this->calculate_bmi_by_gender('Severely Wasted', $grade, 'M', $assessment_type, $school_level),
-                'wasted' => $this->calculate_bmi_by_gender('Wasted', $grade, 'M', $assessment_type, $school_level),
-                'normal_bmi' => $this->calculate_bmi_by_gender('Normal', $grade, 'M', $assessment_type, $school_level),
-                'overweight' => $this->calculate_bmi_by_gender('Overweight', $grade, 'M', $assessment_type, $school_level),
-                'obese' => $this->calculate_bmi_by_gender('Obese', $grade, 'M', $assessment_type, $school_level),
-                'severely_stunted' => $this->calculate_hfa_by_gender('Severely Stunted', $grade, 'M', $assessment_type, $school_level),
-                'stunted' => $this->calculate_hfa_by_gender('Stunted', $grade, 'M', $assessment_type, $school_level),
-                'normal_hfa' => $this->calculate_hfa_by_gender('Normal', $grade, 'M', $assessment_type, $school_level),
-                'tall' => $this->calculate_hfa_by_gender('Tall', $grade, 'M', $assessment_type, $school_level),
-                'pupils_height' => (int)($row->male_count ?? 0)
-            );
-            
-            $data[$grade . '_f'] = array(
-                'enrolment' => (int)($row->female_count ?? 0),
-                'pupils_weighed' => (int)($row->female_count ?? 0),
-                'severely_wasted' => $this->calculate_bmi_by_gender('Severely Wasted', $grade, 'F', $assessment_type, $school_level),
-                'wasted' => $this->calculate_bmi_by_gender('Wasted', $grade, 'F', $assessment_type, $school_level),
-                'normal_bmi' => $this->calculate_bmi_by_gender('Normal', $grade, 'F', $assessment_type, $school_level),
-                'overweight' => $this->calculate_bmi_by_gender('Overweight', $grade, 'F', $assessment_type, $school_level),
-                'obese' => $this->calculate_bmi_by_gender('Obese', $grade, 'F', $assessment_type, $school_level),
-                'severely_stunted' => $this->calculate_hfa_by_gender('Severely Stunted', $grade, 'F', $assessment_type, $school_level),
-                'stunted' => $this->calculate_hfa_by_gender('Stunted', $grade, 'F', $assessment_type, $school_level),
-                'normal_hfa' => $this->calculate_hfa_by_gender('Normal', $grade, 'F', $assessment_type, $school_level),
-                'tall' => $this->calculate_hfa_by_gender('Tall', $grade, 'F', $assessment_type, $school_level),
-                'pupils_height' => (int)($row->female_count ?? 0)
-            );
-            
-            $data[$grade . '_total'] = array(
-                'enrolment' => (int)($row->enrolment ?? 0),
-                'pupils_weighed' => (int)($row->enrolment ?? 0),
-                'severely_wasted' => (int)($row->severely_wasted ?? 0),
-                'wasted' => (int)($row->wasted ?? 0),
-                'normal_bmi' => (int)($row->normal_bmi ?? 0),
-                'overweight' => (int)($row->overweight ?? 0),
-                'obese' => (int)($row->obese ?? 0),
-                'severely_stunted' => (int)($row->severely_stunted ?? 0),
-                'stunted' => (int)($row->stunted ?? 0),
-                'normal_hfa' => (int)($row->normal_hfa ?? 0),
-                'tall' => (int)($row->tall ?? 0),
-                'pupils_height' => (int)($row->pupils_height ?? 0)
-            );
+            $data[$grade . '_m'] = $this->create_empty_grade_data();
+            $data[$grade . '_f'] = $this->create_empty_grade_data();
+            $data[$grade . '_total'] = $this->create_empty_grade_data();
         }
-        
+
+        $this->db->select("CASE
+                WHEN LOWER(TRIM(n.grade_level)) IN ('kindergarten', 'kinder') THEN 'Kinder'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 1' THEN 'Grade 1'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 2' THEN 'Grade 2'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 3' THEN 'Grade 3'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 4' THEN 'Grade 4'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 5' THEN 'Grade 5'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 6' THEN 'Grade 6'
+                WHEN LOWER(TRIM(n.grade_level)) = 'sped' THEN 'SPED'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 7' THEN 'Grade 7'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 8' THEN 'Grade 8'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 9' THEN 'Grade 9'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 10' THEN 'Grade 10'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 11' THEN 'Grade 11'
+                WHEN LOWER(TRIM(n.grade_level)) = 'grade 12' THEN 'Grade 12'
+                ELSE NULL
+            END AS grade_label,
+            CASE
+                WHEN UPPER(TRIM(n.sex)) = 'M' THEN 'm'
+                WHEN UPPER(TRIM(n.sex)) = 'F' THEN 'f'
+                ELSE NULL
+            END AS sex_key,
+            COUNT(*) AS enrolment,
+            SUM(CASE WHEN n.weight IS NOT NULL AND n.weight <> '' AND n.weight > 0 THEN 1 ELSE 0 END) AS pupils_weighed,
+            SUM(CASE WHEN n.height IS NOT NULL AND n.height <> '' AND n.height > 0 THEN 1 ELSE 0 END) AS pupils_height,
+            SUM(CASE WHEN LOWER(TRIM(n.nutritional_status)) = 'severely wasted' THEN 1 ELSE 0 END) AS severely_wasted,
+            SUM(CASE WHEN LOWER(TRIM(n.nutritional_status)) = 'wasted' THEN 1 ELSE 0 END) AS wasted,
+            SUM(CASE WHEN LOWER(TRIM(n.nutritional_status)) = 'normal' THEN 1 ELSE 0 END) AS normal_bmi,
+            SUM(CASE WHEN LOWER(TRIM(n.nutritional_status)) = 'overweight' THEN 1 ELSE 0 END) AS overweight,
+            SUM(CASE WHEN LOWER(TRIM(n.nutritional_status)) = 'obese' THEN 1 ELSE 0 END) AS obese,
+            SUM(CASE WHEN LOWER(TRIM(n.height_for_age)) = 'severely stunted' THEN 1 ELSE 0 END) AS severely_stunted,
+            SUM(CASE WHEN LOWER(TRIM(n.height_for_age)) = 'stunted' THEN 1 ELSE 0 END) AS stunted,
+            SUM(CASE WHEN LOWER(TRIM(n.height_for_age)) = 'normal' THEN 1 ELSE 0 END) AS normal_hfa,
+            SUM(CASE WHEN LOWER(TRIM(n.height_for_age)) IN ('tall', 'above normal') THEN 1 ELSE 0 END) AS tall")
+                 ->from('nutritional_assessments n')
+                 ->join('schools s', 'n.school_id = s.school_id', 'left')
+                 ->join('school_districts sd', 's.school_district_id = sd.id', 'left')
+                 ->where('n.is_deleted', 0)
+                 ->where('n.assessment_type', $assessment_type);
+
+        if ($legislative_district_id) {
+            $this->db->where('sd.legislative_district_id', $legislative_district_id);
+        }
+
+        $this->apply_school_level_filter($school_level);
+
+        if ($school_level === 'shs_only') {
+            $this->db->where_in('n.grade_level', ['Grade 11', 'Grade 12']);
+        }
+
+        $this->db->group_by('grade_label, sex_key');
+
+        $query = $this->db->get();
+        $rows = $query->result();
+
+        foreach ($rows as $row) {
+            $grade = isset($row->grade_label) ? trim($row->grade_label) : null;
+            if (!$grade) {
+                continue;
+            }
+
+            $sexKey = isset($row->sex_key) ? trim($row->sex_key) : '';
+            if ($sexKey === 'm') {
+                $genderKey = '_m';
+            } elseif ($sexKey === 'f') {
+                $genderKey = '_f';
+            } else {
+                continue;
+            }
+
+            $gradeKey = $grade . $genderKey;
+
+            if (!isset($data[$gradeKey])) {
+                continue;
+            }
+
+            $data[$gradeKey]['enrolment'] = (int)($row->enrolment ?? 0);
+            $data[$gradeKey]['pupils_weighed'] = (int)($row->pupils_weighed ?? 0);
+            $data[$gradeKey]['pupils_height'] = (int)($row->pupils_height ?? 0);
+            $data[$gradeKey]['severely_wasted'] = (int)($row->severely_wasted ?? 0);
+            $data[$gradeKey]['wasted'] = (int)($row->wasted ?? 0);
+            $data[$gradeKey]['normal_bmi'] = (int)($row->normal_bmi ?? 0);
+            $data[$gradeKey]['overweight'] = (int)($row->overweight ?? 0);
+            $data[$gradeKey]['obese'] = (int)($row->obese ?? 0);
+            $data[$gradeKey]['severely_stunted'] = (int)($row->severely_stunted ?? 0);
+            $data[$gradeKey]['stunted'] = (int)($row->stunted ?? 0);
+            $data[$gradeKey]['normal_hfa'] = (int)($row->normal_hfa ?? 0);
+            $data[$gradeKey]['tall'] = (int)($row->tall ?? 0);
+        }
+
+        $numericFields = [
+            'enrolment',
+            'pupils_weighed',
+            'pupils_height',
+            'severely_wasted',
+            'wasted',
+            'normal_bmi',
+            'overweight',
+            'obese',
+            'severely_stunted',
+            'stunted',
+            'normal_hfa',
+            'tall'
+        ];
+
+        foreach ($grades as $grade) {
+            $maleKey = $grade . '_m';
+            $femaleKey = $grade . '_f';
+            $totalKey = $grade . '_total';
+
+            if (!isset($data[$maleKey], $data[$femaleKey], $data[$totalKey])) {
+                continue;
+            }
+
+            foreach ($numericFields as $field) {
+                $data[$totalKey][$field] = (int)($data[$maleKey][$field] ?? 0) + (int)($data[$femaleKey][$field] ?? 0);
+            }
+        }
+
         return $data;
     }
-    
+
+    /**
+     * Create an empty grade data structure.
+     */
+    private function create_empty_grade_data() {
+        return [
+            'enrolment' => 0,
+            'pupils_weighed' => 0,
+            'severely_wasted' => 0,
+            'wasted' => 0,
+            'normal_bmi' => 0,
+            'overweight' => 0,
+            'obese' => 0,
+            'severely_stunted' => 0,
+            'stunted' => 0,
+            'normal_hfa' => 0,
+            'tall' => 0,
+            'pupils_height' => 0,
+        ];
+    }
+
     /**
      * NEW: Apply school level filter to queries
      */
@@ -199,72 +267,52 @@ class division_dashboard_model extends CI_Model {
     /**
      * ENHANCED: Get total enrolment for division with filters
      */
-    public function get_division_grand_total($assessment_type = 'baseline', $school_level = 'all') {
-        if (!$this->db->table_exists('nutritional_assessments')) {
-            return 0;
+    public function get_division_grand_total($assessment_type = 'baseline', $school_level = 'all', $legislative_district_id = null) {
+        $this->db->select('COUNT(*) as total')
+                 ->from('nutritional_assessments n')
+                 ->join('schools s', 'n.school_id = s.school_id', 'left')
+                 ->join('school_districts sd', 's.school_district_id = sd.id', 'left')
+                 ->where('n.is_deleted', 0)
+                 ->where('n.assessment_type', $assessment_type);
+        if ($legislative_district_id) {
+            $this->db->where('sd.legislative_district_id', $legislative_district_id);
         }
-        
-        $this->db->select('COUNT(*) as enrolment')
-                 ->from('nutritional_assessments')
-                 ->where('is_deleted', 0)
-                 ->where('assessment_type', $assessment_type);
-        
         $this->apply_school_level_filter($school_level);
-        
-        $query = $this->db->get();
-        
-        return $query->row()->enrolment ?? 0;
+        if ($school_level === 'shs_only') {
+            $this->db->where_in('n.grade_level', ['Grade 11', 'Grade 12']);
+        }
+        $q = $this->db->get();
+        return (int)($q->row()->total ?? 0);
     }
     
     /**
      * ENHANCED: Get assessment counts for division with school level filter
      */
-    public function get_assessment_counts_division($school_level = 'all') {
+    public function get_assessment_counts_division($school_level = 'all', $legislative_district_id = null) {
         if (!$this->db->table_exists('nutritional_assessments')) {
             return ['baseline' => 0, 'midline' => 0, 'endline' => 0];
         }
-        
-        // Use COUNT(DISTINCT school_id) to count unique schools with assessments
-        // This prevents counting the same school multiple times
-        
-        // Baseline count - count unique schools with baseline assessments
-        $this->db->select('COUNT(DISTINCT n.school_id) as count')
-                ->from('nutritional_assessments n')
-                ->join('schools s', 'n.school_id = s.id', 'left')
-                ->where('n.is_deleted', 0)
-                ->where('n.assessment_type', 'baseline');
-        
-        $this->apply_school_level_filter($school_level);
-        $baseline_query = $this->db->get();
-        $baseline = $baseline_query->row()->count ?? 0;
-        
-        // Midline count - count unique schools with midline assessments
-        $this->db->select('COUNT(DISTINCT n.school_id) as count')
-                ->from('nutritional_assessments n')
-                ->join('schools s', 'n.school_id = s.id', 'left')
-                ->where('n.is_deleted', 0)
-                ->where('n.assessment_type', 'midline');
-        
-        $this->apply_school_level_filter($school_level);
-        $midline_query = $this->db->get();
-        $midline = $midline_query->row()->count ?? 0;
-        
-        // Endline count - count unique schools with endline assessments
-        $this->db->select('COUNT(DISTINCT n.school_id) as count')
-                ->from('nutritional_assessments n')
-                ->join('schools s', 'n.school_id = s.id', 'left')
-                ->where('n.is_deleted', 0)
-                ->where('n.assessment_type', 'endline');
-        
-        $this->apply_school_level_filter($school_level);
-        $endline_query = $this->db->get();
-        $endline = $endline_query->row()->count ?? 0;
-        
-        return [
-            'baseline' => $baseline,
-            'midline' => $midline,
-            'endline' => $endline
-        ];
+
+        $types = ['baseline', 'midline', 'endline'];
+        $counts = [];
+        foreach ($types as $type) {
+            $this->db->select('COUNT(DISTINCT n.school_id) as count')
+                     ->from('nutritional_assessments n')
+                     ->join('schools s', 'n.school_id = s.school_id', 'left')
+                     ->join('school_districts sd', 's.school_district_id = sd.id', 'left')
+                     ->where('n.is_deleted', 0)
+                     ->where('n.assessment_type', $type);
+            if ($legislative_district_id) {
+                $this->db->where('sd.legislative_district_id', $legislative_district_id);
+            }
+            $this->apply_school_level_filter($school_level);
+            if ($school_level === 'shs_only') {
+                $this->db->where_in('n.grade_level', ['Grade 11', 'Grade 12']);
+            }
+            $q = $this->db->get();
+            $counts[$type] = (int)($q->row()->count ?? 0);
+        }
+        return $counts;
     }
     
     /**
@@ -362,27 +410,24 @@ class division_dashboard_model extends CI_Model {
     /**
      * Get all districts in division
      */
-    public function get_all_districts() {
-        if (!$this->db->table_exists('school_districts')) {
-            return array();
+    public function get_all_districts($legislative_district_id = null) {
+        $this->db->select('id, name')
+                 ->from('school_districts')
+                 ->order_by('name');
+        if ($legislative_district_id) {
+            $this->db->where('legislative_district_id', $legislative_district_id);
         }
-        
-        $query = $this->db->select('id, name')
-                         ->from('school_districts')
-                         ->order_by('name')
-                         ->get();
-        
-        $districts = array();
-        if ($query->num_rows() > 0) {
-            foreach ($query->result() as $row) {
-                $districts[] = array(
-                    'id' => $row->id,
-                    'name' => $row->name
-                );
-            }
-        }
-        
-        return $districts;
+        $query = $this->db->get();
+        return $query->result_array();
+    }
+
+    // New method: get legislative districts for dropdown
+    public function get_legislative_districts() {
+        return $this->db->select('id, name')
+                        ->from('legislative_districts')
+                        ->order_by('name')
+                        ->get()
+                        ->result();
     }
     
     /**

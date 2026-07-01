@@ -7,6 +7,26 @@ $(document).ready(function() {
     // Store all schools data from config
     const allSchoolsData = window.DivisionDashboardConfig.all_schools_by_district || {};
     
+    function buildDashboardUrl(type, level) {
+        const params = new URLSearchParams();
+        params.set('assessment_type', type);
+
+        if (level && level !== 'all') {
+            params.set('school_level', level);
+        }
+
+        const districtId = window.DivisionDashboardConfig.selected_legislative_district_id;
+        if (districtId) {
+            params.set('legislative_district_id', districtId);
+        }
+
+        return window.DivisionDashboardConfig.urls.base + '?' + params.toString();
+    }
+
+    $(document).on('change', '#districtFilter', function() {
+        $('#districtFilterForm').submit();
+    });
+
     // Assessment dropdown click handler (AJAX then redirect)
     $(document).on('click', 'a.dropdown-item[data-type]', function(e) {
         e.preventDefault();
@@ -23,14 +43,8 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    var url = window.DivisionDashboardConfig.urls.base;
                     var schoolLevel = window.DivisionDashboardConfig.school_level || 'all';
-                    if (schoolLevel && schoolLevel !== 'all') {
-                        url += '?assessment_type=' + encodeURIComponent(type) + '&school_level=' + encodeURIComponent(schoolLevel);
-                    } else {
-                        url += '?assessment_type=' + encodeURIComponent(type);
-                    }
-                    window.location.href = url;
+                    window.location.href = buildDashboardUrl(type, schoolLevel);
                 } else {
                     hideLoading();
                     showNotification('Error updating filter: ' + response.message, 'error');
@@ -77,10 +91,7 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    var url = window.DivisionDashboardConfig.urls.base;
-                    url += '?assessment_type=' + encodeURIComponent(assessmentType) + 
-                           '&school_level=' + encodeURIComponent(level);
-                    window.location.href = url;
+                    window.location.href = buildDashboardUrl(assessmentType, level);
                 } else {
                     hideLoading();
                     showNotification('Error updating filter: ' + response.message, 'error');

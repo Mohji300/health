@@ -205,21 +205,34 @@ public function debug_school_assessments() {
         // Save to session
         $this->session->set_userdata('division_school_level', $school_level);
         $data['school_level'] = $school_level;
+
+        // ===== LEGISLATIVE DISTRICT FILTER HANDLING =====
+        $legislative_district_id = $this->input->get('legislative_district_id') ?: 
+                                   ($this->session->userdata('division_legislative_district_id') ?: null);
+        if ($legislative_district_id !== null && $legislative_district_id !== '') {
+            $legislative_district_id = (int)$legislative_district_id;
+            if ($legislative_district_id < 1) {
+                $legislative_district_id = null;
+            }
+        }
+        $this->session->set_userdata('division_legislative_district_id', $legislative_district_id);
+        $data['selected_legislative_district_id'] = $legislative_district_id;
+        $data['legislative_districts'] = $this->division_dashboard_model->get_legislative_districts();
         
         // ===== GET NUTRITIONAL DATA WITH FILTERS =====
-        // Get nutritional data for entire division with assessment type AND school level filter
-        $data['nutritional_data'] = $this->division_dashboard_model->get_division_nutritional_data($assessment_type, $school_level);
-        $data['grand_total'] = $this->division_dashboard_model->get_division_grand_total($assessment_type, $school_level);
+        // Get nutritional data for entire division with assessment type, school level, and district filters
+        $data['nutritional_data'] = $this->division_dashboard_model->get_division_nutritional_data($assessment_type, $school_level, $legislative_district_id);
+        $data['grand_total'] = $this->division_dashboard_model->get_division_grand_total($assessment_type, $school_level, $legislative_district_id);
         
         // Get assessment counts
-        $assessment_counts = $this->division_dashboard_model->get_assessment_counts_division($school_level);
+        $assessment_counts = $this->division_dashboard_model->get_assessment_counts_division($school_level, $legislative_district_id);
         $data['baseline_count'] = $assessment_counts['baseline'];
         $data['midline_count'] = $assessment_counts['midline']; // NEW: Midline count
         $data['endline_count'] = $assessment_counts['endline'];
         
         // ===== DISTRICT AND SCHOOLS DATA =====
         // Get all districts with their schools and submission stats DIRECTLY
-        $all_districts = $this->division_dashboard_model->get_all_districts();
+        $all_districts = $this->division_dashboard_model->get_all_districts($legislative_district_id);
         $data['district_schools_summary'] = [];
         $data['all_schools_by_district'] = [];
         

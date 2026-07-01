@@ -187,7 +187,7 @@
                 </div>
                 
                 <!-- Comprehensive Nutritional Status Table -->
-                <div class="card mt-2">
+                <div class="card mt-1">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center">
                         <h4 class="card-title mb-0">
                             Division Nutritional Assessment Report
@@ -264,6 +264,19 @@
                                     <li><a class="dropdown-item <?= ($assessment_type == 'endline') ? 'active' : '' ?>" href="#" data-type="endline">Endline <span class="badge bg-info ms-2"><?= isset($endline_count) ? $endline_count : 0 ?></span></a></li>
                                 </ul>
                             </div>
+                            <form id="districtFilterForm" method="get" action="<?= site_url('division_dashboard_controller'); ?>" class="d-flex align-items-center me-2">
+                                <input type="hidden" name="assessment_type" value="<?= htmlspecialchars($assessment_type); ?>">
+                                <input type="hidden" name="school_level" value="<?= htmlspecialchars($school_level); ?>">
+                                <label for="districtFilter" class="me-2 mb-0 small text-muted">District</label>
+                                <select id="districtFilter" name="legislative_district_id" class="form-select form-select-sm" style="min-width: 180px;">
+                                    <option value="">All Districts</option>
+                                    <?php foreach ($legislative_districts as $district): ?>
+                                        <option value="<?= (int)($district->id ?? 0); ?>" <?= ((string)($selected_legislative_district_id ?? '') === (string)($district->id ?? '')) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($district->name ?? 'Unknown District'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </form>
                             <button id="btnPrint" class="btn btn-success">
                                 <i class="fas fa-print me-1"></i> Print Report
                             </button>
@@ -338,6 +351,22 @@
                                     function pct_division($num, $den) {
                                         if (!$den || $den == 0) return '0%';
                                         return round(($num / $den) * 100) . '%';
+                                    }
+
+                                    function sum_group_data($data, $groups, $sex_key, $field) {
+                                        $total = 0;
+                                        if (!is_array($groups)) {
+                                            return $total;
+                                        }
+
+                                        foreach ($groups as $keys) {
+                                            if (!is_array($keys) || !isset($keys[$sex_key])) {
+                                                continue;
+                                            }
+                                            $total += gdata_division($data, $keys[$sex_key], $field);
+                                        }
+
+                                        return $total;
                                     }
                                     
                                     // Define grade arrays with sex breakdown structure
@@ -481,27 +510,23 @@
 
                                     <!-- Grand total block - Elementary (grouped M / F / Total) -->
                                     <?php
-                                    $totalEnrol_m = $totalWeighed_m = 0;
-                                    $totalEnrol_f = $totalWeighed_f = 0;
-                                    $totalEnrol_t = $totalWeighed_t = 0;
+                                    $totalEnrol_m = sum_group_data($nutritional_data, $elementaryGrades, 'm', 'enrolment');
+                                    $totalWeighed_m = sum_group_data($nutritional_data, $elementaryGrades, 'm', 'pupils_weighed');
+                                    $totalEnrol_f = sum_group_data($nutritional_data, $elementaryGrades, 'f', 'enrolment');
+                                    $totalWeighed_f = sum_group_data($nutritional_data, $elementaryGrades, 'f', 'pupils_weighed');
+                                    $totalEnrol_t = sum_group_data($nutritional_data, $elementaryGrades, 'total', 'enrolment');
+                                    $totalWeighed_t = sum_group_data($nutritional_data, $elementaryGrades, 'total', 'pupils_weighed');
                                     $grandCounts_m = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
                                     $grandCounts_f = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
                                     $grandCounts_t = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
-                                    if ($has_nutritional_data) {
-                                        foreach ($elementaryGrades as $grade_name => $sex_keys) {
-                                            $totalEnrol_m += gdata_division($nutritional_data, $sex_keys['m'], 'enrolment');
-                                            $totalWeighed_m += gdata_division($nutritional_data, $sex_keys['m'], 'pupils_weighed');
-
-                                            $totalEnrol_f += gdata_division($nutritional_data, $sex_keys['f'], 'enrolment');
-                                            $totalWeighed_f += gdata_division($nutritional_data, $sex_keys['f'], 'pupils_weighed');
-
-                                            $totalEnrol_t += gdata_division($nutritional_data, $sex_keys['total'], 'enrolment');
-                                            $totalWeighed_t += gdata_division($nutritional_data, $sex_keys['total'], 'pupils_weighed');
-
-                                            foreach ($grandCounts_m as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['m'], $k); } unset($v);
-                                            foreach ($grandCounts_f as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['f'], $k); } unset($v);
-                                            foreach ($grandCounts_t as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['total'], $k); } unset($v);
-                                        }
+                                    foreach ($grandCounts_m as $field => $value) {
+                                        $grandCounts_m[$field] = sum_group_data($nutritional_data, $elementaryGrades, 'm', $field);
+                                    }
+                                    foreach ($grandCounts_f as $field => $value) {
+                                        $grandCounts_f[$field] = sum_group_data($nutritional_data, $elementaryGrades, 'f', $field);
+                                    }
+                                    foreach ($grandCounts_t as $field => $value) {
+                                        $grandCounts_t[$field] = sum_group_data($nutritional_data, $elementaryGrades, 'total', $field);
                                     }
                                     ?>
 
@@ -655,37 +680,23 @@
                                     <?php endforeach; ?>
                                     
                                     <?php
-                                        $shsEnrol_m = $shsWeighed_m = 0;
-                                        $shsEnrol_f = $shsWeighed_f = 0;
-                                        $shsEnrol_t = $shsWeighed_t = 0;
+                                        $shsEnrol_m = sum_group_data($nutritional_data, $shsGrades, 'm', 'enrolment');
+                                        $shsWeighed_m = sum_group_data($nutritional_data, $shsGrades, 'm', 'pupils_weighed');
+                                        $shsEnrol_f = sum_group_data($nutritional_data, $shsGrades, 'f', 'enrolment');
+                                        $shsWeighed_f = sum_group_data($nutritional_data, $shsGrades, 'f', 'pupils_weighed');
+                                        $shsEnrol_t = sum_group_data($nutritional_data, $shsGrades, 'total', 'enrolment');
+                                        $shsWeighed_t = sum_group_data($nutritional_data, $shsGrades, 'total', 'pupils_weighed');
                                         $shsCounts_m = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
                                         $shsCounts_f = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
                                         $shsCounts_t = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
-
-                                        if ($has_nutritional_data) {
-                                            foreach ($shsGrades as $grade_name => $sex_keys) {
-                                                // Male
-                                                $shsEnrol_m += gdata_division($nutritional_data, $sex_keys['m'], 'enrolment');
-                                                $shsWeighed_m += gdata_division($nutritional_data, $sex_keys['m'], 'pupils_weighed');
-                                                foreach ($shsCounts_m as $k => &$v) {
-                                                    $v += gdata_division($nutritional_data, $sex_keys['m'], $k);
-                                                }
-                                                unset($v);
-                                                // Female
-                                                $shsEnrol_f += gdata_division($nutritional_data, $sex_keys['f'], 'enrolment');
-                                                $shsWeighed_f += gdata_division($nutritional_data, $sex_keys['f'], 'pupils_weighed');
-                                                foreach ($shsCounts_f as $k => &$v) {
-                                                    $v += gdata_division($nutritional_data, $sex_keys['f'], $k);
-                                                }
-                                                unset($v);
-                                                // Total
-                                                $shsEnrol_t += gdata_division($nutritional_data, $sex_keys['total'], 'enrolment');
-                                                $shsWeighed_t += gdata_division($nutritional_data, $sex_keys['total'], 'pupils_weighed');
-                                                foreach ($shsCounts_t as $k => &$v) {
-                                                    $v += gdata_division($nutritional_data, $sex_keys['total'], $k);
-                                                }
-                                                unset($v);
-                                            }
+                                        foreach ($shsCounts_m as $field => $value) {
+                                            $shsCounts_m[$field] = sum_group_data($nutritional_data, $shsGrades, 'm', $field);
+                                        }
+                                        foreach ($shsCounts_f as $field => $value) {
+                                            $shsCounts_f[$field] = sum_group_data($nutritional_data, $shsGrades, 'f', $field);
+                                        }
+                                        foreach ($shsCounts_t as $field => $value) {
+                                            $shsCounts_t[$field] = sum_group_data($nutritional_data, $shsGrades, 'total', $field);
                                         }
                                         ?>
 
@@ -872,27 +883,23 @@
 
                                     <!-- Grand total block - Secondary (grouped M / F / Total) -->
                                     <?php
-                                    $sEnrol_m = $sWeighed_m = 0;
-                                    $sEnrol_f = $sWeighed_f = 0;
-                                    $sEnrol_t = $sWeighed_t = 0;
+                                    $sEnrol_m = sum_group_data($nutritional_data, $secondaryGrades, 'm', 'enrolment');
+                                    $sWeighed_m = sum_group_data($nutritional_data, $secondaryGrades, 'm', 'pupils_weighed');
+                                    $sEnrol_f = sum_group_data($nutritional_data, $secondaryGrades, 'f', 'enrolment');
+                                    $sWeighed_f = sum_group_data($nutritional_data, $secondaryGrades, 'f', 'pupils_weighed');
+                                    $sEnrol_t = sum_group_data($nutritional_data, $secondaryGrades, 'total', 'enrolment');
+                                    $sWeighed_t = sum_group_data($nutritional_data, $secondaryGrades, 'total', 'pupils_weighed');
                                     $scounts_m = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
                                     $scounts_f = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
                                     $scounts_t = array_fill_keys(array_merge($bmiFields, $hfaFields), 0);
-                                    if ($has_nutritional_data) {
-                                        foreach ($secondaryGrades as $grade_name => $sex_keys) {
-                                            $sEnrol_m += gdata_division($nutritional_data, $sex_keys['m'], 'enrolment');
-                                            $sWeighed_m += gdata_division($nutritional_data, $sex_keys['m'], 'pupils_weighed');
-
-                                            $sEnrol_f += gdata_division($nutritional_data, $sex_keys['f'], 'enrolment');
-                                            $sWeighed_f += gdata_division($nutritional_data, $sex_keys['f'], 'pupils_weighed');
-
-                                            $sEnrol_t += gdata_division($nutritional_data, $sex_keys['total'], 'enrolment');
-                                            $sWeighed_t += gdata_division($nutritional_data, $sex_keys['total'], 'pupils_weighed');
-
-                                            foreach ($scounts_m as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['m'], $k); } unset($v);
-                                            foreach ($scounts_f as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['f'], $k); } unset($v);
-                                            foreach ($scounts_t as $k => &$v) { $v += gdata_division($nutritional_data, $sex_keys['total'], $k); } unset($v);
-                                        }
+                                    foreach ($scounts_m as $field => $value) {
+                                        $scounts_m[$field] = sum_group_data($nutritional_data, $secondaryGrades, 'm', $field);
+                                    }
+                                    foreach ($scounts_f as $field => $value) {
+                                        $scounts_f[$field] = sum_group_data($nutritional_data, $secondaryGrades, 'f', $field);
+                                    }
+                                    foreach ($scounts_t as $field => $value) {
+                                        $scounts_t[$field] = sum_group_data($nutritional_data, $secondaryGrades, 'total', $field);
                                     }
                                     ?>
 
@@ -960,6 +967,7 @@
         },
         school_level: '<?= isset($school_level) ? $school_level : "all"; ?>',
         assessment_type: '<?= isset($assessment_type) ? $assessment_type : ""; ?>',
+        selected_legislative_district_id: '<?= isset($selected_legislative_district_id) ? (int)$selected_legislative_district_id : ""; ?>',
         assessment_type_display: '<?= ucfirst(isset($assessment_type) ? $assessment_type : ""); ?>',
         school_level_display: '<?php 
             $level = isset($school_level) ? $school_level : 'all';
