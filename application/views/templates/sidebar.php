@@ -13,7 +13,7 @@
 <div id="mainSidebar" role="navigation" aria-label="Main sidebar">
 
   <!-- Header -->
-  <div class="text-center py-4 border-bottom border-gray-700 px-2" style="margin-top:0.5in;">
+  <div class="text-center py-0 border-bottom border-gray-700 px-2" style="margin-top:0.5in;">
         <img src="<?php echo base_url(ASSETS_PATH . '/images/sdo.png'); ?>" 
           alt="School Logo" 
           class="mb-3 avatar-circle">
@@ -59,15 +59,6 @@
 
       <li class="nav-item mb-2 px-2">
         <h6 class="text-uppercase text-gray-400 small fw-semibold mb-2 main-sidebar-text">Quick Access</h6>
-
-        <!-- Enrollment -->
-         <?php if ($is_admin || $is_regular_user): ?>
-        <a href="<?php echo site_url('enrollment'); ?>"
-           class="nav-link rounded-2 mb-1 <?php echo is_active_page('enrollment', $current_uri) ? 'active' : ''; ?>">
-          <i class="fas fa-user-graduate"></i>
-          <span class="main-sidebar-text"> Enrollment</span>
-        </a>
-        <?php endif; ?>
 
         <!-- Show to Admin and Regular Users only -->
         <?php if ($is_admin || $is_regular_user): ?>
@@ -204,7 +195,7 @@
       </li>
       <?php endif; ?>
 
-      <!-- SBFP Beneficiaries - Show to ALL ROLES (Admin, District, Division, Regular User) -->
+      <!-- SBFP Beneficiaries - Show to ALL ROLES -->
       <li class="nav-item mb-2 px-2">
         <a href="<?php echo site_url('sbfp_beneficiaries'); ?>"
            class="nav-link rounded-2 mb-1 <?php echo is_active_page('sbfp_beneficiaries', $current_uri) ? 'active' : ''; ?>">
