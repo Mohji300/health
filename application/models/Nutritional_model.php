@@ -13,9 +13,9 @@ class nutritional_model extends CI_Model {
 
     /**
      * Return processed nutritional data structured for the table.
-     * Now accepts assessment_type, school_name, and school_level parameters
+     *accepts assessment_type, school_name, school_level, and school_id parameters
      */
-    public function get_processed_data($assessment_type = null, $school_name = null, $school_level = 'all')
+    public function get_processed_data($assessment_type = null, $school_name = null, $school_level = 'all', $school_id = null)
     {
         // Build query with optional assessment_type filter
         if ($assessment_type) {
@@ -25,7 +25,12 @@ class nutritional_model extends CI_Model {
         // Filter out deleted records
         $this->db->where('is_deleted', 0);
 
-        // Optional school filter (filter by school_name in nutritional_assessments)
+        //  Filter by school_id if provided
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
+
+        // Secondary school filter (filter by school_name)
         if ($school_name) {
             $this->db->where('school_name', $school_name);
         }
@@ -33,33 +38,25 @@ class nutritional_model extends CI_Model {
         // Add school level filtering using the actual school_level from users table
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
-                // For secondary, get schools with school_level = 'secondary' from users table
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
-                // Also filter by grade levels 7-12
                 $this->db->where_in('grade_level', ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
             } 
             elseif ($school_level === 'elementary') {
-                // For elementary, get schools with school_level = 'elementary' from users table
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'elementary')");
-                // Also filter by grade levels K-6
                 $this->db->where_in('grade_level', ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'SPED']);
             }
             elseif ($school_level === 'integrated') {
-                // All grades from integrated schools
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
             }
             elseif ($school_level === 'integrated_elementary') {
-                // Only elementary grades (K-6) from integrated schools
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
                 $this->db->where_in('grade_level', ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'SPED']);
             }
             elseif ($school_level === 'integrated_secondary') {
-                // Only secondary grades (7-12) from integrated schools
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'integrated')");
                 $this->db->where_in('grade_level', ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
             }
             elseif ($school_level === 'Stand Alone SHS') {
-                // Only grades 11-12 from Stand Alone SHS schools
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE school_level = 'Stand Alone SHS' OR LOWER(school_level) IN ('shs', 'senior high school', 'senior high'))");
                 $this->db->where_in('grade_level', ['Grade 11', 'Grade 12']);
             }
@@ -78,7 +75,7 @@ class nutritional_model extends CI_Model {
             $data[$grade . '_total'] = $this->create_empty_grade_data();
         }
 
-        // Simple grade mapping (adjust if your DB has different grade names)
+        // Simple grade mapping
         $gradeMapping = [
             'Kindergarten' => 'Kinder',
             'Kinder' => 'Kinder',
@@ -100,7 +97,6 @@ class nutritional_model extends CI_Model {
         $processedCount = 0;
 
         foreach ($assessments as $item) {
-            // Extra safety check for deleted records (though already filtered at DB level)
             if (isset($item->is_deleted) && $item->is_deleted == 1) {
                 continue;
             }
@@ -123,23 +119,19 @@ class nutritional_model extends CI_Model {
 
             if (!isset($data[$gradeKey]) || !isset($data[$totalKey])) continue;
 
-            // Increment enrolment
             $data[$gradeKey]['enrolment'] += 1;
             $data[$totalKey]['enrolment'] += 1;
 
-            // Pupils weighed
             if (isset($item->weight) && is_numeric($item->weight) && floatval($item->weight) > 0) {
                 $data[$gradeKey]['pupils_weighed'] += 1;
                 $data[$totalKey]['pupils_weighed'] += 1;
             }
 
-            // Pupils height counted
             if (isset($item->height) && is_numeric($item->height) && floatval($item->height) > 0) {
                 $data[$gradeKey]['pupils_height'] += 1;
                 $data[$totalKey]['pupils_height'] += 1;
             }
 
-            // BMI categories (string matching from DB)
             $bmiStatus = isset($item->nutritional_status) ? strtolower(trim($item->nutritional_status)) : '';
             if ($bmiStatus === 'severely wasted') {
                 $data[$gradeKey]['severely_wasted'] += 1;
@@ -158,7 +150,6 @@ class nutritional_model extends CI_Model {
                 $data[$totalKey]['obese'] += 1;
             }
 
-            // Height-for-age
             $hfaStatus = isset($item->height_for_age) ? strtolower(trim($item->height_for_age)) : '';
             if ($hfaStatus === 'severely stunted') {
                 $data[$gradeKey]['severely_stunted'] += 1;
@@ -177,7 +168,6 @@ class nutritional_model extends CI_Model {
             $processedCount++;
         }
 
-        // Calculate grand total from all enrolment counts (total rows)
         $grandTotal = 0;
         foreach ($data as $key => $vals) {
             if (substr($key, -6) === '_total') {
@@ -212,19 +202,24 @@ class nutritional_model extends CI_Model {
     }
 
     /**
-     * Get assessment count by type with optional school name and school level filtering
+     * Get assessment count by type with optional filtering
      */
-    public function get_assessment_count_by_type($type, $school_name = null, $school_level = 'all')
+    public function get_assessment_count_by_type($type, $school_name = null, $school_level = 'all', $school_id = null)
     {
         $this->db->where('assessment_type', $type);
         $this->db->where('is_deleted', 0);
         
-        // Optional school filter
+        // Filter by school_id if provided
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
+        
+        // Secondary school filter
         if ($school_name) {
             $this->db->where('school_name', $school_name);
         }
         
-        // Add school level filtering using the actual school_level from users table
+        // Add school level filtering
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
@@ -257,17 +252,22 @@ class nutritional_model extends CI_Model {
     /**
      * Check if assessment type has data with optional filtering
      */
-    public function has_assessment_data($type, $school_name = null, $school_level = 'all')
+    public function has_assessment_data($type, $school_name = null, $school_level = 'all', $school_id = null)
     {
         $this->db->where('assessment_type', $type);
         $this->db->where('is_deleted', 0);
         
-        // Optional school filter
+        // Filter by school_id if provided
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
+        
+        // Secondary school filter
         if ($school_name) {
             $this->db->where('school_name', $school_name);
         }
         
-        // Add school level filtering using the actual school_level from users table
+        // Add school level filtering
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
@@ -301,14 +301,19 @@ class nutritional_model extends CI_Model {
     /**
      * Get all nutritional assessments with optional filtering
      */
-    public function get_all_assessments($school_name = null, $school_level = 'all')
+    public function get_all_assessments($school_name = null, $school_level = 'all', $school_id = null)
     {
-        // Optional school filter
+        //  Filter by school_id if provided
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
+        
+        // Secondary school filter
         if ($school_name) {
             $this->db->where('school_name', $school_name);
         }
         
-        // Add school level filtering using the actual school_level from users table
+        // Add school level filtering
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
@@ -330,19 +335,24 @@ class nutritional_model extends CI_Model {
     /**
      * Get assessments by grade and gender with optional filtering
      */
-    public function get_by_grade_gender($grade, $gender = null, $school_name = null, $school_level = 'all')
+    public function get_by_grade_gender($grade, $gender = null, $school_name = null, $school_level = 'all', $school_id = null)
     {
         $this->db->where('grade_level', $grade);
         if ($gender) {
             $this->db->where('sex', $gender);
         }
         
-        // Optional school filter
+        // Filter by school_id if provided
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
+        
+        // Secondary school filter
         if ($school_name) {
             $this->db->where('school_name', $school_name);
         }
         
-        // Add school level filtering using the actual school_level from users table
+        // Add school level filtering
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
@@ -364,16 +374,21 @@ class nutritional_model extends CI_Model {
     /**
      * Get nutritional status summary with optional filtering
      */
-    public function get_nutritional_summary($school_name = null, $school_level = 'all')
+    public function get_nutritional_summary($school_name = null, $school_level = 'all', $school_id = null)
     {
         $this->db->select('nutritional_status, COUNT(*) as count');
         
-        // Optional school filter
+        //  PRIMARY FILTER: Filter by school_id if provided
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
+        
+        // Secondary school filter
         if ($school_name) {
             $this->db->where('school_name', $school_name);
         }
         
-        // Add school level filtering using the actual school_level from users table
+        // Add school level filtering
         if ($school_level !== 'all') {
             if ($school_level === 'secondary') {
                 $this->db->where("school_name IN (SELECT school_name FROM users WHERE LOWER(school_level) = 'secondary')");
