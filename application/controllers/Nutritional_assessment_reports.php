@@ -45,6 +45,7 @@ class Nutritional_assessment_reports extends CI_Controller {
         $assessment_type = $this->input->get('assessment_type', TRUE);
         $date_from = $this->input->get('date_from', TRUE);
         $date_to = $this->input->get('date_to', TRUE);
+        $section_id = $this->input->get('section_id', TRUE);
 
         $data['reports'] = $this->nutritional_assessment_model->get_reports_with_filters(
             $legislative_district,
@@ -54,7 +55,8 @@ class Nutritional_assessment_reports extends CI_Controller {
             $date_from,
             $date_to,
             $assessment_type,
-            $school_id  
+            $school_id,
+            $section_id
         );
 
         if (in_array($role, ['admin', 'super_admin', 'district', 'division'])) {
@@ -96,7 +98,8 @@ class Nutritional_assessment_reports extends CI_Controller {
             'grade_level' => $grade_level,
             'assessment_type' => $assessment_type,
             'date_from' => $date_from,
-            'date_to' => $date_to
+            'date_to' => $date_to,
+            'section_id' => $section_id
         ];
 
         $this->load->view('nutritional_reports', $data);
@@ -485,6 +488,7 @@ class Nutritional_assessment_reports extends CI_Controller {
             $school_id = $this->input->get('school_id', TRUE);
             $grade_level = $this->input->get('grade_level', TRUE);
             $section = $this->input->get('section', TRUE);
+            $section_id = $this->input->get('section_id', TRUE);
             $year = $this->input->get('year', TRUE);
             $assessment_type = $this->input->get('assessment_type', TRUE) ?: 'baseline';
 
@@ -506,7 +510,9 @@ class Nutritional_assessment_reports extends CI_Controller {
                 $grade_level,
                 $section,
                 $year,
-                $assessment_type
+                $assessment_type,
+                $section_id,
+                $school_id
             );
 
             if (empty($assessments)) {

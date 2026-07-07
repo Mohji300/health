@@ -406,6 +406,7 @@
                               'school_id' => $report->school_id ?? '',
                               'grade_level' => $report->grade_level ?? '',
                               'section' => $report->section ?? '',
+                              'section_id' => $report->section_id ?? '',
                               'year' => $report->year ?? '',
                               'assessment_type' => $report->assessment_type ?? 'baseline'
                             ])); ?>" 
