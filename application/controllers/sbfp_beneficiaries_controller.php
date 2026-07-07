@@ -31,7 +31,8 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $school_id = '';
         $school_district = '';
         $legislative_district = '';
-        
+
+        // --- 1. Determine user role and school data from auth_user ---
         if (!empty($auth_user)) {
             if (is_object($auth_user)) {
                 $user_role = !empty($auth_user->role) ? $auth_user->role : $user_role;
@@ -53,7 +54,311 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
                 $user_role = $session_role;
             }
         }
-        
+
+        if (empty($school_name) && !empty($session_school_name)) {
+            $school_name = $session_school_name;
+        }
+
+        if (!empty($session_district)) {
+            $school_district = $session_district;
+        }
+
+        // --- 2. Fallback to database if still empty ---
+        if (empty($school_district) || (empty($school_name) && $user_role === 'school') || empty($user_role)) {
+            $user_data = $this->get_user_data_from_db($user_id);
+            if (!empty($user_data)) {
+                $user_role = !empty($user_data['role']) ? $user_data['role'] : $user_role;
+                $school_name = !empty($user_data['name']) ? $user_data['name'] : $school_name;
+                $school_id = !empty($user_data['school_id']) ? $user_data['school_id'] : $school_id;
+                $school_district = !empty($user_data['school_district']) ? $user_data['school_district'] : $school_district;
+                $legislative_district = !empty($user_data['legislative_district']) ? $user_data['legislative_district'] : $legislative_district;
+            }
+        }
+
+        // Force school_id from database if still empty
+        if (empty($school_id) && !empty($user_id)) {
+            $this->db->select('school_id, name, school_district, legislative_district');
+            $this->db->from('users');
+            $this->db->where('id', $user_id);
+            $user_query = $this->db->get();
+            if ($user_query->num_rows() > 0) {
+                $user_row = $user_query->row();
+                $school_id = $user_row->school_id;
+                $school_name = $user_row->name;
+                $school_district = $user_row->school_district;
+                $legislative_district = $user_row->legislative_district;
+                // Update session with correct values
+                $this->session->set_userdata('school_id', $school_id);
+                $this->session->set_userdata('school_name', $school_name);
+                $this->session->set_userdata('school_district', $school_district);
+                $this->session->set_userdata('legislative_district', $legislative_district);
+            }
+        }
+
+        if ($user_role === 'district' && empty($school_district)) {
+            $this->db->select('school_district, legislative_district');
+            $this->db->from('users');
+            $this->db->where('id', $user_id);
+            $district_query = $this->db->get();
+            if ($district_query->num_rows() > 0) {
+                $district_row = $district_query->row();
+                $school_district = !empty($district_row->school_district) ? $district_row->school_district : '';
+                $legislative_district = !empty($district_row->legislative_district) ? $district_row->legislative_district : '';
+            }
+        }
+
+        // --- 3. Safety check: school users must have a school assigned ---
+        if ($user_role === 'school' && empty($school_id) && empty($school_name)) {
+            show_error('Your account does not have a school assigned. Please contact the administrator.');
+        }
+
+        // --- 4. Retrieve session filters ---
+        $assessment_type = $this->session->userdata('assessment_type') ?: 'baseline';
+        $grade_level_filter = $this->session->userdata('grade_level_filter') ?: '';
+        $school_name_filter = $this->session->userdata('school_name_filter') ?: '';
+        $district_filter = $this->session->userdata('district_filter') ?: '';
+
+        // --- 5. Compute school level (must be done before auto-clear) ---
+        $user_school_level = $this->get_user_school_level($user_id);
+        $session_school_level = $this->session->userdata('school_level');
+
+        // ----- 6. AUTO-CLEAR STALE FILTERS -----
+        $filters_applied = $this->session->userdata('filters_applied');
+        if (!$filters_applied) {
+            // Unset all filter session variables
+            $this->session->unset_userdata('grade_level_filter');
+            $this->session->unset_userdata('school_name_filter');
+            $this->session->unset_userdata('district_filter');
+            $this->session->unset_userdata('selected_school');
+
+            // Reset local variables
+            $grade_level_filter = '';
+            $school_name_filter = '';
+            $district_filter = '';
+
+            // Reset school_level to a safe default based on role
+            if ($user_role === 'school') {
+                $school_level = $user_school_level;
+                $this->session->set_userdata('school_level', $school_level);
+            } else {
+                $school_level = 'all';
+                $this->session->set_userdata('school_level', 'all');
+            }
+        } else {
+            // If filters were applied, force school_level = 'all' for division/admin
+            if (in_array($user_role, ['division', 'admin'])) {
+                $school_level = 'all';
+                $this->session->set_userdata('school_level', 'all');
+            }
+        }
+
+        // --- 7. Build data array for the view ---
+        $data['assessment_type'] = $assessment_type;
+        $data['is_baseline'] = ($assessment_type == 'baseline');
+        $data['is_midline'] = ($assessment_type == 'midline');
+        $data['is_endline'] = ($assessment_type == 'endline');
+        $data['school_year'] = $this->get_current_school_year();
+
+        // Determine final school level
+        $school_level = $this->session->userdata('school_level') ?: 'all';
+        if ($user_role === 'school' && empty($school_level)) {
+            $school_level = $user_school_level;
+            $this->session->set_userdata('school_level', $school_level);
+        }
+        if ($user_role === 'district') {
+            $school_level = 'all';
+        }
+
+        $data['school_level'] = $school_level;
+        $data['user_actual_school_level'] = $user_school_level;
+
+        $selected_school = $this->session->userdata('selected_school') ?: '';
+        $data['selected_school'] = $selected_school;
+
+        // Model should ignore school_name for district, division, admin
+        $model_school_name = (in_array($user_role, ['district', 'division', 'admin'])) ? '' : $school_name;
+
+        $data['user_role'] = $user_role;
+        $data['school_id'] = $school_id;
+        $data['district'] = $school_district;
+        $data['school_name'] = $school_name;
+        $data['legislative_district'] = $legislative_district;
+        $data['grade_level_filter'] = $grade_level_filter;
+        $data['school_name_filter'] = $school_name_filter;
+        $data['district_filter'] = $district_filter;
+        $data['available_schools'] = $this->get_available_schools($user_role, $school_id, $school_district);
+        $data['available_districts'] = $this->get_available_districts($user_role, $school_district);
+        $data['available_grade_levels'] = $this->get_available_grade_levels();
+
+        $data['beneficiaries'] = [];
+
+        // ---- Counts and stats (same as before, but using the final variables) ----
+        $data['baseline_count'] = $this->sbfp_beneficiaries_model->count_by_assessment_with_filter(
+            'baseline',
+            $model_school_name,
+            $school_level,
+            $user_role,
+            $school_id,
+            $school_district,
+            $selected_school,
+            $grade_level_filter,
+            $school_name_filter,
+            $district_filter,
+            $section_id
+        );
+
+        $data['midline_count'] = $this->sbfp_beneficiaries_model->count_by_assessment_with_filter(
+            'midline',
+            $model_school_name,
+            $school_level,
+            $user_role,
+            $school_id,
+            $school_district,
+            $selected_school,
+            $grade_level_filter,
+            $school_name_filter,
+            $district_filter,
+            $section_id
+        );
+
+        $data['endline_count'] = $this->sbfp_beneficiaries_model->count_by_assessment_with_filter(
+            'endline',
+            $model_school_name,
+            $school_level,
+            $user_role,
+            $school_id,
+            $school_district,
+            $selected_school,
+            $grade_level_filter,
+            $school_name_filter,
+            $district_filter,
+            $section_id
+        );
+
+        $data['nutritional_stats'] = $this->sbfp_beneficiaries_model->get_nutritional_stats_with_filter(
+            $assessment_type,
+            $model_school_name,
+            $school_level,
+            $user_role,
+            $school_id,
+            $school_district,
+            $selected_school,
+            $grade_level_filter,
+            $school_name_filter,
+            $district_filter,
+            $section_id
+        );
+
+        // Format BMI and height
+        foreach ($data['beneficiaries'] as &$student) {
+            if (isset($student['bmi'])) {
+                $student['bmi'] = $this->format_bmi($student['bmi']);
+            }
+            if (isset($student['height'])) {
+                $student['height'] = $this->format_height_cm($student['height']);
+            }
+        }
+        unset($student);
+
+        $normal_count = 0;
+        $intervention_count = 0;
+        foreach ($data['nutritional_stats'] as $stat) {
+            if ($stat['nutritional_status'] == 'Normal') {
+                $normal_count = $stat['count'];
+            }
+            if (in_array($stat['nutritional_status'], ['Severely Wasted', 'Wasted', 'Overweight', 'Obese'])) {
+                $intervention_count += $stat['count'];
+            }
+        }
+        $data['normal_count'] = $normal_count;
+        $data['intervention_count'] = $intervention_count;
+
+        // Summary stats (tall count)
+        $summary_stats = $this->sbfp_beneficiaries_model->get_summary_stats($assessment_type, $model_school_name, $school_id);
+        $data['tall_count'] = ($summary_stats && isset($summary_stats->tall)) ? (int)$summary_stats->tall : 0;
+
+        $data['schools'] = $this->sbfp_beneficiaries_model->get_schools_by_role(
+            $user_role,
+            $school_id,
+            $school_district
+        );
+        $data['school_count'] = count($data['schools']);
+
+        $data['sections'] = $this->sbfp_beneficiaries_model->get_sections(
+            $assessment_type,
+            $school_id,
+            $grade_level_filter,
+            $school_name
+        );
+        $data['section_id'] = $section_id;
+
+        $this->load->view('sbfp_beneficiaries', $data);
+    }
+
+    public function datatable() {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        // DataTables parameters
+        $draw   = intval($this->input->post('draw'));
+        $start  = intval($this->input->post('start'));
+        $length = intval($this->input->post('length'));
+        $search = $this->input->post('search')['value'] ?? '';
+        $order  = $this->input->post('order')[0] ?? null;
+        $order_column = $order ? intval($order['column']) : 0;
+        $order_dir    = $order ? $order['dir'] : 'asc';
+
+        $columns = [
+            'name', 'sex', 'grade_level', 'birthday',
+            'date_of_weighing', 'age', 'weight', 'height',
+            'bmi', 'nutritional_status', 'height_for_age'
+        ];
+        $order_by = isset($columns[$order_column]) ? $columns[$order_column] : 'name';
+
+        // --- 1. Retrieve session filters ---
+        $assessment_type = $this->session->userdata('assessment_type') ?: 'baseline';
+        $grade_level_filter = $this->session->userdata('grade_level_filter') ?: '';
+        $school_name_filter = $this->session->userdata('school_name_filter') ?: '';
+        $district_filter    = $this->session->userdata('district_filter') ?: '';
+        $section_id = $this->input->post('section_id') ?: '';
+
+        // --- 2. Get user role and school info (same as index) ---
+        $user_id = $this->session->userdata('user_id');
+        $auth_user = $this->session->userdata('auth_user');
+        $user_role = 'school';
+        $school_name = '';
+        $school_id = '';
+        $school_district = '';
+
+        $session_role = $this->session->userdata('role');
+        $session_school_name = $this->session->userdata('school_name');
+        $session_school_id = $this->session->userdata('school_id');
+        $session_district = $this->session->userdata('school_district');
+        $session_legislative_district = $this->session->userdata('legislative_district');
+
+        if (!empty($auth_user)) {
+            if (is_object($auth_user)) {
+                $user_role = !empty($auth_user->role) ? $auth_user->role : $user_role;
+                $school_name = !empty($auth_user->name) ? $auth_user->name : $school_name;
+                $school_id = !empty($auth_user->school_id) ? $auth_user->school_id : $school_id;
+                $school_district = !empty($auth_user->school_district) ? $auth_user->school_district : $school_district;
+                $legislative_district = !empty($auth_user->legislative_district) ? $auth_user->legislative_district : $legislative_district;
+            } elseif (is_array($auth_user)) {
+                $user_role = !empty($auth_user['role']) ? $auth_user['role'] : $user_role;
+                $school_name = !empty($auth_user['name']) ? $auth_user['name'] : $school_name;
+                $school_id = !empty($auth_user['school_id']) ? $auth_user['school_id'] : $school_id;
+                $school_district = !empty($auth_user['school_district']) ? $auth_user['school_district'] : $school_district;
+                $legislative_district = !empty($auth_user['legislative_district']) ? $auth_user['legislative_district'] : $legislative_district;
+            }
+        }
+
+        if (empty($user_role) || $user_role === 'school') {
+            if (!empty($session_role)) {
+                $user_role = $session_role;
+            }
+        }
+
         if (empty($school_name) && !empty($session_school_name)) {
             $school_name = $session_school_name;
         }
@@ -73,7 +378,7 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             }
         }
 
-        //  FORCE school_id from database if still empty
+        // Force school_id from database if still empty
         if (empty($school_id) && !empty($user_id)) {
             $this->db->select('school_id, name, school_district, legislative_district');
             $this->db->from('users');
@@ -85,12 +390,10 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
                 $school_name = $user_row->name;
                 $school_district = $user_row->school_district;
                 $legislative_district = $user_row->legislative_district;
-                // Update session with correct values
                 $this->session->set_userdata('school_id', $school_id);
                 $this->session->set_userdata('school_name', $school_name);
                 $this->session->set_userdata('school_district', $school_district);
                 $this->session->set_userdata('legislative_district', $legislative_district);
-                log_message('debug', ' Forced school_id from DB: ' . $school_id);
             }
         }
 
@@ -106,171 +409,175 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             }
         }
 
-        $assessment_type = $this->session->userdata('assessment_type') ?: 'baseline';
-        $grade_level_filter = $this->session->userdata('grade_level_filter') ?: '';
-        $school_name_filter = $this->session->userdata('school_name_filter') ?: '';
-        $district_filter = $this->session->userdata('district_filter') ?: '';
-        
-        $data['assessment_type'] = $assessment_type;
-        $data['is_baseline'] = ($assessment_type == 'baseline');
-        $data['is_midline'] = ($assessment_type == 'midline');
-        $data['is_endline'] = ($assessment_type == 'endline');
-        $data['school_year'] = $this->get_current_school_year();
-        $session_school_level = $this->session->userdata('school_level');
-        $user_school_level = $this->get_user_school_level($user_id);
-        
-        if ($user_role === 'school') {
-            $school_level = $user_school_level;
-            $this->session->set_userdata('school_level', $school_level);
-        } elseif ($user_role === 'district') {
-            $school_level = 'all';
-        } else {
-            $school_level = !empty($session_school_level) ? $session_school_level : 'all';
+        // --- 3. Safety check for school users ---
+        if ($user_role === 'school' && empty($school_id) && empty($school_name)) {
+            show_error('Your account does not have a school assigned. Please contact the administrator.');
         }
-        
-        $data['school_level'] = $school_level;
-        $data['user_actual_school_level'] = $user_school_level;
 
-        $selected_school = $this->session->userdata('selected_school') ?: '';
-        $data['selected_school'] = $selected_school;
-        
-        //  ALWAYS pass school_name for school users
-        $model_school_name = $school_name;
+        // --- 4. School level handling ---
+        $school_level = $this->session->userdata('school_level') ?: 'all';
         if ($user_role === 'district') {
-            $model_school_name = '';
+            $school_level = 'all';
         }
-        
-        $data['user_role'] = $user_role;
-        $data['school_id'] = $school_id;
-        $data['district'] = $school_district;
-        $data['school_name'] = $school_name;
-        $data['legislative_district'] = $legislative_district;
-        $data['grade_level_filter'] = $grade_level_filter;
-        $data['school_name_filter'] = $school_name_filter;
-        $data['district_filter'] = $district_filter;
-        $data['available_schools'] = $this->get_available_schools($user_role, $school_id, $school_district);
-        $data['available_districts'] = $this->get_available_districts($user_role, $school_district);
-        $data['available_grade_levels'] = $this->get_available_grade_levels();
-        
-        $data['beneficiaries'] = $this->sbfp_beneficiaries_model->get_beneficiaries(
+
+        // ----- 5. AUTO-CLEAR STALE FILTERS -----
+        $filters_applied = $this->session->userdata('filters_applied');
+        if (!$filters_applied) {
+            // Unset all filter session variables
+            $this->session->unset_userdata('grade_level_filter');
+            $this->session->unset_userdata('school_name_filter');
+            $this->session->unset_userdata('district_filter');
+            $this->session->unset_userdata('selected_school');
+
+            // Reset local variables
+            $grade_level_filter = '';
+            $school_name_filter = '';
+            $district_filter = '';
+
+            // For division/admin, force school_level = 'all'
+            if (in_array($user_role, ['division', 'admin'])) {
+                $school_level = 'all';
+                $this->session->set_userdata('school_level', 'all');
+            }
+        } else {
+            // If filters were applied, force school_level = 'all' for division/admin
+            if (in_array($user_role, ['division', 'admin'])) {
+                $school_level = 'all';
+                $this->session->set_userdata('school_level', 'all');
+            }
+        }
+
+        // --- 6. Build filters array ---
+        $selected_school = $this->session->userdata('selected_school') ?: '';
+        $model_school_name = (in_array($user_role, ['district', 'division', 'admin'])) ? '' : $school_name;
+
+        if (empty($section_id)) {
+            $section_id = $this->input->get('section_id') ?: '';
+        }
+
+        $filters = [
+            'grade_level'      => $grade_level_filter,
+            'school_name'      => $school_name_filter,
+            'district'         => $district_filter,
+            'section_id'       => $section_id,
+            'school_id'        => $school_id,
+            'school_district'  => $school_district,
+            'selected_school'  => $selected_school,
+            'school_level'     => $school_level,
+            'user_role'        => $user_role,
+            'school_name'      => $model_school_name,
+        ];
+
+        // --- 7. Query the model ---
+        $total_records = $this->sbfp_beneficiaries_model->count_beneficiaries_filtered($assessment_type, $filters);
+
+        $data = $this->sbfp_beneficiaries_model->get_beneficiaries_datatable(
             $assessment_type,
-            $model_school_name,
-            $school_level,
-            $user_role,
-            $school_id,
-            $school_district,
-            $selected_school,
-            $grade_level_filter,
-            $school_name_filter,
-            $district_filter,
-            $section_id
+            $filters,
+            $length,
+            $start,
+            $order_by,
+            $order_dir,
+            $search
         );
 
-        $data['baseline_count'] = $this->sbfp_beneficiaries_model->count_by_assessment_with_filter(
-            'baseline', 
-            $model_school_name,
-            $school_level,       
-            $user_role,
-            $school_id,
-            $school_district,
-            $selected_school,
-            $grade_level_filter,
-            $school_name_filter,
-            $district_filter,
-            $section_id
-        );
-        
-        $data['midline_count'] = $this->sbfp_beneficiaries_model->count_by_assessment_with_filter(
-            'midline', 
-            $model_school_name,
-            $school_level,       
-            $user_role,
-            $school_id,
-            $school_district,
-            $selected_school,
-            $grade_level_filter,
-            $school_name_filter,
-            $district_filter,
-            $section_id
-        );
-        
-        $data['endline_count'] = $this->sbfp_beneficiaries_model->count_by_assessment_with_filter(
-            'endline', 
-            $model_school_name,
-            $school_level,       
-            $user_role,
-            $school_id,
-            $school_district,
-            $selected_school,
-            $grade_level_filter,
-            $school_name_filter,
-            $district_filter,
-            $section_id
-        );
-        
-        // Get nutritional stats with filters
-        $data['nutritional_stats'] = $this->sbfp_beneficiaries_model->get_nutritional_stats_with_filter(
-            $assessment_type,
-            $model_school_name,
-            $school_level,       
-            $user_role,
-            $school_id,
-            $school_district,
-            $selected_school,
-            $grade_level_filter,
-            $school_name_filter,
-            $district_filter,
-            $section_id
-        );
+        // --- 8. Build DataTable response ---
+        $records = [];
+        $counter = $start + 1;
+        foreach ($data as $student) {
+            $dob = !empty($student['birthday']) ? date('m/d/Y', strtotime($student['birthday'])) : '';
+            $weighing_date = !empty($student['date_of_weighing']) ? date('m/d/Y', strtotime($student['date_of_weighing'])) : '';
+            $bmi = isset($student['bmi']) ? number_format($student['bmi'], 1) : '';
+            $weight = isset($student['weight']) ? number_format($student['weight'], 1) : '';
+            $height = isset($student['height']) ? $this->format_height_cm($student['height']) : '';
+            $grade_section = ($student['grade_level'] ?? '') . '/' . ($student['section'] ?? '');
 
-        // Format BMI and height (convert meters to cm)
-        foreach ($data['beneficiaries'] as &$student) {
-            // BMI: two decimals, truncated
-            if (isset($student['bmi'])) {
-                $student['bmi'] = $this->format_bmi($student['bmi']);
-            }
-            // Height: convert meters to centimeters
-            if (isset($student['height'])) {
-                $student['height'] = $this->format_height_cm($student['height']);
-            }
+            $ns_class = $this->get_ns_badge_class($student['nutritional_status'] ?? '');
+            $hfa_class = $this->get_hfa_badge_class($student['height_for_age'] ?? '');
+
+            $records[] = [
+                'no'                => $counter++,
+                'name'              => htmlspecialchars($student['name'] ?? ''),
+                'sex'               => $student['sex'] ?? '',
+                'grade_section'     => htmlspecialchars($grade_section),
+                'birthday'          => $dob,
+                'date_of_weighing'  => $weighing_date,
+                'age'               => $student['age'] ?? '',
+                'weight'            => $weight,
+                'height'            => $height,
+                'bmi'               => $bmi,
+                'nutritional_status' => '<span class="badge ' . $ns_class . '">' . htmlspecialchars($student['nutritional_status'] ?? '') . '</span>',
+                'height_for_age'    => '<span class="badge ' . $hfa_class . '">' . htmlspecialchars($student['height_for_age'] ?? '') . '</span>',
+                'classification'    => $this->render_flag_buttons($student, 'classification_of_beneficiary', 'Primary', 'Secondary'),
+                'pregnant'          => $this->render_flag_buttons($student, 'pregnant', 'Yes', 'No'),
+                'child_0_1'         => $this->render_flag_buttons($student, 'with_0_1_year_old_child', 'Yes', 'No'),
+                'dewormed'          => $this->render_flag_buttons($student, 'dewormed', 'Yes', 'No'),
+                'parent_consent'    => $this->render_flag_buttons($student, 'parent_consent_milk', 'Yes', 'No'),
+                'participation_4ps' => $this->render_flag_buttons($student, 'participation_4ps', 'Yes', 'No'),
+                'previous_sbfp'     => $this->render_flag_buttons($student, 'previous_sbfp', 'Yes', 'No'),
+            ];
         }
-        unset($student);
-        
-        $normal_count = 0;
-        $intervention_count = 0;
-        foreach ($data['nutritional_stats'] as $stat) {
-            if ($stat['nutritional_status'] == 'Normal') {
-                $normal_count = $stat['count'];
-            }
-            if (in_array($stat['nutritional_status'], ['Severely Wasted', 'Wasted', 'Overweight', 'Obese'])) {
-                $intervention_count += $stat['count'];
-            }
-        }
-        $data['normal_count'] = $normal_count;
-        $data['intervention_count'] = $intervention_count;
-        
-        // Get summary stats (includes 'tall' HFA count)
-        //  Pass BOTH school_name AND school_id
-        $summary_stats = $this->sbfp_beneficiaries_model->get_summary_stats($assessment_type, $model_school_name, $school_id);
-        $data['tall_count'] = ($summary_stats && isset($summary_stats->tall)) ? (int)$summary_stats->tall : 0;
-        
-        $data['schools'] = $this->sbfp_beneficiaries_model->get_schools_by_role(
-            $user_role,
-            $school_id,
-            $school_district
-        );
-        $data['school_count'] = count($data['schools']);
 
-        $data['sections'] = $this->sbfp_beneficiaries_model->get_sections(
-        $assessment_type,
-        $school_id,
-        $grade_level_filter,
-        $school_name
-        );
-        $data['section_id'] = $section_id;
-        
-        $this->load->view('sbfp_beneficiaries', $data);
+        $response = [
+            'draw'            => $draw,
+            'recordsTotal'    => $total_records,
+            'recordsFiltered' => $total_records,
+            'data'            => $records,
+        ];
+
+        $this->output->set_content_type('application/json')->set_output(json_encode($response));
     }
+
+    // --- Helpers for flag buttons and badge classes ---
+    private function render_flag_buttons($student, $field, $val1, $val2) {
+        $id = $student['id'] ?? ($student['assessment_id'] ?? '');
+        $current = $this->get_flag_value($student, $field);
+        $html = '<div class="btn-group btn-group-sm sbfp-flag-group" data-assessment-id="' . $id . '">';
+        $html .= '<button type="button" class="btn sbfp-flag-btn ' . (strtolower($current) === strtolower($val1) ? 'btn-primary' : 'btn-outline-secondary') . '" data-field="' . $field . '" data-value="' . $val1 . '">' . $val1 . '</button>';
+        $html .= '<button type="button" class="btn sbfp-flag-btn ' . (strtolower($current) === strtolower($val2) ? 'btn-primary' : 'btn-outline-secondary') . '" data-field="' . $field . '" data-value="' . $val2 . '">' . $val2 . '</button>';
+        $html .= '</div>';
+        return $html;
+    }
+
+    private function get_flag_value($student, $field) {
+        $map = [
+            'classification_of_beneficiary' => ['classification_of_beneficiary_(Primary or Secondary)','classification_of_beneficiary','beneficiary_classification','classification_primary_secondary'],
+            'pregnant' => ['pregnant','is_pregnant','pregnancy_status','pregnancy'],
+            'with_0_1_year_old_child' => ['with_0_1_year_old_child','with_0_1_children','has_child_0_1','child_0_1'],
+            'dewormed' => ['dewormed','is_dewormed','deworming'],
+            'parent_consent_milk' => ['parent_consent','parents_consent','parent_consent_for_milk','parent_consent_milk'],
+            'participation_4ps' => ['participation_4ps','participation_in_4ps','is_4ps','4ps_participation'],
+            'previous_sbfp' => ['previous_sbfp','sbfp_previous','previous_beneficiary_sbfp','previous_sbfp_beneficiary'],
+        ];
+        $candidates = $map[$field] ?? [];
+        foreach ($candidates as $col) {
+            if (isset($student[$col]) && $student[$col] !== '') {
+                return $student[$col];
+            }
+        }
+        return '';
+    }
+
+    private function get_ns_badge_class($status) {
+        $map = [
+            'Severely Wasted' => 'badge-severely-wasted',
+            'Wasted'          => 'badge-wasted',
+            'Normal'          => 'badge-normal',
+            'Overweight'      => 'badge-overweight',
+            'Obese'           => 'badge-obese'
+        ];
+        return $map[$status] ?? 'badge-secondary';
+    }
+
+    private function get_hfa_badge_class($hfa) {
+        $lc = strtolower(trim($hfa));
+        if ($lc == 'severely stunted') return 'badge-severely-wasted';
+        if ($lc == 'stunted') return 'badge-wasted';
+        if ($lc == 'normal') return 'badge-normal';
+        if ($lc == 'tall' || $lc == 'above normal') return 'badge-info';
+        return 'badge-secondary';
+    }
+
     /**
      * Get available schools for filter dropdown based on user role
      */
@@ -278,7 +585,7 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $this->db->select('DISTINCT(school_name), school_id');
         $this->db->from('nutritional_assessments');
         $this->db->where('is_deleted', 0);
-        $this->db->where("(sbfp_beneficiary = 'Yes' OR grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+        $this->db->where('sbfp_beneficiary', 'Yes');  // ← only beneficiaries
 
         if ($user_role === 'district' && !empty($district)) {
             $this->db->where('school_district', $district);
@@ -293,7 +600,6 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
     
     /**
      * Get available districts for filter dropdown
-     * District users don't need this filter
      */
     private function get_available_districts($user_role, $user_district) {
         if ($user_role === 'district') {
@@ -305,7 +611,7 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $this->db->where('is_deleted', 0);
         $this->db->where('school_district IS NOT NULL');
         $this->db->where('school_district !=', '');
-        $this->db->where("(sbfp_beneficiary = 'Yes' OR grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+        $this->db->where('sbfp_beneficiary', 'Yes');  // ← only beneficiaries
         
         $this->db->order_by('school_district', 'ASC');
         $query = $this->db->get();
@@ -321,7 +627,8 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $this->db->where('is_deleted', 0);
         $this->db->where('grade_level IS NOT NULL');
         $this->db->where('grade_level !=', '');
-        $this->db->where("(sbfp_beneficiary = 'Yes' OR grade_level IN ('Kindergarten','Grade 1'))", NULL, FALSE);
+        $this->db->where('sbfp_beneficiary', 'Yes');  // ← only beneficiaries
+
         // Order grade levels using custom sequence
         $this->db->order_by("CASE
             WHEN grade_level = 'Kindergarten' THEN 0
@@ -348,6 +655,7 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
     public function set_grade_level_filter() {
         $grade_level = $this->input->post('grade_level');
         $this->session->set_userdata('grade_level_filter', $grade_level);
+        $this->session->set_userdata('filters_applied', true);
         echo json_encode(['success' => true]);
     }
     
@@ -357,6 +665,7 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
     public function set_school_name_filter() {
         $school_name = $this->input->post('school_name');
         $this->session->set_userdata('school_name_filter', $school_name);
+        $this->session->set_userdata('filters_applied', true);
         echo json_encode(['success' => true]);
     }
     
@@ -366,7 +675,38 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
     public function set_district_filter() {
         $district = $this->input->post('district');
         $this->session->set_userdata('district_filter', $district);
+        $this->session->set_userdata('filters_applied', true);
         echo json_encode(['success' => true]);
+    }
+
+    /**
+     * AJAX: Get sections for a given grade level
+     */
+    public function get_sections_by_grade() {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $grade_level = $this->input->post('grade_level');
+        $assessment_type = $this->session->userdata('assessment_type') ?: 'baseline';
+        $school_id = $this->session->userdata('school_id') ?: '';
+        $school_name = $this->session->userdata('school_name') ?: '';
+
+        // Use the existing model method, but pass the grade filter
+        $sections = $this->sbfp_beneficiaries_model->get_sections(
+            $assessment_type,
+            $school_id,
+            $grade_level,   // <-- this filters by grade
+            $school_name
+        );
+
+        // Also get the currently selected section from session (if any)
+        $selected_section_id = $this->session->userdata('section_id') ?: '';
+
+        echo json_encode([
+            'sections' => $sections,
+            'selected' => $selected_section_id
+        ]);
     }
     
     /**
@@ -377,6 +717,8 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $this->session->unset_userdata('school_name_filter');
         $this->session->unset_userdata('district_filter');
         $this->session->unset_userdata('selected_school');
+        $this->session->unset_userdata('school_level');
+        $this->session->set_userdata('filters_applied', false);
         echo json_encode(['success' => true]);
     }
 
@@ -391,14 +733,31 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $field = $this->input->post('field');
         $value = $this->input->post('value');
 
-        if (empty($id) || empty($field) || !in_array($value, ['Yes', 'No'])) {
+        // Validate allowed values per field
+        $allowed_values = ['Yes', 'No'];
+        if ($field == 'classification_of_beneficiary') {
+            $allowed_values = ['Primary', 'Secondary'];
+        }
+        if (empty($id) || empty($field) || !in_array($value, $allowed_values)) {
             echo json_encode(['success' => false, 'message' => 'Invalid input']);
             return;
         }
 
-        // Map logical field names to possible DB columns. We'll pick the first existing column.
+        // Map logical field names to possible DB columns – pick the first existing one
         $candidates = [];
         switch ($field) {
+            case 'classification_of_beneficiary':
+                $candidates = ['classification_of_beneficiary', 'classification_of_beneficiary_(Primary or Secondary)', 'beneficiary_classification', 'classification_primary_secondary'];
+                break;
+            case 'pregnant':
+                $candidates = ['pregnant', 'is_pregnant', 'pregnancy_status', 'pregnancy'];
+                break;
+            case 'with_0_1_year_old_child':
+                $candidates = ['with_0_1_year_old_child', 'with_0_1_children', 'has_child_0_1', 'child_0_1'];
+                break;
+            case 'dewormed':
+                $candidates = ['dewormed', 'is_dewormed', 'deworming'];
+                break;
             case 'parent_consent_milk':
                 $candidates = ['parent_consent', 'parents_consent', 'parent_consent_for_milk', 'parent_consent_milk'];
                 break;
@@ -557,16 +916,9 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
      */
     public function set_school_level() {
         $level = $this->input->post('school_level');
+        $this->session->set_userdata('filters_applied', true);
         $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary', 'Stand Alone SHS'];
-        
         if (in_array($level, $valid_levels)) {
-            $user_role = $this->session->userdata('role');
-
-            if ($user_role === 'district' && $level !== 'all') {
-                echo json_encode(['success' => false, 'message' => 'District accounts can only view all schools']);
-                return;
-            }
-            
             $this->session->set_userdata('school_level', $level);
             echo json_encode(['success' => true]);
         } else {
@@ -673,6 +1025,11 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
             $school_level = $this->session->userdata('school_level') ?: 'all';
             $selected_school = $this->session->userdata('selected_school') ?: '';
             $district_filter = $this->session->userdata('district_filter') ?: '';
+
+            $grade_level_filter = $this->session->userdata('grade_level_filter') ?: '';
+            $school_name_filter = $this->session->userdata('school_name_filter') ?: '';
+            $section_id = $this->input->post('section_id') ?: '';
+
             if ($user_role === 'district') {
                 $school_level = 'all';
             }
