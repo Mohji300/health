@@ -363,7 +363,7 @@ foreach ($submitted as $s) {
                               <div class="d-flex justify-content-center gap-2">
                                 <?php if (!$isSubmitted): ?>
                                     <!-- Create Assessment Button -->
-                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
+                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&section_id=' . $item->id . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
                                       class="btn btn-<?php 
                                             if ($is_baseline) {
                                                 echo 'primary';
@@ -388,7 +388,7 @@ foreach ($submitted as $s) {
                                 <?php else: ?>
                                     
                                     <!-- Add Student Button (no date parameter) -->
-                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>"
+                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&section_id=' . $item->id . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>"
                                       class="btn btn-primary btn-sm add-student-btn"
                                       title="Add Student">
                                       <i class="fas fa-user-plus"></i>
