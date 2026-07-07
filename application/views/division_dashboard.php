@@ -310,7 +310,7 @@
                         <div id="tableContainer" class="table-responsive p-3">
                             
                             <!-- Elementary Table with Sex Breakdown -->
-                            <table id="elementaryTable" class="table table-bordered table-sm mb-0 <?php echo ($level === 'secondary' || $level === 'integrated_secondary' || $level === 'shs_only') ? 'd-none' : ''; ?>">
+                            <table id="elementaryTable" class="table table-bordered table-sm mb-0 <?php echo ($school_level === 'secondary' || $school_level === 'integrated_secondary' || $school_level === 'shs_only') ? 'd-none' : ''; ?>">
                                 <thead class="table-light">
                                     <tr>
                                         <th rowspan="3">Grade Level</th>
@@ -558,7 +558,7 @@
                             </table>
 
                             <!-- SHS-only Table (Grade 11-12) -->
-                            <table id="shsTable" class="table table-bordered table-sm mb-0 <?php echo ($level === 'shs_only') ? '' : 'd-none'; ?>">
+                            <table id="shsTable" class="table table-bordered table-sm mb-0 <?php echo ($school_level === 'shs_only') ? '' : 'd-none'; ?>">
                                 <thead class="table-light">
                                     <tr>
                                         <th rowspan="3">Grade Level</th>
@@ -746,7 +746,7 @@
                             </table>
 
                             <!-- Secondary Table with Sex Breakdown -->
-                            <table id="secondaryTable" class="table table-bordered table-sm mb-0 <?php echo ($level === 'elementary' || $level === 'integrated_elementary') ? 'd-none' : ''; ?>">
+                            <table id="secondaryTable" class="table table-bordered table-sm mb-0 <?php echo ($school_level === 'elementary' || $school_level === 'integrated_elementary') ? 'd-none' : ''; ?>">
                                 <thead class="table-light">
                                     <tr>
                                         <th rowspan="3">Grade Level</th>
@@ -963,7 +963,8 @@
             set_assessment_type: '<?= site_url("division_dashboard_controller/set_assessment_type"); ?>',
             set_school_level: '<?= site_url("division_dashboard_controller/set_school_level"); ?>',
             base: '<?= site_url("division_dashboard_controller"); ?>',
-            get_school_details: '<?= base_url("division_dashboard_controller/get_school_details/"); ?>'
+            get_school_details: '<?= base_url("division_dashboard_controller/get_school_details/"); ?>',
+            get_district_schools: '<?= base_url("division_dashboard_controller/get_district_schools") ?>'
         },
         school_level: '<?= isset($school_level) ? $school_level : "all"; ?>',
         assessment_type: '<?= isset($assessment_type) ? $assessment_type : ""; ?>',
@@ -979,7 +980,7 @@
             elseif ($level == 'integrated_secondary') echo 'Integrated Schools (Secondary)';
             else echo ucfirst($level);
         ?>',
-        all_schools_by_district: <?php echo json_encode($all_schools_by_district); ?>,
+        school_level: '<?= isset($school_level) ? $school_level : "all"; ?>',
         // identifiers for client-side print header
         school_id: '<?= addslashes($this->session->userdata('school_id') ?? '') ?>',
         school_name: '<?= addslashes($this->session->userdata('school_name') ?? '') ?>',

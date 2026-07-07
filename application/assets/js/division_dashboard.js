@@ -5,7 +5,7 @@ $(document).ready(function() {
     let allSchools = [];
     
     // Store all schools data from config
-    const allSchoolsData = window.DivisionDashboardConfig.all_schools_by_district || {};
+    // const allSchoolsData = window.DivisionDashboardConfig.all_schools_by_district || {};
     
     function buildDashboardUrl(type, level) {
         const params = new URLSearchParams();
@@ -58,6 +58,60 @@ $(document).ready(function() {
             }
         });
     });
+
+    // Search functionality
+    let searchTimeout;
+    $('#schoolSearch').on('input', function() {
+        clearTimeout(searchTimeout);
+        const searchTerm = $(this).val();
+        searchTimeout = setTimeout(function() {
+            filterSchools(searchTerm);
+        }, 300);
+    });
+
+    $('#clearSearch').click(function() {
+        $('#schoolSearch').val('');
+        filterSchools('');
+    });
+
+    function filterSchools(searchTerm) {
+        if (!selectedDistrict) return;
+        
+        if (!searchTerm || searchTerm.trim() === '') {
+            displaySchools(allSchools);
+            updateSubmissionStats(allSchools);
+            $('#noSearchResults').addClass('d-none');
+            $('#submissionText').text('Submission Progress:');
+            return;
+        }
+        
+        const searchLower = searchTerm.toLowerCase().trim();
+        const filtered = allSchools.filter(school => {
+            const nameMatch = school.name && school.name.toLowerCase().includes(searchLower);
+            const codeMatch = school.code && school.code.toLowerCase().includes(searchLower);
+            const idMatch = school.id && school.id.toString().includes(searchLower);
+            return nameMatch || codeMatch || idMatch;
+        });
+        
+        displaySchools(filtered);
+        updateSubmissionStats(filtered);
+        
+        if (filtered.length === 0) {
+            $('#noSearchResults').removeClass('d-none');
+            $('#noSchoolsMessage').addClass('d-none');
+        } else {
+            $('#noSearchResults').addClass('d-none');
+            $('#noSchoolsMessage').addClass('d-none');
+        }
+        
+        const total = allSchools.length;
+        const filteredCount = filtered.length;
+        if (filteredCount < total) {
+            $('#submissionText').text(`Showing ${filteredCount} of ${total} schools:`);
+        } else {
+            $('#submissionText').text('Submission Progress:');
+        }
+    }
     
     // Handle school level dropdown selection
     $('.dropdown-item[data-level]').on('click', function(e) {
@@ -385,84 +439,39 @@ $(document).ready(function() {
         $('#districtsView').addClass('d-none');
         $('#schoolsView').removeClass('d-none');
         $('#districtSchoolsTitle').text('Schools in ' + districtName);
-        
-        // Clear search input when switching districts
         $('#schoolSearch').val('');
-        
-        if (allSchoolsData && allSchoolsData[districtName]) {
-            allSchools = allSchoolsData[districtName];
-            
-            // Debug: Log the first school to see its structure
-            if (allSchools.length > 0) {
-                console.log('Sample school data structure:', allSchools[0]);
-                console.log('Current assessment type:', window.DivisionDashboardConfig.assessment_type);
+        allSchools = [];
+
+        // Show loading state
+        const list = $('#schoolsList');
+        list.html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+
+        // Build the URL explicitly
+        const url = window.DivisionDashboardConfig.urls.get_district_schools;
+
+        // Fetch schools for this district via AJAX
+        $.ajax({
+            url: url,
+            method: 'GET',
+            data: { district: districtName },
+            dataType: 'json',
+            cache: false,
+            success: function(response) {
+                if (response.success) {
+                    allSchools = response.schools || [];
+                    displaySchools(allSchools);
+                    updateSubmissionStats(allSchools);
+                } else {
+                    list.html('<div class="text-center py-4 text-danger">Error loading schools: ' + (response.message || 'Unknown error') + '</div>');
+                }
+            },
+            error: function(xhr, status, error) {
+            list.html('<div class="text-center py-4 text-danger">Error loading schools. Please try again.</div>');
+            showNotification('Failed to load schools', 'error');
             }
-            
-            displaySchools(allSchools);
-            updateSubmissionStats(allSchools);
-        } else {
-            allSchools = [];
-            displaySchools([]);
-            updateSubmissionStats([]);
-        }
-    }
-    
-    // Search functionality
-    let searchTimeout;
-    $('#schoolSearch').on('input', function() {
-        clearTimeout(searchTimeout);
-        const searchTerm = $(this).val();
-        
-        searchTimeout = setTimeout(function() {
-            filterSchools(searchTerm);
-        }, 300);
-    });
-
-    $('#clearSearch').click(function() {
-        $('#schoolSearch').val('');
-        filterSchools('');
-    });
-
-    function filterSchools(searchTerm) {
-        if (!selectedDistrict) return;
-        
-        const allSchoolsInDistrict = allSchoolsData[selectedDistrict] || [];
-        
-        if (!searchTerm || searchTerm.trim() === '') {
-            displaySchools(allSchoolsInDistrict);
-            updateSubmissionStats(allSchoolsInDistrict);
-            $('#noSearchResults').addClass('d-none');
-            $('#submissionText').text('Submission Progress:');
-            return;
-        }
-        
-        const searchLower = searchTerm.toLowerCase().trim();
-        const filtered = allSchoolsInDistrict.filter(school => {
-            const nameMatch = school.name && school.name.toLowerCase().includes(searchLower);
-            const codeMatch = school.code && school.code.toLowerCase().includes(searchLower);
-            const idMatch = school.id && school.id.toString().includes(searchLower);
-            
-            return nameMatch || codeMatch || idMatch;
         });
-        
-        displaySchools(filtered);
-        
-        if (filtered.length === 0) {
-            $('#noSearchResults').removeClass('d-none');
-            $('#noSchoolsMessage').addClass('d-none');
-        } else {
-            $('#noSearchResults').addClass('d-none');
-            $('#noSchoolsMessage').addClass('d-none');
-        }
-        
-        const total = allSchoolsInDistrict.length;
-        const filteredCount = filtered.length;
-        if (filteredCount < total) {
-            $('#submissionText').text(`Showing ${filteredCount} of ${total} schools:`);
-        } else {
-            $('#submissionText').text('Submission Progress:');
-        }
     }
+        
 
     function displaySchools(schools) {
         const list = $('#schoolsList');
@@ -530,14 +539,6 @@ $(document).ready(function() {
         
         const assessmentType = window.DivisionDashboardConfig.assessment_type || 'baseline';
 
-        console.log(`Checking school ${school.name} for ${assessmentType}:`, {
-            has_baseline: school.has_baseline,
-            has_midline: school.has_midline,
-            has_endline: school.has_endline,
-            has_submitted: school.has_submitted,
-            raw_data: school
-        });
-
         if (assessmentType === 'baseline' && school.has_baseline !== undefined) {
             return isTruthy(school.has_baseline);
         }
@@ -603,9 +604,8 @@ $(document).ready(function() {
         
         const searchTerm = $('#schoolSearch').val();
         if (searchTerm && searchTerm.trim() !== '' && selectedDistrict) {
-            const allSchoolsInDistrict = allSchoolsData[selectedDistrict] || [];
-            if (schools.length < allSchoolsInDistrict.length) {
-                $('#submissionText').text(`Showing ${schools.length} of ${allSchoolsInDistrict.length} schools:`);
+            if (schools.length < allSchools.length) {
+                $('#submissionText').text(`Showing ${schools.length} of ${allSchools.length} schools:`);
                 return;
             }
         }
