@@ -300,6 +300,7 @@
                                class="form-control bg-light" 
                                value="<?= htmlspecialchars($section ?? '') ?>" readonly>
                       </div>
+                      <input type="hidden" id="section_id_hidden" value="<?= htmlspecialchars($section_id ?? '') ?>">
                     </div>
                   </div>
 
@@ -517,8 +518,13 @@
               document.getElementById('confirmBody').innerHTML = 
                 'Are you sure you want to <strong>' + actionText + '</strong> this student as a <strong>' + statusText + '</strong>?';
 
-              var modal = new bootstrap.Modal(confirmModalEl);
-              modal.show();
+              if (confirmModal) {
+                  confirmModal.show();
+              } else {
+                  // fallback (should not happen)
+                  var modal = new bootstrap.Modal(confirmModalEl);
+                  modal.show();
+              }
             });
           });
 
@@ -542,8 +548,13 @@
             document.getElementById('confirmBody').innerHTML = 
               'Are you sure you want to mark <strong>ALL</strong> students as <strong>' + statusText + '</strong>? This action cannot be undone.';
 
-            var modal = new bootstrap.Modal(confirmModalEl);
-            modal.show();
+          if (confirmModal) {
+              confirmModal.show();
+          } else {
+              // fallback (should not happen)
+              var modal = new bootstrap.Modal(confirmModalEl);
+              modal.show();
+          }
           }
 
           // Handle modal confirm button click
@@ -591,12 +602,15 @@
                 btn.dataset.current = 'No';
               }
               showNotification('Beneficiary status updated.', 'success');
+              if (confirmModal) confirmModal.hide();   // <-- ADD THIS
             } else {
               showNotification('Error: ' + (resp.message || 'Could not update'), 'danger');
+              if (confirmModal) confirmModal.hide();   // <-- AND THIS
             }
           })
           .catch(function() {
             showNotification('Server error. Please try again.', 'danger');
+            if (confirmModal) confirmModal.hide();     // <-- AND THIS
           });
         }
 
@@ -626,13 +640,16 @@
           .then(resp => {
             if (resp.success) {
               showNotification('Updated ' + (resp.updated || 0) + ' student(s).', 'success');
+              if (confirmModal) confirmModal.hide();   // <-- ADD THIS
               location.reload();
             } else {
               showNotification('Error updating all.', 'danger');
+              if (confirmModal) confirmModal.hide();   // <-- ADD THIS
             }
           })
           .catch(function() {
             showNotification('Server error.', 'danger');
+            if (confirmModal) confirmModal.hide();     // <-- ADD THIS
           });
         }
 

@@ -16,7 +16,7 @@ class nutritional_assessment_model extends CI_Model {
      */
     public function get_submitted_summary($legislative_district, $school_district, $school_id = null)
     {
-        $this->db->select('grade_level as grade, section, year as school_year, assessment_type, COUNT(*) as total_students, MAX(date_of_weighing) as last_updated');
+        $this->db->select('grade_level as grade, section, section_id, year as school_year, assessment_type, COUNT(*) as total_students, MAX(date_of_weighing) as last_updated');
         $this->db->from('nutritional_assessments');
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
@@ -24,11 +24,10 @@ class nutritional_assessment_model extends CI_Model {
             $this->db->where('school_id', $school_id);
         }
         $this->db->where('is_deleted', FALSE);
-        $this->db->group_by(['grade_level', 'section', 'year', 'assessment_type']);
+        $this->db->group_by(['grade_level', 'section', 'section_id', 'year', 'assessment_type']);  // added section_id
         $this->db->order_by('grade_level', 'ASC');
         $this->db->order_by('section', 'ASC');
         $this->db->order_by('assessment_type', 'ASC');
-        
         return $this->db->get()->result();
     }
 
@@ -101,28 +100,28 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get assessments by section
      */
-    public function get_by_section($legislative_district, $school_district, $grade_level, $section, $school_year = null, $assessment_type = null, $section_id = null)
+    public function get_by_section($legislative_district, $school_district, $grade_level, $section, $school_year = null, $assessment_type = null, $section_id = null, $school_id = null)
     {
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
         $this->db->where('grade_level', $grade_level);
         $this->db->where('section', $section);
         $this->db->where('is_deleted', 0);
-        
-        // Added section_id filter
+
+        // Add school_id filter if provided
+        if (!empty($school_id)) {
+            $this->db->where('school_id', $school_id);
+        }
         if (!empty($section_id)) {
             $this->db->where('section_id', $section_id);
         }
-        
-        // Add school_year filter if provided
         if ($school_year && $school_year !== 'N/A' && $school_year !== '') {
             $this->db->where('year', $school_year);
         }
-        
         if ($assessment_type) {
             $this->db->where('assessment_type', $assessment_type);
         }
-        
+
         $this->db->order_by('name', 'ASC');
         return $this->db->get($this->table)->result();
     }
@@ -317,7 +316,7 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get reports with filters for Nutritional Reports page
      */
-    public function get_reports_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null, $school_id = null)
+    public function get_reports_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null, $school_id = null, $section_id = null)
     {
         $this->db->select('
             school_id,
@@ -326,6 +325,7 @@ class nutritional_assessment_model extends CI_Model {
             school_district, 
             grade_level, 
             section,
+            section_id,
             year, 
             year as school_year,
             assessment_type,
@@ -337,7 +337,8 @@ class nutritional_assessment_model extends CI_Model {
         $this->db->from($this->table);
         $this->db->where('is_deleted', 0);
         
-        $this->db->group_by('school_id, school_name, legislative_district, school_district, grade_level, section, year, assessment_type');
+        // GROUP BY now includes section_id to separate different sections with same name
+        $this->db->group_by('school_id, school_name, legislative_district, school_district, grade_level, section, section_id, year, assessment_type');
 
         // Apply filters
         if (!empty($legislative_district)) {
@@ -349,12 +350,14 @@ class nutritional_assessment_model extends CI_Model {
         if (!empty($school_name)) {
             $this->db->where('school_name', $school_name);
         }
-
         if (!empty($school_id)) {
             $this->db->where('school_id', $school_id);
         }
         if (!empty($grade_level)) {
             $this->db->where('grade_level', $grade_level);
+        }
+        if (!empty($section_id)) {                           // Added
+            $this->db->where('section_id', $section_id);
         }
         if (!empty($date_from)) {
             $this->db->where('DATE(created_at) >=', $date_from);
@@ -382,43 +385,17 @@ class nutritional_assessment_model extends CI_Model {
         $this->db->select('*');
         $this->db->from($this->table);
         $this->db->where('is_deleted', FALSE);
-        
-        // Filter for SBFP beneficiaries (Yes)
         $this->db->where('sbfp_beneficiary', 'Yes');
         
-        // Apply other filters
-        if (!empty($filters['legislative_district'])) {
-            $this->db->where('legislative_district', $filters['legislative_district']);
-        }
-        if (!empty($filters['school_district'])) {
-            $this->db->where('school_district', $filters['school_district']);
-        }
-        if (!empty($filters['school_name'])) {
-            $this->db->where('school_name', $filters['school_name']);
-        }
-        if (!empty($filters['school_id'])) {
-            $this->db->where('school_id', $filters['school_id']);
-        }
-        if (!empty($filters['grade_level'])) {
-            $this->db->where('grade_level', $filters['grade_level']);
-        }
-        if (!empty($filters['assessment_type'])) {
-            $this->db->where('assessment_type', $filters['assessment_type']);
-        }
-        if (!empty($filters['date_from'])) {
-            $this->db->where('DATE(created_at) >=', $filters['date_from']);
-        }
-        if (!empty($filters['date_to'])) {
-            $this->db->where('DATE(created_at) <=', $filters['date_to']);
-        }
+        // Apply all filters (now includes section_id)
+        $this->apply_filters($filters);
         
         $this->db->order_by('school_name', 'ASC');
         $this->db->order_by('grade_level', 'ASC');
         $this->db->order_by('section', 'ASC');
         $this->db->order_by('name', 'ASC');
         
-        $query = $this->db->get();
-        return $query->result();
+        return $this->db->get()->result();
     }
     
     /**
@@ -597,6 +574,26 @@ class nutritional_assessment_model extends CI_Model {
     }
 
     /**
+     * Get nutritional statistics summary (for statistics page cards)
+     * Returns total counts without grouping by grade/section.
+     */
+    public function get_nutritional_statistics_summary($filters = [])
+    {
+        $this->db->select('
+            COUNT(*) as total_students,
+            SUM(CASE WHEN LOWER(nutritional_status) = "severely wasted" THEN 1 ELSE 0 END) as severely_wasted,
+            SUM(CASE WHEN LOWER(nutritional_status) = "wasted" THEN 1 ELSE 0 END) as wasted,
+            SUM(CASE WHEN LOWER(nutritional_status) = "normal" THEN 1 ELSE 0 END) as normal,
+            SUM(CASE WHEN LOWER(nutritional_status) = "overweight" THEN 1 ELSE 0 END) as overweight,
+            SUM(CASE WHEN LOWER(nutritional_status) = "obese" THEN 1 ELSE 0 END) as obese
+        ');
+        $this->db->from($this->table);
+        $this->db->where('is_deleted', FALSE);
+        $this->apply_filters($filters);
+        return $this->db->get()->row();
+    }
+
+    /**
      * Get recent submissions (last 30 days)
      */
     public function get_recent_submissions($limit = 10)
@@ -644,6 +641,7 @@ class nutritional_assessment_model extends CI_Model {
             school_district,
             grade_level,
             section,
+            section_id,                -- added
             year as school_year,
             COUNT(*) as total_students,
             SUM(CASE WHEN LOWER(nutritional_status) = "severely wasted" THEN 1 ELSE 0 END) as severely_wasted,
@@ -656,17 +654,15 @@ class nutritional_assessment_model extends CI_Model {
         
         $this->db->from($this->table);
         $this->db->where('is_deleted', FALSE);
-        $this->db->group_by('school_name, legislative_district, school_district, grade_level, section, year');
+        $this->db->group_by('school_name, legislative_district, school_district, grade_level, section, section_id, year');  // added section_id
         
-        // Apply filters
         $this->apply_filters($filters);
         
         $this->db->order_by('school_name', 'ASC');
         $this->db->order_by('grade_level', 'ASC');
         $this->db->order_by('section', 'ASC');
         
-        $query = $this->db->get();
-        return $query->result();
+        return $this->db->get()->result();
     }
 
     /**
@@ -718,29 +714,6 @@ class nutritional_assessment_model extends CI_Model {
     }
 
     /**
-     * Get nutritional statistics summary (for statistics page cards)
-     */
-    public function get_nutritional_statistics_summary($filters = [])
-    {
-        $this->db->select('
-            COUNT(*) as total_students,
-            SUM(CASE WHEN LOWER(nutritional_status) = "severely wasted" THEN 1 ELSE 0 END) as severely_wasted,
-            SUM(CASE WHEN LOWER(nutritional_status) = "wasted" THEN 1 ELSE 0 END) as wasted,
-            SUM(CASE WHEN LOWER(nutritional_status) = "normal" THEN 1 ELSE 0 END) as normal,
-            SUM(CASE WHEN LOWER(nutritional_status) = "overweight" THEN 1 ELSE 0 END) as overweight,
-            SUM(CASE WHEN LOWER(nutritional_status) = "obese" THEN 1 ELSE 0 END) as obese
-        ');
-        
-        $this->db->from($this->table);
-        $this->db->where('is_deleted', FALSE);
-        
-        // Apply filters
-        $this->apply_filters($filters);
-        
-        return $this->db->get()->row();
-    }
-
-    /**
      * Helper method to apply filters
      */
     private function apply_filters($filters = [])
@@ -750,42 +723,33 @@ class nutritional_assessment_model extends CI_Model {
         if (!empty($filters['legislative_district'])) {
             $this->db->where('legislative_district', $filters['legislative_district']);
         }
-        
         if (!empty($filters['school_district'])) {
             $this->db->where('school_district', $filters['school_district']);
         }
-        
         if (!empty($filters['school_name'])) {
             $this->db->where('school_name', $filters['school_name']);
         }
-        
-        //  Added school_id filter
         if (!empty($filters['school_id'])) {
             $this->db->where('school_id', $filters['school_id']);
         }
-        
         if (!empty($filters['grade_level'])) {
             $this->db->where('grade_level', $filters['grade_level']);
         }
-        
+        if (!empty($filters['section_id'])) {                     // Added
+            $this->db->where('section_id', $filters['section_id']);
+        }
         if (!empty($filters['assessment_type'])) {
             $this->db->where('assessment_type', $filters['assessment_type']);
         }
-        
-        // Add school_year filter if specified
         if (!empty($filters['school_year'])) {
             $this->db->where('year', $filters['school_year']);
         }
-        
-        // Add nutritional_status filter if specified
         if (!empty($filters['nutritional_status'])) {
             $this->db->where('LOWER(nutritional_status)', strtolower($filters['nutritional_status']));
         }
-        
         if (!empty($filters['date_from'])) {
             $this->db->where('DATE(created_at) >=', $filters['date_from']);
         }
-        
         if (!empty($filters['date_to'])) {
             $this->db->where('DATE(created_at) <=', $filters['date_to']);
         }
@@ -889,7 +853,7 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Get export data with filters
      */
-    public function get_export_data_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null, $school_id = null)
+    public function get_export_data_with_filters($legislative_district = null, $school_district = null, $school_name = null, $grade_level = null, $date_from = null, $date_to = null, $assessment_type = null, $school_id = null, $section_id = null)
     {
         $this->db->select('*');
         $this->db->from($this->table);
@@ -905,12 +869,14 @@ class nutritional_assessment_model extends CI_Model {
         if (!empty($school_name)) {
             $this->db->where('school_name', $school_name);
         }
-        //  Added school_id filter
         if (!empty($school_id)) {
             $this->db->where('school_id', $school_id);
         }
         if (!empty($grade_level)) {
             $this->db->where('grade_level', $grade_level);
+        }
+        if (!empty($section_id)) {                           // Added
+            $this->db->where('section_id', $section_id);
         }
         if (!empty($date_from)) {
             $this->db->where('DATE(created_at) >=', $date_from);

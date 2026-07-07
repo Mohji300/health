@@ -13,13 +13,18 @@
     let isUploading = false;
 
     function getStorageKey() {
+        const sid = document.getElementById('section_id_hidden')?.value;
+        if (!sid) {
+            // No section ID – use a temporary key to avoid collision with old data
+            return STORAGE_PREFIX + 'temp_' + Date.now();
+        }
         const ld = document.getElementById('legislative_district')?.value || 'na';
         const sd = document.getElementById('school_district')?.value || 'na';
         const gr = document.getElementById('grade')?.value || 'na';
         const sc = document.getElementById('section')?.value || 'na';
         const sy = document.getElementById('school_year')?.value || 'na';
         const sn = document.getElementById('school_name')?.value || 'na';
-        return STORAGE_PREFIX + [ld, sd, gr, sc, sy, sn].join('_');
+        return STORAGE_PREFIX + [ld, sd, gr, sc, sy, sn, sid].join('_');
     }
 
     // Load students from localStorage
