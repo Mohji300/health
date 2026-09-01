@@ -129,6 +129,23 @@
                             </div>
                         </div>
 
+                        <!-- School Level Dropdown -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="school_level" class="font-weight-bold text-primary">School Level</label>
+                                    <select class="form-control" id="school_level" name="school_level">
+                                        <option value="">Select School Level</option>
+                                        <option value="Elementary" <?php echo set_select('school_level', 'Elementary', $user->school_level == 'Elementary'); ?>>Elementary</option>
+                                        <option value="Secondary" <?php echo set_select('school_level', 'Secondary', $user->school_level == 'Secondary'); ?>>Secondary</option>
+                                        <option value="Integrated" <?php echo set_select('school_level', 'Integrated', $user->school_level == 'Integrated'); ?>>Integrated</option>
+                                        <option value="Stand Alone SHS" <?php echo set_select('school_level', 'Stand Alone SHS', $user->school_level == 'Stand Alone SHS'); ?>>Stand Alone SHS</option>
+                                    </select>
+                                    <small class="form-text text-muted">Select the school level type.</small>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="fas fa-save mr-2"></i> Save Changes
