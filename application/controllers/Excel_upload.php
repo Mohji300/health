@@ -19,9 +19,54 @@ class Excel_upload extends CI_Controller {
     }
 
     public function index() {
+        $search = $this->input->get('search', TRUE);
+        $search = is_string($search) ? trim($search) : '';
+
         $data['title'] = 'Excel/CSV Data Upload';
         $data['summary'] = $this->excel_model->get_data_summary();
+        $data['schools'] = $this->excel_model->get_editable_schools($search);
+        $data['role'] = $this->session->userdata('role') ?: 'user';
+        $data['search'] = $search;
         $this->load->view('excel_upload_view', $data);
+    }
+
+    public function update_school() {
+        $role = $this->session->userdata('role') ?: 'user';
+        if (!in_array($role, array('admin', 'super_admin'))) {
+            $this->session->set_flashdata('error', 'Only admin roles can edit uploaded school data.');
+            redirect('excel_upload');
+        }
+
+        $id = (int) $this->input->post('id');
+        $school_id = trim((string) ($this->input->post('school_id') ?? ''));
+        $school_name = trim((string) ($this->input->post('school_name') ?? ''));
+        $school_level = trim((string) ($this->input->post('school_level') ?? ''));
+        $school_district = trim((string) ($this->input->post('school_district') ?? ''));
+        $legislative_district = trim((string) ($this->input->post('legislative_district') ?? ''));
+        $school_size = trim((string) ($this->input->post('school_size') ?? ''));
+
+        if (empty($id) || empty($school_id) || empty($school_name) || empty($school_district) || empty($legislative_district)) {
+            $this->session->set_flashdata('error', 'Please complete every required school field before saving.');
+            redirect('excel_upload');
+        }
+
+        $updated = $this->excel_model->update_school_details(
+            $id,
+            $school_id,
+            $school_name,
+            $school_level,
+            $school_district,
+            $legislative_district,
+            $school_size
+        );
+
+        if ($updated) {
+            $this->session->set_flashdata('success', 'School data was updated successfully.');
+        } else {
+            $this->session->set_flashdata('error', 'Unable to update the selected school.');
+        }
+
+        redirect('excel_upload');
     }
 
     public function upload_excel() {

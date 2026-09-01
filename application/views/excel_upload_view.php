@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="<?= base_url(ASSETS_PATH . '/css/excel-upload.css'); ?>">
 </head>
 <body>
+    <?php $this->load->view('templates/sidebar'); ?>
+
     <div class="container">
         <div class="upload-container">
             <h2 class="text-center mb-4"><i class="fas fa-file-excel text-success"></i> Excel/CSV Data Upload System</h2>
@@ -111,6 +113,73 @@
                     </div>
                 </div>
             </div>
+
+            <?php if (in_array($role, ['admin', 'super_admin'])): ?>
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <h5 class="mb-0"><i class="fas fa-edit"></i> Uploaded School Data Editor</h5>
+                        <form class="d-flex align-items-center gap-2" action="<?php echo site_url('excel_upload'); ?>" method="get">
+                            <input type="text" class="form-control form-control-sm" name="search" value="<?php echo htmlspecialchars($search ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="Search school data" aria-label="Search uploaded school data">
+                            <button type="submit" class="btn btn-light btn-sm"><i class="fas fa-search"></i> Search</button>
+                            <?php if (!empty($search)): ?>
+                                <a href="<?php echo site_url('excel_upload'); ?>" class="btn btn-outline-light btn-sm"><i class="fas fa-times"></i> Clear</a>
+                            <?php endif; ?>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-bordered align-middle editable-school-table">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>School ID</th>
+                                    <th>School Name</th>
+                                    <th>School District</th>
+                                    <th>Legislative District</th>
+                                    <th>Level</th>
+                                    <th>Size</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (!empty($schools)): ?>
+                                    <?php foreach ($schools as $school): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($school->school_id, ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($school->name, ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($school->school_district ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($school->legislative_district ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($school->school_level ?: 'Unknown', ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($school->school_size ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td class="text-center">
+                                                <button type="button"
+                                                    class="btn btn-sm btn-outline-primary edit-school-btn"
+                                                    data-id="<?php echo (int) $school->id; ?>"
+                                                    data-school-id="<?php echo htmlspecialchars($school->school_id, ENT_QUOTES, 'UTF-8'); ?>"
+                                                    data-school-name="<?php echo htmlspecialchars($school->name, ENT_QUOTES, 'UTF-8'); ?>"
+                                                    data-school-district="<?php echo htmlspecialchars($school->school_district ?: '', ENT_QUOTES, 'UTF-8'); ?>"
+                                                    data-legislative-district="<?php echo htmlspecialchars($school->legislative_district ?: '', ENT_QUOTES, 'UTF-8'); ?>"
+                                                    data-school-level="<?php echo htmlspecialchars($school->school_level ?: '', ENT_QUOTES, 'UTF-8'); ?>"
+                                                    data-school-size="<?php echo htmlspecialchars($school->school_size ?: '', ENT_QUOTES, 'UTF-8'); ?>"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editSchoolModal">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted">No school rows have been uploaded yet.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- Clear Data Button -->
             <div class="text-center mt-4">
@@ -271,6 +340,87 @@
         </div>
     </div>
 
+    <?php if (in_array($role, ['admin', 'super_admin'])): ?>
+    <div class="modal fade" id="editSchoolModal" tabindex="-1" aria-labelledby="editSchoolModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form action="<?php echo site_url('excel_upload/update_school'); ?>" method="post">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="editSchoolModalLabel"><i class="fas fa-edit"></i> Edit Uploaded School</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="edit_school_id">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="edit_school_id_field" class="form-label">School ID</label>
+                                <input type="text" class="form-control" id="edit_school_id_field" name="school_id" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit_school_name" class="form-label">School Name</label>
+                                <input type="text" class="form-control" id="edit_school_name" name="school_name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit_school_district" class="form-label">School District</label>
+                                <input type="text" class="form-control" id="edit_school_district" name="school_district" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit_legislative_district" class="form-label">Legislative District</label>
+                                <input type="text" class="form-control" id="edit_legislative_district" name="legislative_district" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit_school_level" class="form-label">School Level</label>
+                                <select class="form-select" id="edit_school_level" name="school_level">
+                                    <option value="Elementary">Elementary</option>
+                                    <option value="Secondary">Secondary</option>
+                                    <option value="Private">Private</option>
+                                    <option value="Integrated">Integrated</option>
+                                    <option value="Unknown">Unknown</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit_school_size" class="form-label">School Size</label>
+                                <input type="number" class="form-control" id="edit_school_size" name="school_size" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="<?= base_url(ASSETS_PATH . '/js/sidebar.js'); ?>"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const editButtons = document.querySelectorAll('.edit-school-btn');
+            editButtons.forEach((button) => {
+                button.addEventListener('click', function() {
+                    const fields = {
+                        id: button.getAttribute('data-id'),
+                        school_id: button.getAttribute('data-school-id'),
+                        school_name: button.getAttribute('data-school-name'),
+                        school_district: button.getAttribute('data-school-district'),
+                        legislative_district: button.getAttribute('data-legislative-district'),
+                        school_level: button.getAttribute('data-school-level'),
+                        school_size: button.getAttribute('data-school-size')
+                    };
+
+                    document.getElementById('edit_school_id').value = fields.id;
+                    document.getElementById('edit_school_id_field').value = fields.school_id;
+                    document.getElementById('edit_school_name').value = fields.school_name;
+                    document.getElementById('edit_school_district').value = fields.school_district;
+                    document.getElementById('edit_legislative_district').value = fields.legislative_district;
+                    document.getElementById('edit_school_level').value = fields.school_level || 'Unknown';
+                    document.getElementById('edit_school_size').value = fields.school_size || '';
+                });
+            });
+        });
+    </script>
 </body>
 </html>

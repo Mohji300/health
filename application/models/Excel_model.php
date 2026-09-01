@@ -348,6 +348,109 @@ class excel_model extends CI_Model {
     /**
      * Get total schools count
      */
+    public function get_editable_schools($search = '') {
+        $this->db->select('s.id, s.school_id, s.name, s.school_level, s.school_size, sd.name as school_district, ld.name as legislative_district');
+        $this->db->from('schools s');
+        $this->db->join('school_districts sd', 'sd.id = s.school_district_id', 'left');
+        $this->db->join('legislative_districts ld', 'ld.id = sd.legislative_district_id', 'left');
+
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('s.school_id', $search);
+            $this->db->or_like('s.name', $search);
+            $this->db->or_like('sd.name', $search);
+            $this->db->or_like('ld.name', $search);
+            $this->db->or_like('s.school_level', $search);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('ld.name', 'ASC');
+        $this->db->order_by('sd.name', 'ASC');
+        $this->db->order_by('s.name', 'ASC');
+        return $this->db->get()->result();
+    }
+
+    public function update_school_details($id, $school_id, $school_name, $school_level, $school_district, $legislative_district, $school_size = null) {
+        $this->db->trans_start();
+
+        try {
+            $legislative_id = $this->ensure_legislative_district($legislative_district);
+            $district_id = $this->ensure_school_district($school_district, $legislative_id);
+
+            $data = array(
+                'school_id' => $school_id,
+                'name' => $school_name,
+                'school_level' => $school_level,
+                'school_size' => ($school_size !== '' && $school_size !== null) ? (int) $school_size : null,
+                'school_district_id' => $district_id,
+                'updated_at' => date('Y-m-d H:i:s')
+            );
+
+            $this->db->where('id', $id);
+            $this->db->update('schools', $data);
+
+            $this->db->where('school_id', $school_id);
+            $this->db->update('users', array(
+                'name' => $school_name,
+                'school_id' => $school_id,
+                'school_level' => $school_level,
+                'school_district' => $school_district,
+                'legislative_district' => $legislative_district,
+            ));
+
+            $this->db->trans_complete();
+            return $this->db->trans_status();
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            log_message('error', 'Error updating school details: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    private function ensure_legislative_district($name) {
+        $name = trim($name);
+        if (empty($name)) {
+            return null;
+        }
+
+        $row = $this->db->where('name', $name)->get('legislative_districts')->row();
+        if ($row) {
+            return (int) $row->id;
+        }
+
+        $this->db->insert('legislative_districts', array(
+            'name' => $name,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ));
+
+        return (int) $this->db->insert_id();
+    }
+
+    private function ensure_school_district($name, $legislative_id) {
+        $name = trim($name);
+        if (empty($name)) {
+            return null;
+        }
+
+        $row = $this->db->where('name', $name)
+            ->where('legislative_district_id', $legislative_id)
+            ->get('school_districts')->row();
+
+        if ($row) {
+            return (int) $row->id;
+        }
+
+        $this->db->insert('school_districts', array(
+            'name' => $name,
+            'legislative_district_id' => $legislative_id,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ));
+
+        return (int) $this->db->insert_id();
+    }
+
     public function get_total_schools_count() {
         return $this->db->count_all('schools');
     }
