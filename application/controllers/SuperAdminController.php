@@ -41,6 +41,29 @@ class Superadmincontroller extends CI_Controller {
             ->get()
             ->result();
 
+        // Fetch schools with related district and legislative district names
+        $this->load->model('school_model');
+        $schools = $this->db
+            ->select('s.*, sd.name as school_district_name, ld.name as legislative_name')
+            ->from('schools s')
+            ->join('school_districts sd', 's.school_district_id = sd.id', 'left')
+            ->join('legislative_districts ld', 'sd.legislative_district_id = ld.id', 'left')
+            ->order_by('ld.name', 'ASC')
+            ->order_by('sd.name', 'ASC')
+            ->order_by('s.name', 'ASC')
+            ->get()
+            ->result();
+
+        // Also fetch users' school-related info directly from users table
+        $users_school_info = $this->db
+            ->select('id, name, legislative_district, school_district, school_id, school_address, school_level, school_head_name, school_info_completed')
+            ->from('users')
+            ->order_by('legislative_district', 'ASC')
+            ->order_by('school_district', 'ASC')
+            ->order_by('name', 'ASC')
+            ->get()
+            ->result();
+
         $data = [
             'title' => 'Super Admin Dashboard',
             'userCounts' => $userCounts,
@@ -48,7 +71,9 @@ class Superadmincontroller extends CI_Controller {
             'availableRoles' => $availableRoles,
             'currentUser' => $this->session->userdata('email'),
             'legislative_districts' => $legislative_districts,
-            'school_districts' => $school_districts
+            'school_districts' => $school_districts,
+            'schools' => $schools,
+            'users_school_info' => $users_school_info
         ];
         
         $this->load->view('templates/header', $data);
@@ -173,77 +198,10 @@ class Superadmincontroller extends CI_Controller {
         redirect('superadmin');
     }
 
-    public function reset_user_data($user_id)
-    {
-        if ($this->input->method() != 'post') {
-            show_404();
-        }
-
-        $user = $this->user_model->get_user_by_id($user_id);
-        if (!$user) {
-            $this->session->set_flashdata('error', 'User not found.');
-            redirect('superadmin');
-            return;
-        }
-
-        // Only reset the school_info_completed flag
-        $resetData = [
-            'school_info_completed' => 0,
-            'updated_at' => date('Y-m-d H:i:s')
-        ];
-
-        $updateOk = $this->user_model->update_user($user_id, $resetData);
-
-        if ($updateOk) {
-            $this->session->set_flashdata('success', 'School info completion flag reset successfully.');
-        } else {
-            $this->session->set_flashdata('error', 'Failed to reset school info completion flag.');
-        }
-
-        redirect('superadmin');
-    }
-
-    public function reset_all_school_info()
-    {
-        if ($this->input->method() != 'post') {
-            show_404();
-        }
-
-        $this->load->model('user_model');
-        $result = $this->user_model->reset_all_school_data();
-
-        if ($result) {
-            $this->session->set_flashdata('success', 'All users\' school info cleared and completion flag reset.');
-        } else {
-            $this->session->set_flashdata('error', 'Failed to clear school info for users.');
-        }
-
-        redirect('superadmin');
-    }
-
-    public function delete_all_nutritional_assessments()
-    {
-        if ($this->input->method() != 'post') {
-            show_404();
-        }
-
-        $this->load->model('nutritional_assessment_model'); // assuming you have this model
-        $deleted = $this->nutritional_assessment_model->delete_all_assessments();
-
-        if ($deleted) {
-            $this->session->set_flashdata('success', 'All nutritional assessment records have been permanently deleted.');
-        } else {
-            $this->session->set_flashdata('error', 'Failed to delete nutritional assessment records.');
-        }
-
-        redirect('superadmin');
-    }
-
     public function edit_user($user_id)
     {
         $this->load->library('form_validation');
 
-        // Get the user to edit
         $user = $this->user_model->get_user_by_id($user_id);
         if (!$user) {
             show_404();
@@ -253,6 +211,7 @@ class Superadmincontroller extends CI_Controller {
         $availableRoles = ['super_admin', 'admin', 'district', 'division', 'user'];
 
         if ($this->input->method() === 'post') {
+            // Existing rules
             $this->form_validation->set_rules('name', 'Full Name', 'required|trim');
             $this->form_validation->set_rules('email', 'Email', 'required|valid_email');
             $this->form_validation->set_rules('role', 'Role', 'required');
@@ -260,10 +219,12 @@ class Superadmincontroller extends CI_Controller {
             $this->form_validation->set_rules('legislative_district', 'Legislative District', 'trim');
             $this->form_validation->set_rules('school_district', 'School District', 'trim');
             
-            // Password fields are optional - only validate if one is provided
+            // NEW: Add school_level rule (optional, change to 'required' if needed)
+            $this->form_validation->set_rules('school_level', 'School Level', 'trim');
+
+            // Password fields optional...
             $password = $this->input->post('password');
             $confirm_password = $this->input->post('confirm_password');
-            
             if (!empty($password)) {
                 $this->form_validation->set_rules('password', 'Password', 'required|min_length[6]');
                 $this->form_validation->set_rules('confirm_password', 'Confirm Password', 'required|matches[password]');
@@ -276,10 +237,10 @@ class Superadmincontroller extends CI_Controller {
                     'role' => $this->input->post('role'),
                     'school_id' => $this->input->post('school_id'),
                     'legislative_district' => $this->input->post('legislative_district'),
-                    'school_district' => $this->input->post('school_district')
+                    'school_district' => $this->input->post('school_district'),
+                    'school_level' => $this->input->post('school_level')   // NEW
                 ];
 
-                // Only update password if provided
                 if (!empty($password)) {
                     $updateData['password'] = password_hash($password, PASSWORD_DEFAULT);
                 }

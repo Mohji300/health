@@ -1,10 +1,30 @@
 /* Externalized JS for SuperAdminDashboard */
 $(document).ready(function() {
     var table = $('#userTable').DataTable({
-        "pageLength": 10,
+        "pageLength": 25,
+        "lengthMenu": [[25, 50, 100, -1], [25, 50, 100, "All"]],
         "ordering": true,
-        "columnDefs": [ { "orderable": false, "targets": [4] } ]
+        "autoWidth": false,          // Let us control widths manually
+        "scrollX": true,             // Enable horizontal scroll
+        "columnDefs": [
+            { "orderable": false, "targets": [9] },  // Actions column not orderable
+            // Optionally set width for each column (adjust values as needed)
+            { "width": "12%", "targets": 0 },  // Name
+            { "width": "15%", "targets": 1 },  // Email
+            { "width": "10%", "targets": 2 },  // Legislative District
+            { "width": "10%", "targets": 3 },  // School District
+            { "width": "8%",  "targets": 4 },  // School ID
+            { "width": "12%", "targets": 5 },  // School Address
+            { "width": "8%",  "targets": 6 },  // School Level
+            { "width": "10%", "targets": 7 },  // School Head
+            { "width": "8%",  "targets": 8 },  // Role
+            { "width": "7%",  "targets": 9 }   // Actions
+        ]
     });
+
+    // Ensure the table fills its container
+    $('#userTable').css('width', '100%');
+    table.columns.adjust().draw();
 
     $('#submitBulkPayload').on('click', function(e) {
         var users = [];

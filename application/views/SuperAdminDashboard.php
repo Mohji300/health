@@ -23,6 +23,8 @@
             </div>
           </div>
 
+          <!-- (Users' school info removed — fields will appear in main user table) -->
+
           <!-- Stats Cards -->
           <div class="row">
             <!-- Total Users -->
@@ -155,7 +157,7 @@
           <!-- Management Section -->
           <div class="row">
             <!-- User Management -->
-            <div class="col-lg-8 mb-4">
+            <div class="col-12 mb-4">
               <div class="card shadow">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
                   <h6 class="m-0 font-weight-bold text-primary">User Management</h6>
@@ -169,14 +171,6 @@
                     <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#updateAllModal">
                       <i class="fas fa-sync-alt me-1"></i> Update All Roles
                     </button>
-                    <!-- Reset All School Info -->
-                    <?= form_open('superadmin/reset-school-info'); ?>
-                        <button type="submit" class="btn btn-warning">Reset All</button>
-                    <?= form_close(); ?>
-                    <!-- Delete All Nutritional Assessments -->
-                    <?= form_open('superadmin/delete-all-assessments'); ?>
-                        <button type="submit" class="btn btn-danger">Delete All Permanently</button>
-                    <?= form_close(); ?>
                   </div>
                 </div>
                 <div class="card-body">
@@ -200,7 +194,12 @@
                         <tr>
                           <th>Name</th>
                           <th>Email</th>
-                          <th>District</th>
+                          <th>Legislative District</th>
+                          <th>School District</th>
+                          <th>School ID</th>
+                          <th>School Address</th>
+                          <th>School Level</th>
+                          <th>School Head</th>
                           <th>Role</th>
                           <th class="text-center">Actions</th>
                         </tr>
@@ -210,12 +209,17 @@
                         <tr data-user-id="<?php echo $user->id; ?>">
                           <td class="fw-bold"><?php echo htmlspecialchars($user->name ?? 'N/A'); ?></td>
                           <td><?php echo htmlspecialchars($user->email ?? 'N/A'); ?></td>
-                          <td><?php echo htmlspecialchars($user->school_district ?? $user->district ?? $user->school_district_name ?? 'N/A'); ?></td>
+                          <td><?php echo htmlspecialchars($user->legislative_district ?? ''); ?></td>
+                          <td><?php echo htmlspecialchars($user->school_district ?? ''); ?></td>
+                          <td><?php echo htmlspecialchars($user->school_id ?? ''); ?></td>
+                          <td><?php echo htmlspecialchars($user->school_address ?? ''); ?></td>
+                          <td><?php echo htmlspecialchars($user->school_level ?? ''); ?></td>
+                          <td><?php echo htmlspecialchars($user->school_head_name ?? ''); ?></td>
                           <td>
                             <form method="post" action="<?php echo site_url('superadmin/update_user_role/' . $user->id); ?>" class="d-inline">
                               <select name="role" class="form-select form-select-sm role-select" onchange="this.form.submit()">
                                 <?php foreach ($availableRoles as $role): ?>
-                                <option value="<?php echo $role; ?>" <?php echo $user->role == $role ? 'selected' : ''; ?>>
+                                <option value="<?php echo $role; ?>" <?php echo $user->role == $role ? 'selected' : ''; ?> >
                                   <?php echo ucwords(str_replace('_', ' ', $role)); ?>
                                 </option>
                                 <?php endforeach; ?>
@@ -252,6 +256,8 @@
               </div>
             </div>
           </div>
+
+          <!-- (Schools directory removed — data integrated into user table) -->
         </div>
       </div>
     </div>
@@ -305,52 +311,6 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Reset All School Info Modal -->
-    <div class="modal fade" id="resetAllSchoolInfoModal" tabindex="-1" aria-labelledby="resetAllSchoolInfoModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="resetAllSchoolInfoModalLabel">Reset All School Info Flags</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <p>Are you sure you want to reset <strong>school_info_completed</strong> to <strong>0</strong> for <strong>ALL users</strong>?</p>
-            <p class="text-danger fw-bold">This action cannot be undone. All users will be required to complete the school information setup again.</p>
-            <p class="text-warning">No other user data (uploads, profiles, etc.) will be affected – only the completion flag.</p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <?= form_open('superadmin/reset-school-info'); ?>
-                <button type="submit" class="btn btn-warning">Reset All</button>
-            <?= form_close(); ?>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Reset Nutritional Data Modal -->
-    <div class="modal fade" id="resetNutritionalModal" tabindex="-1" aria-labelledby="resetNutritionalModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="resetNutritionalModalLabel">Delete All Nutritional Assessment Data</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>  
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to <strong class="text-danger">PERMANENTLY DELETE ALL</strong> records from the <code>nutritional_assessments</code> table?</p>
-                    <p>This action <strong>cannot be undone</strong>. All student assessments, SBFP beneficiaries, and associated data will be lost.</p>
-                    <p class="text-warning fw-bold">Back up your data before proceeding.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                  <?= form_open('superadmin/delete-all-assessments'); ?>
-                      <button type="submit" class="btn btn-danger">Delete All Permanently</button>
-                  <?= form_close(); ?>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Delete Confirmation Modal -->
