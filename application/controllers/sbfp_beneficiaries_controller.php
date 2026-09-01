@@ -305,16 +305,20 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $start  = intval($this->input->post('start'));
         $length = intval($this->input->post('length'));
         $search = $this->input->post('search')['value'] ?? '';
-        $order  = $this->input->post('order')[0] ?? null;
-        $order_column = $order ? intval($order['column']) : 0;
-        $order_dir    = $order ? $order['dir'] : 'asc';
-
-        $columns = [
-            'name', 'sex', 'grade_level', 'birthday',
-            'date_of_weighing', 'age', 'weight', 'height',
-            'bmi', 'nutritional_status', 'height_for_age'
-        ];
-        $order_by = isset($columns[$order_column]) ? $columns[$order_column] : 'name';
+        $order = $this->input->post('order')[0] ?? null;
+        if ($order) {
+            $order_column = intval($order['column']);
+            $order_dir    = $order['dir'];
+            $columns = [
+                'name', 'sex', 'grade_level', 'birthday',
+                'date_of_weighing', 'age', 'weight', 'height',
+                'bmi', 'nutritional_status', 'height_for_age'
+            ];
+            $order_by = isset($columns[$order_column]) ? $columns[$order_column] : '';
+        } else {
+            $order_by = '';
+            $order_dir = 'asc';
+        }
 
         // --- 1. Retrieve session filters ---
         $assessment_type = $this->session->userdata('assessment_type') ?: 'baseline';
@@ -470,6 +474,7 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
 
         // --- 7. Query the model ---
         $total_records = $this->sbfp_beneficiaries_model->count_beneficiaries_filtered($assessment_type, $filters);
+        $filtered_records = $this->sbfp_beneficiaries_model->count_beneficiaries_with_search($assessment_type, $filters, $search);
 
         $data = $this->sbfp_beneficiaries_model->get_beneficiaries_datatable(
             $assessment_type,
@@ -521,7 +526,7 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $response = [
             'draw'            => $draw,
             'recordsTotal'    => $total_records,
-            'recordsFiltered' => $total_records,
+            'recordsFiltered' => $filtered_records,
             'data'            => $records,
         ];
 
@@ -532,9 +537,23 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
     private function render_flag_buttons($student, $field, $val1, $val2) {
         $id = $student['id'] ?? ($student['assessment_id'] ?? '');
         $current = $this->get_flag_value($student, $field);
+        $selected = strtolower($current);
+        $hasValue = ($selected !== '');   // true if a value is stored
+
         $html = '<div class="btn-group btn-group-sm sbfp-flag-group" data-assessment-id="' . $id . '">';
-        $html .= '<button type="button" class="btn sbfp-flag-btn ' . (strtolower($current) === strtolower($val1) ? 'btn-primary' : 'btn-outline-secondary') . '" data-field="' . $field . '" data-value="' . $val1 . '">' . $val1 . '</button>';
-        $html .= '<button type="button" class="btn sbfp-flag-btn ' . (strtolower($current) === strtolower($val2) ? 'btn-primary' : 'btn-outline-secondary') . '" data-field="' . $field . '" data-value="' . $val2 . '">' . $val2 . '</button>';
+
+        // Button 1
+        $isSelected1 = (strtolower($val1) === $selected);
+        $class1 = $isSelected1 ? 'btn-primary' : 'btn-outline-secondary';
+        $hidden1 = ($hasValue && !$isSelected1) ? 'd-none' : '';  // hide only when value exists and not selected
+        $html .= '<button type="button" class="btn sbfp-flag-btn ' . $class1 . ' ' . $hidden1 . '" data-field="' . $field . '" data-value="' . $val1 . '">' . $val1 . '</button>';
+
+        // Button 2
+        $isSelected2 = (strtolower($val2) === $selected);
+        $class2 = $isSelected2 ? 'btn-primary' : 'btn-outline-secondary';
+        $hidden2 = ($hasValue && !$isSelected2) ? 'd-none' : '';
+        $html .= '<button type="button" class="btn sbfp-flag-btn ' . $class2 . ' ' . $hidden2 . '" data-field="' . $field . '" data-value="' . $val2 . '">' . $val2 . '</button>';
+
         $html .= '</div>';
         return $html;
     }
@@ -733,17 +752,12 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         $field = $this->input->post('field');
         $value = $this->input->post('value');
 
-        // Validate allowed values per field
-        $allowed_values = ['Yes', 'No'];
-        if ($field == 'classification_of_beneficiary') {
-            $allowed_values = ['Primary', 'Secondary'];
-        }
-        if (empty($id) || empty($field) || !in_array($value, $allowed_values)) {
+        if (empty($id) || empty($field)) {
             echo json_encode(['success' => false, 'message' => 'Invalid input']);
             return;
         }
 
-        // Map logical field names to possible DB columns – pick the first existing one
+        // Map field to column (same mapping as before)
         $candidates = [];
         switch ($field) {
             case 'classification_of_beneficiary':
@@ -781,15 +795,27 @@ class Sbfp_beneficiaries_controller extends CI_Controller {
         }
 
         if (!$targetColumn) {
-            echo json_encode(['success' => false, 'message' => 'Database column for this field does not exist']);
+            echo json_encode(['success' => false, 'message' => 'Database column not found']);
             return;
+        }
+
+        // If value is empty, set to NULL; otherwise validate
+        if ($value === '') {
+            $dbValue = null;
+        } else {
+            $allowed_values = ($field == 'classification_of_beneficiary') ? ['Primary','Secondary'] : ['Yes','No'];
+            if (!in_array($value, $allowed_values)) {
+                echo json_encode(['success' => false, 'message' => 'Invalid value']);
+                return;
+            }
+            $dbValue = $value;
         }
 
         try {
             $this->db->where('id', $id);
-            $updated = $this->db->update('nutritional_assessments', [ $targetColumn => $value, 'updated_at' => date('Y-m-d H:i:s') ]);
+            $updated = $this->db->update('nutritional_assessments', [ $targetColumn => $dbValue, 'updated_at' => date('Y-m-d H:i:s') ]);
             if ($updated) {
-                echo json_encode(['success' => true, 'column' => $targetColumn, 'value' => $value]);
+                echo json_encode(['success' => true, 'column' => $targetColumn, 'value' => $dbValue]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Update failed']);
             }

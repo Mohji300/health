@@ -1,7 +1,7 @@
 // sbfp_beneficiaries.js – Server‑side pagination with DataTables
 $(document).ready(function() {
     // ------------------------------------------------------------
-    // 1. DataTable initialization (server-side)
+    // DataTable initialization 
     // ------------------------------------------------------------
     var table = $('#beneficiariesTable').DataTable({
         processing: true,
@@ -11,10 +11,7 @@ $(document).ready(function() {
             type: 'POST',
             cache: false,
             data: function(d) {
-                // Pass section filter (and any other GET parameters)
                 d.section_id = $('#sectionFilter').val() || '';
-                // The rest (grade, school, district) are stored in session
-                // and will be applied on the server side.
             }
         },
         columns: [
@@ -40,7 +37,7 @@ $(document).ready(function() {
         ],
         pageLength: 25,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-        order: [[1, 'asc']], // default sort by name
+        order: [],
         language: {
             search: 'Search beneficiary:',
             lengthMenu: 'Show _MENU_ entries',
@@ -52,13 +49,12 @@ $(document).ready(function() {
             emptyTable: 'No ' + (window.SbfpBeneficiariesConfig.assessment_type || '') + ' data available'
         },
         drawCallback: function() {
-            // Re‑bind flag button events after each redraw
             bindFlagButtons();
         }
     });
 
     // ------------------------------------------------------------
-    // 2. Flag button binding (works with dynamic rows)
+    //Flag button binding
     // ------------------------------------------------------------
     function bindFlagButtons() {
         $('.sbfp-flag-btn').off('click').on('click', function() {
@@ -70,29 +66,45 @@ $(document).ready(function() {
 
             if (!assessmentId || !field) return;
 
-            // Store in localStorage (optional, for export/print overrides)
-            try {
-                localStorage.setItem('sbfp_flag_' + assessmentId + '_' + field, value);
-            } catch (e) {}
+            var isAlreadySelected = btn.hasClass('btn-primary');
+            var newValue = isAlreadySelected ? '' : value;
+            var isClearing = isAlreadySelected;
 
-            // UI update
             var buttons = group.find('.sbfp-flag-btn');
             buttons.prop('disabled', true);
-            buttons.removeClass('btn-primary').addClass('btn-outline-secondary');
-            buttons.not(btn).addClass('d-none');
-            btn.removeClass('btn-outline-secondary').removeClass('d-none').addClass('btn-primary');
 
-            // AJAX update
+            if (isClearing) {
+                buttons.removeClass('btn-primary btn-outline-secondary d-none').addClass('btn-outline-secondary');
+            } else {
+                buttons.removeClass('btn-primary').addClass('btn-outline-secondary');
+                buttons.not(btn).addClass('d-none');
+                btn.removeClass('btn-outline-secondary').addClass('btn-primary');
+            }
+
             $.ajax({
                 url: window.SbfpBeneficiariesConfig.urls.update_flag,
                 method: 'POST',
-                data: { id: assessmentId, field: field, value: value },
+                data: { id: assessmentId, field: field, value: newValue },
                 dataType: 'json',
                 success: function(resp) {
                     console.log('Flag updated:', resp);
+                    if (newValue !== '') {
+                        try { localStorage.setItem('sbfp_flag_' + assessmentId + '_' + field, newValue); } catch(e) {}
+                    } else {
+                        try { localStorage.removeItem('sbfp_flag_' + assessmentId + '_' + field); } catch(e) {}
+                    }
                 },
                 error: function(xhr, status, err) {
                     console.warn('Flag update error:', err);
+                    // Revert UI on error
+                    if (isClearing) {
+                        buttons.removeClass('btn-outline-secondary').addClass('btn-primary');
+                        buttons.not(btn).removeClass('d-none').addClass('btn-outline-secondary');
+                    } else {
+                        buttons.removeClass('btn-primary').addClass('btn-outline-secondary');
+                        buttons.removeClass('d-none');
+                    }
+                    showNotification('Failed to update. Please try again.', 'danger');
                 },
                 complete: function() {
                     buttons.prop('disabled', false);
@@ -105,7 +117,7 @@ $(document).ready(function() {
     bindFlagButtons();
 
     // ------------------------------------------------------------
-    // 3. Apply Filters (AJAX to session + reload table)
+    // Apply Filters 
     // ------------------------------------------------------------
     function applyFilters() {
         var gradeLevel = $('#gradeLevelFilter').val();
@@ -117,7 +129,6 @@ $(document).ready(function() {
 
         var userRole = window.SbfpBeneficiariesConfig.user_role;
 
-        // Helper to set a filter via AJAX
         function setFilter(url, data, callback) {
             $.ajax({
                 url: url,
@@ -132,7 +143,6 @@ $(document).ready(function() {
             });
         }
 
-        // Chain filter settings
         setFilter(window.SbfpBeneficiariesConfig.urls.set_grade_level_filter, { grade_level: gradeLevel }, function() {
             if (schoolName && $('#schoolNameFilter').length && 
                 (userRole === 'district' || userRole === 'division' || userRole === 'admin')) {
@@ -140,7 +150,6 @@ $(document).ready(function() {
                     if (district && $('#districtFilter').length && 
                         (userRole === 'division' || userRole === 'admin')) {
                         setFilter(window.SbfpBeneficiariesConfig.urls.set_district_filter, { district: district }, function() {
-                            // All filters saved, reload table
                             table.ajax.reload();
                             hideLoadingOverlay();
                             showNotification('Filters applied', 'success');
@@ -160,36 +169,31 @@ $(document).ready(function() {
     }
 
     // ------------------------------------------------------------
-    // 4. Clear Filters
+    // Clear Filters
     // ------------------------------------------------------------
     function clearAllFilters() {
         showLoadingOverlay();
         
-        // First, clear the regular filters
         $.ajax({
             url: window.SbfpBeneficiariesConfig.urls.clear_filters,
             method: 'POST',
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    // Reset dropdowns
                     $('#gradeLevelFilter').val('');
                     if ($('#schoolNameFilter').length) $('#schoolNameFilter').val('');
                     if ($('#districtFilter').length) $('#districtFilter').val('');
                     $('#sectionFilter').val('');
                     
-                    // Explicitly set school level to 'all' via AJAX
                     $.ajax({
                         url: window.SbfpBeneficiariesConfig.urls.set_school_level,
                         method: 'POST',
                         data: { school_level: 'all' },
                         dataType: 'json',
-                        success: function(levelResponse) {
-                            // Reload the page after school level is set
+                        success: function() {
                             window.location.reload();
                         },
                         error: function() {
-                            // Still reload even if school level set fails
                             window.location.reload();
                         }
                     });
@@ -206,12 +210,10 @@ $(document).ready(function() {
     }
 
     // ------------------------------------------------------------
-    // 5. Event bindings for filter controls
+    // Event bindings for filter controls
     // ------------------------------------------------------------
     $('#applyFiltersBtn').click(applyFilters);
     $('#clearFiltersBtn').click(clearAllFilters);
-
-    // Auto‑apply on change (optional – you may keep or remove)
     $('#gradeLevelFilter, #sectionFilter').change(applyFilters);
     if ($('#schoolNameFilter').length) {
         $('#schoolNameFilter').change(applyFilters);
@@ -221,7 +223,7 @@ $(document).ready(function() {
     }
 
     // ------------------------------------------------------------
-    // 6. Assessment type switch (page reload)
+    // Assessment type switch (page reload)
     // ------------------------------------------------------------
     $('#assessmentTypeSelect').on('change', function() {
         var newType = $(this).val();
@@ -232,7 +234,7 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    window.location.reload(); // Reload page to reset DataTable with new type
+                    window.location.reload();
                 } else {
                     alert('Error: ' + response.message);
                 }
@@ -244,10 +246,13 @@ $(document).ready(function() {
     });
 
     // ------------------------------------------------------------
-    // 7. Export and Print (keep existing logic)
+    // Export and Print 
     // ------------------------------------------------------------
     $('#exportExcelBtn').on('click', function(e) {
         e.preventDefault();
+        var $btn = $(this);
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Exporting...');
+
         var overrides = {};
         try {
             for (var i = 0; i < localStorage.length; i++) {
@@ -267,6 +272,7 @@ $(document).ready(function() {
         } catch (ex) {
             console.warn('Could not read localStorage for export overrides', ex);
         }
+
         var form = document.createElement('form');
         form.method = 'POST';
         form.action = window.SbfpBeneficiariesConfig.urls.export_excel;
@@ -277,6 +283,10 @@ $(document).ready(function() {
         form.appendChild(input);
         document.body.appendChild(form);
         form.submit();
+
+        setTimeout(function() {
+            $btn.prop('disabled', false).html('<i class="fas fa-file-excel me-1"></i> Export to Excel');
+        }, 3000);
     });
 
     $('#printForm').on('submit', function() {
@@ -303,7 +313,7 @@ $(document).ready(function() {
     });
 
     // ------------------------------------------------------------
-    // 8. Utility functions (loading overlay, notifications)
+    //Utility functions (loading overlay, notifications)
     // ------------------------------------------------------------
     function showLoadingOverlay() {
         var overlay = $('<div id="loadingOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column;">' +
@@ -331,7 +341,7 @@ $(document).ready(function() {
     }
 
     // ------------------------------------------------------------
-    // 9. Remove filter (via active filter badge X buttons)
+    //Remove filter 
     // ------------------------------------------------------------
     function removeFilter(filterType) {
         switch(filterType) {
@@ -348,51 +358,16 @@ $(document).ready(function() {
                 if ($('#sectionFilter').length) $('#sectionFilter').val('');
                 break;
         }
-        applyFilters(); // will reload table
+        applyFilters();
     }
-    // Make removeFilter globally accessible for inline onclick
     window.removeFilter = removeFilter;
 
     // ------------------------------------------------------------
-    // 10. Initialize local flags from localStorage (for UI consistency)
-    // ------------------------------------------------------------
-    (function initializeLocalFlags() {
-        $('.sbfp-flag-group').each(function() {
-            var group = $(this);
-            var assessmentId = group.data('assessment-id');
-            if (!assessmentId) return;
-            group.find('.sbfp-flag-btn').each(function() {
-                var b = $(this);
-                var field = b.data('field');
-                if (!field) return;
-                try {
-                    var stored = localStorage.getItem('sbfp_flag_' + assessmentId + '_' + field);
-                    if (stored && stored !== '') {
-                        var normalizedStored = String(stored).toLowerCase();
-                        group.find('.sbfp-flag-btn').each(function() {
-                            var btn = $(this);
-                            var btnVal = String(btn.data('value') || '').toLowerCase();
-                            if (btnVal === normalizedStored) {
-                                btn.removeClass('btn-outline-secondary').addClass('btn-primary').removeClass('d-none');
-                            } else {
-                                btn.addClass('d-none').removeClass('btn-primary').addClass('btn-outline-secondary');
-                            }
-                        });
-                    }
-                } catch (e) {
-                    // ignore
-                }
-            });
-        });
-    })();
-
-    // ------------------------------------------------------------
-    // 11. Dynamic Section filter based on Grade Level
+    // Dynamic Section filter based on Grade Level
     // ------------------------------------------------------------
     $('#gradeLevelFilter').on('change', function() {
         var grade = $(this).val();
         if (grade) {
-            // Show loading state if desired
             $('#sectionFilter').prop('disabled', true).html('<option value="">Loading...</option>');
 
             $.ajax({
@@ -417,9 +392,6 @@ $(document).ready(function() {
                 }
             });
         } else {
-            // If grade is cleared, reset section dropdown to all sections (or reload page)
-            // Optionally, you could reload the original sections list via another AJAX call or simply reload the page.
-            // Simpler: reload the page with current filters
             window.location.reload();
         }
     });

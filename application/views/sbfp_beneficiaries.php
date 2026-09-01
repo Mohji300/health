@@ -197,6 +197,20 @@ $school_level = isset($school_level) ? $school_level : 'all';
                       </select>
                   </div>
 
+                    <!-- School Level Filter -->
+                    <div class="col-md-4 mb-3">
+                      <label class="form-label fw-bold">
+                        <i class="fas fa-layer-group me-1"></i> School Level
+                      </label>
+                      <select id="schoolLevelFilter" class="form-select">
+                        <option value="all" <?= ($school_level === 'all') ? 'selected' : '' ?>>All School Levels</option>
+                        <option value="elementary" <?= ($school_level === 'elementary') ? 'selected' : '' ?>>Elementary</option>
+                        <option value="secondary" <?= ($school_level === 'secondary') ? 'selected' : '' ?>>Secondary</option>
+                        <option value="integrated" <?= (in_array($school_level, ['integrated', 'integrated_elementary', 'integrated_secondary'])) ? 'selected' : '' ?>>Integrated</option>
+                        <option value="Stand Alone SHS" <?= ($school_level === 'Stand Alone SHS' || strtolower($school_level) === 'stand alone shs') ? 'selected' : '' ?>>Stand Alone SHS</option>
+                      </select>
+                    </div>
+
                   <!-- School Name Filter (for district/division/admin) -->
                   <?php if (in_array($user_role, ['district', 'division', 'admin'])): ?>
                   <div class="col-md-4 mb-3">

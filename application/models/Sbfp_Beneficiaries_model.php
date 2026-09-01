@@ -17,7 +17,7 @@ class sbfp_beneficiaries_model extends CI_Model {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
         $this->db->where('n.is_deleted', 0);
-        $this->db->where('n.sbfp_beneficiary', 'Yes');  // Only explicit beneficiaries
+        $this->db->where('n.sbfp_beneficiary', 'Yes');
         
         if (!empty($school_id)) {
             $this->db->where('n.school_id', $school_id);
@@ -46,8 +46,11 @@ class sbfp_beneficiaries_model extends CI_Model {
             WHEN n.grade_level = 'Grade 11' THEN 11
             WHEN n.grade_level = 'Grade 12' THEN 12
             ELSE 99 END", '', FALSE);
+        // Sex: Males first
+        $this->db->order_by("CASE WHEN n.sex = 'M' THEN 0 WHEN n.sex = 'F' THEN 1 ELSE 2 END", '', FALSE);
+        // Name
         $this->db->order_by('n.name', 'ASC');
-        
+
         $query = $this->db->get();
         return $query->result_array();
     }
@@ -80,18 +83,18 @@ class sbfp_beneficiaries_model extends CI_Model {
                 } elseif (!empty($school_name)) {
                     $this->db->where('n.school_name', $school_name);
                 } else {
-                    $this->db->where('1=0'); // no valid school info
+                    $this->db->where('1=0');
                 }
                 break;
                 
             case 'district':
                 if (!empty($district)) {
-                    // Join with schools and school_districts to filter by district name
+                    $this->db->group_start();
                     $this->db->join('schools s', 'n.school_id = s.school_id', 'left');
                     $this->db->join('school_districts sd', 's.school_district_id = sd.id', 'left');
                     $this->db->where('sd.name', $district);
-                    // Also allow filtering by the legacy school_district column (fallback)
                     $this->db->or_where('n.school_district', $district);
+                    $this->db->group_end();
                 } else {
                     $this->db->where('1=0');
                 }
@@ -99,9 +102,7 @@ class sbfp_beneficiaries_model extends CI_Model {
                 
             case 'division':
             case 'admin':
-                // NO role‑based filter – division/admin see all schools.
-                // School name filtering is handled via apply_additional_filters().
-                // Do NOT add any WHERE clause here.
+                // no filter – see all schools
                 break;
                 
             default:
@@ -114,22 +115,30 @@ class sbfp_beneficiaries_model extends CI_Model {
      * Apply school level grade restrictions
      */
     private function apply_school_level_filter($school_level) {
-        if ($school_level === 'all') return;
-        
+        if (empty($school_level) || $school_level === 'all') return;
+
+        // normalize key (allow variants like 'Stand Alone SHS' or 'stand_alone_shs')
+        $key = strtolower(trim(str_replace(['_', '-'], ' ', $school_level)));
+
         $grade_map = [
             'elementary' => ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'SPED'],
             'secondary'  => ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
-            'integrated_elementary' => ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'],
-            'integrated_secondary'  => ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
-            'Stand Alone SHS' => ['Grade 11', 'Grade 12'],
+            // integrated means both elementary and secondary grades
+            'integrated' => ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12', 'SPED'],
+            'integrated elementary' => ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'],
+            'integrated secondary'  => ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
+            'stand alone shs' => ['Grade 11', 'Grade 12'],
+            'standaloneshs' => ['Grade 11', 'Grade 12'],
         ];
-        if (isset($grade_map[$school_level])) {
-            $this->db->where_in('n.grade_level', $grade_map[$school_level]);
+
+        if (isset($grade_map[$key])) {
+            $this->db->where_in('n.grade_level', $grade_map[$key]);
         }
-        // 'integrated' has no grade restriction
     }
     
-    // ----- Other methods (all updated to use sbfp_beneficiary = 'Yes') -----
+    // -----------------------------------------------------------------
+    // Other methods (unchanged except added ordering)
+    // -----------------------------------------------------------------
     
     public function get_sections($assessment_type, $school_id, $grade_level = '', $school_name = '') {
         $this->db->distinct();
@@ -194,13 +203,10 @@ class sbfp_beneficiaries_model extends CI_Model {
         if ($user_role === 'school' && !empty($school_id)) {
             $this->db->where('n.school_id', $school_id);
         } elseif ($user_role === 'district' && !empty($district)) {
-            // Fix: join with school_districts
             $this->db->join('schools s', 'n.school_id = s.school_id', 'left');
             $this->db->join('school_districts sd', 's.school_district_id = sd.id', 'left');
             $this->db->where('sd.name', $district);
         }
-        // For division/admin: no extra filter – they see all schools with beneficiaries
-        
         $this->db->order_by('n.school_name', 'ASC');
         $query = $this->db->get();
         return $query->result_array();
@@ -223,7 +229,13 @@ class sbfp_beneficiaries_model extends CI_Model {
         return $result ? $result->count : 0;
     }
     
-    // DataTables methods
+    // =============================================================
+    // DATATABLES METHODS – with search count fix
+    // =============================================================
+    
+    /**
+     * Count beneficiaries with all filters (excluding search)
+     */
     public function count_beneficiaries_filtered($assessment_type, $filters) {
         $this->db->from('nutritional_assessments n');
         $this->db->where('n.assessment_type', $assessment_type);
@@ -249,6 +261,47 @@ class sbfp_beneficiaries_model extends CI_Model {
         return $this->db->count_all_results();
     }
     
+    /**
+     * NEW: Count beneficiaries with search term applied (for recordsFiltered)
+     */
+    public function count_beneficiaries_with_search($assessment_type, $filters, $search = '') {
+        $this->db->from('nutritional_assessments n');
+        $this->db->where('n.assessment_type', $assessment_type);
+        $this->db->where('n.is_deleted', 0);
+        $this->db->where('n.sbfp_beneficiary', 'Yes');
+        $this->apply_role_filter(
+            $filters['user_role'],
+            $filters['school_id'],
+            $filters['school_district'],
+            $filters['school_name'],
+            $filters['selected_school']
+        );
+        $this->apply_additional_filters(
+            $filters['user_role'],
+            $filters['grade_level'],
+            $filters['school_name'],
+            $filters['district']
+        );
+        $this->apply_school_level_filter($filters['school_level']);
+        if (!empty($filters['section_id'])) {
+            $this->db->where('n.section_id', $filters['section_id']);
+        }
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('n.name', $search);
+            $this->db->or_like('n.grade_level', $search);
+            $this->db->or_like('n.section', $search);
+            $this->db->or_like('n.school_name', $search);
+            $this->db->or_like('n.nutritional_status', $search);
+            $this->db->or_like('n.sex', $search);
+            $this->db->group_end();
+        }
+        return $this->db->count_all_results();
+    }
+    
+    /**
+     * Get beneficiaries for DataTables (with search, order, limit)
+     */
     public function get_beneficiaries_datatable($assessment_type, $filters, $limit, $offset, $order_by, $order_dir, $search) {
         $this->db->select('n.*');
         $this->db->from('nutritional_assessments n');
@@ -283,7 +336,8 @@ class sbfp_beneficiaries_model extends CI_Model {
             $this->db->or_like('n.sex', $search);
             $this->db->group_end();
         }
-        // Ordering
+
+        // Ordering – apply either user-defined or default
         $allowed = ['name','sex','grade_level','birthday','date_of_weighing','age','weight','height','bmi','nutritional_status','height_for_age'];
         if (in_array($order_by, $allowed)) {
             $this->db->order_by($order_by, $order_dir);
@@ -303,16 +357,22 @@ class sbfp_beneficiaries_model extends CI_Model {
                 WHEN n.grade_level = 'Grade 11' THEN 11
                 WHEN n.grade_level = 'Grade 12' THEN 12
                 ELSE 99 END", '', FALSE);
+            $this->db->order_by("CASE WHEN n.sex = 'M' THEN 0 WHEN n.sex = 'F' THEN 1 ELSE 2 END", '', FALSE);
             $this->db->order_by('n.name', 'ASC');
         }
+        // Apply limit and offset
         if ($limit > 0) {
             $this->db->limit($limit, $offset);
         }
+
         $query = $this->db->get();
         return $query->result_array();
     }
     
-    // Other methods remain similar
+    // -----------------------------------------------------------------
+    // Other methods – with missing ORDER BY added
+    // -----------------------------------------------------------------
+    
     public function get_beneficiaries_by_status($nutritional_status, $assessment_type = 'baseline', $school_name = '', $school_id = '', $section_id = '') {
         $this->db->select('n.*');
         $this->db->from('nutritional_assessments n');
@@ -329,7 +389,24 @@ class sbfp_beneficiaries_model extends CI_Model {
         if (!empty($section_id)) {
             $this->db->where('n.section_id', $section_id);
         }
-        // ... order by ...
+        // Add same ordering as get_beneficiaries()
+        $this->db->order_by("CASE
+            WHEN n.grade_level = 'Kindergarten' THEN 0
+            WHEN n.grade_level = 'Grade 1' THEN 1
+            WHEN n.grade_level = 'Grade 2' THEN 2
+            WHEN n.grade_level = 'Grade 3' THEN 3
+            WHEN n.grade_level = 'Grade 4' THEN 4
+            WHEN n.grade_level = 'Grade 5' THEN 5
+            WHEN n.grade_level = 'Grade 6' THEN 6
+            WHEN n.grade_level = 'Grade 7' THEN 7
+            WHEN n.grade_level = 'Grade 8' THEN 8
+            WHEN n.grade_level = 'Grade 9' THEN 9
+            WHEN n.grade_level = 'Grade 10' THEN 10
+            WHEN n.grade_level = 'Grade 11' THEN 11
+            WHEN n.grade_level = 'Grade 12' THEN 12
+            ELSE 99 END", '', FALSE);
+        $this->db->order_by("CASE WHEN n.sex = 'M' THEN 0 WHEN n.sex = 'F' THEN 1 ELSE 2 END", '', FALSE);
+        $this->db->order_by('n.name', 'ASC');
         $query = $this->db->get();
         return $query->result_array();
     }
@@ -373,7 +450,22 @@ class sbfp_beneficiaries_model extends CI_Model {
             $this->db->where('n.school_id', $school_id);
         }
         $this->db->group_by('n.grade_level');
-        // ... order by custom ...
+        // Custom ordering for grades
+        $this->db->order_by("CASE
+            WHEN n.grade_level = 'Kindergarten' THEN 0
+            WHEN n.grade_level = 'Grade 1' THEN 1
+            WHEN n.grade_level = 'Grade 2' THEN 2
+            WHEN n.grade_level = 'Grade 3' THEN 3
+            WHEN n.grade_level = 'Grade 4' THEN 4
+            WHEN n.grade_level = 'Grade 5' THEN 5
+            WHEN n.grade_level = 'Grade 6' THEN 6
+            WHEN n.grade_level = 'Grade 7' THEN 7
+            WHEN n.grade_level = 'Grade 8' THEN 8
+            WHEN n.grade_level = 'Grade 9' THEN 9
+            WHEN n.grade_level = 'Grade 10' THEN 10
+            WHEN n.grade_level = 'Grade 11' THEN 11
+            WHEN n.grade_level = 'Grade 12' THEN 12
+            ELSE 99 END", '', FALSE);
         $query = $this->db->get();
         return $query->result_array();
     }
@@ -407,10 +499,28 @@ class sbfp_beneficiaries_model extends CI_Model {
             $this->db->where('n.section_id', $section_id);
         }
         $this->apply_role_filter($user_role, $school_id, $district, $school_name, $selected_school);
+
+        // Sorting order: School Name, then Grade, Sex, Section, Name
         $this->db->order_by('n.school_name', 'ASC');
-        $this->db->order_by("CASE ... END", '', FALSE);
+        $this->db->order_by("CASE
+            WHEN n.grade_level = 'Kindergarten' THEN 0
+            WHEN n.grade_level = 'Grade 1' THEN 1
+            WHEN n.grade_level = 'Grade 2' THEN 2
+            WHEN n.grade_level = 'Grade 3' THEN 3
+            WHEN n.grade_level = 'Grade 4' THEN 4
+            WHEN n.grade_level = 'Grade 5' THEN 5
+            WHEN n.grade_level = 'Grade 6' THEN 6
+            WHEN n.grade_level = 'Grade 7' THEN 7
+            WHEN n.grade_level = 'Grade 8' THEN 8
+            WHEN n.grade_level = 'Grade 9' THEN 9
+            WHEN n.grade_level = 'Grade 10' THEN 10
+            WHEN n.grade_level = 'Grade 11' THEN 11
+            WHEN n.grade_level = 'Grade 12' THEN 12
+            ELSE 99 END", '', FALSE);
+        $this->db->order_by("CASE WHEN n.sex = 'M' THEN 0 WHEN n.sex = 'F' THEN 1 ELSE 2 END", '', FALSE);
         $this->db->order_by('n.section', 'ASC');
         $this->db->order_by('n.name', 'ASC');
+
         $query = $this->db->get();
         return $query->result_array();
     }
