@@ -36,9 +36,10 @@ class User_dashboard_controller extends CI_Controller {
         
         $user_id = $this->session->userdata('user_id');
 
-        // Define school_id first
+        // Define school_id first and prefer it over school_name so renamed accounts still map correctly.
         $school_id = $this->session->userdata('school_id');
-        $school_name = $this->input->get('school_name') ?: $this->session->userdata('school_name') ?: null;
+        $requested_school_name = $this->input->get('school_name') ?: $this->session->userdata('school_name') ?: null;
+        $school_name = null;
 
         // Force school_id from database if empty
         if (empty($school_id) && !empty($user_id)) {
@@ -53,8 +54,13 @@ class User_dashboard_controller extends CI_Controller {
                 // Update session with correct values
                 $this->session->set_userdata('school_id', $school_id);
                 $this->session->set_userdata('school_name', $school_name);
-                
             }
+        }
+
+        if (!empty($school_id)) {
+            $school_name = null;
+        } else {
+            $school_name = $requested_school_name;
         }
 
         $user_school_level = $this->get_user_school_level($user_id);

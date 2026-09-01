@@ -68,6 +68,34 @@ $display_mode = isset($display_mode) ? $display_mode : 'normal';
       .sex-row-female { background-color: #fce4ec; }
       .sex-row-total { background-color: #f5f5f5; font-weight: bold; }
       .grade-separator td { border-top: 2px solid #dee2e6 !important; }
+
+      /* Print adjustments: expand table and optimize for landscape print */
+      @page { size: A4 landscape; margin: 0.5in; }
+      @media print {
+        /* Expand the table container moderately and remove bottom whitespace */
+        #tableContainer, #tableContainer .table {
+          width: calc(100% + 3in) !important;
+          max-width: none !important;
+          overflow: visible !important;
+          margin-bottom: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        /* Ensure the page content uses full width and no extra height */
+        #page-content-wrapper, body, html { width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; }
+        /* Use natural table layout and larger font for print to improve readability */
+        #tableContainer .table { table-layout: auto !important; font-size: 13px !important; margin-bottom: 0 !important; }
+        /* Prevent large gaps after tables and cards */
+        .card, .card-body, #tableContainer { margin-bottom: 0 !important; }
+        table { page-break-after: auto; }
+        thead { display: table-header-group; }
+        tfoot { display: table-footer-group; }
+        tbody { display: table-row-group; }
+        tr { page-break-inside: avoid; }
+        /* Hide interactive controls when printing */
+        .no-print { display: none !important; }
+        /* Ensure colors print correctly */
+        body { -webkit-print-color-adjust: exact; color-adjust: exact; }
+      }
     </style>
   </head>
   <body class="bg-light">

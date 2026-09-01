@@ -222,16 +222,17 @@ $(document).ready(function() {
                     /* Ask browsers to preserve background colors when printing */
                     *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                     @page{size:Legal landscape;margin:8mm;}
-                    body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:4px;color:#000;font-size:7px;line-height:1.05;}
-                    table{width:100%;border-collapse:collapse;table-layout:auto;font-size:7px;margin:0;}
-                    th,td{border:0.5px solid #dee2e6;padding:2px;word-wrap:break-word;line-height:1.05;vertical-align:top;}
-                    th:first-child, td:first-child{width:80px;min-width:80px;max-width:80px;}
-                    th:nth-child(2), td:nth-child(2){width:30px;min-width:30px;max-width:30px;}
+                    /* Increase font sizes for printed output so numbers are readable */
+                    body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:6px;color:#000;font-size:12px;line-height:1.15;}
+                    table{width:100%;border-collapse:collapse;table-layout:auto;font-size:11px;margin:0;}
+                    th,td{border:0.5px solid #dee2e6;padding:4px;word-wrap:break-word;line-height:1.1;vertical-align:top;}
+                    th:first-child, td:first-child{width:100px;min-width:60px;max-width:180px;}
+                    th:nth-child(2), td:nth-child(2){width:40px;min-width:30px;max-width:80px;}
                     thead{display:table-header-group;} tfoot{display:table-footer-group;} tbody{display:table-row-group;}
                     tr, td, th {page-break-inside: avoid; page-break-after: auto;}
                     .no-print{display:none!important;}
-                    h3{font-size:10px;margin:0 0 2px 0;font-weight:bold;}
-                    p{font-size:7px;margin:0 0 4px 0;}
+                    h3{font-size:14px;margin:0 0 4px 0;font-weight:bold;}
+                    p{font-size:11px;margin:0 0 6px 0;}
                     .print-header{text-align:center;margin-bottom:10px;}
                 </style>
             `;

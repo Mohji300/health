@@ -59,7 +59,7 @@ class user_model extends CI_Model {
 
     public function get_all_users()
     {
-        $this->db->select('id, name, email, role, created_at, school_id, legislative_district, school_district, school_level');
+        $this->db->select('id, name, email, role, created_at, school_id, legislative_district, school_district, school_level, school_address, school_head_name');
         $this->db->from($this->table);
         $this->db->order_by('created_at', 'DESC');
         $query = $this->db->get();
