@@ -15,8 +15,11 @@ class Shd_reports_model extends CI_Model {
     public function create_school_report($data)
     {
         $this->db->insert('school_reports', [
-            'school_name' => $data['school_name'],
+            'month' => $data['month'],
             'school_year' => $data['school_year'],
+            'districtmunicipality' => $data['districtmunicipality'],
+            'school_id' => $data['school_id'],
+            'school_name' => $data['school_name'],
             'report_data' => null,
             'created_at' => date('Y-m-d H:i:s')
         ]);

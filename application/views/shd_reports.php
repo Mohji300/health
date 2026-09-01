@@ -83,12 +83,24 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label for="schoolName" class="form-label">School Name</label>
-                    <input type="text" class="form-control" id="schoolName" required>
+                    <label for="Month" class="form-label">Month</label>
+                    <input type="text" class="form-control" id="Month" required>
                 </div>
                 <div class="mb-3">
                     <label for="schoolYear" class="form-label">School Year</label>
                     <input type="text" class="form-control" id="schoolYear" placeholder="e.g., 2025-2026" required>
+                </div>
+                <div class="mb-3">
+                    <label for="districtmunicipality" class="form-label">District/Municipality</label>
+                    <input type="text" class="form-control" id="districtmunicipality" required>
+                </div>
+                <div class="mb-3">
+                    <label for="schoolId" class="form-label">School ID</label>
+                    <input type="text" class="form-control" id="schoolId" required>
+                </div>
+                <div class="mb-3">
+                    <label for="schoolName" class="form-label">School Name</label>
+                    <input type="text" class="form-control" id="schoolName" required>
                 </div>
             </div>
             <div class="modal-footer">

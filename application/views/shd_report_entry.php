@@ -9,25 +9,32 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .entry-table th, .entry-table td { vertical-align: middle; text-align: center; font-size: 0.75rem; padding: 0.3rem; }
-        .entry-table input { width: 65px; text-align: center; padding: 0.2rem; font-size: 0.75rem; }
+        .entry-table input { width: 60px; text-align: center; padding: 0.2rem; font-size: 0.75rem; }
         .section-header { background-color: #d9e2e8; font-weight: bold; }
         .sub-section { background-color: #f0f3f5; }
         .sub-section2 { background-color: #fef9e6; }
         .table-responsive { max-height: 70vh; overflow-y: auto; }
         .sign-line { border-top: 1px solid #000; width: 200px; margin-top: 30px; }
+        .extra-textarea textarea { width: 100%; }
     </style>
 </head>
 <body class="bg-light">
-<div class="container-fluid py-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3><?= htmlspecialchars($report->school_name) ?> (<?= htmlspecialchars($report->school_year) ?>)</h3>
-        <div>
-            <button class="btn btn-info me-2" id="uploadExcelBtn"><i class="fas fa-file-excel"></i> Upload Excel</button>
-            <button class="btn btn-success me-2" id="saveDataBtn"><i class="fas fa-save"></i> Save All Data</button>
-            <a href="<?= site_url('shd_reports_controller') ?>" class="btn btn-secondary">Back to List</a>
-            <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display:none;">
-        </div>
-    </div>
+    <div class="container-fluid py-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>
+                    <?= htmlspecialchars($report->month ?? '') ?>
+                    <?= htmlspecialchars($report->school_year ?? '') ?>
+                    <br>
+                    <?= htmlspecialchars($report->school_id ?? '') ?> - <?= htmlspecialchars($report->school_name ?? '') ?>
+                    <br>
+                    <?= htmlspecialchars($report->nurse ?? '') ?>
+                </h3>
+                    <button class="btn btn-info me-2" id="uploadExcelBtn"><i class="fas fa-file-excel"></i> Upload Excel</button>
+                    <button class="btn btn-success me-2" id="saveDataBtn"><i class="fas fa-save"></i> Save All Data</button>
+                    <a href="<?= site_url('shd_reports_controller') ?>" class="btn btn-secondary">Back to List</a>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display:none;">
+                </div>
+            </div>
 
     <form id="reportForm">
         <div class="table-responsive">
@@ -36,24 +43,24 @@
                 <tr>
                     <th style="min-width: 220px;">Indicators</th>
                     <th>Kinder</th>
-                    <th>Elem<br>Gr 1</th><th>Elem<br>Gr 2</th><th>Elem<br>Gr 3</th>
-                    <th>Elem<br>Gr 4</th><th>Elem<br>Gr 5</th><th>Elem<br>Gr 6</th>
-                    <th>Elem<br>SPED</th>
-                    <th>Elem Total</th>
-                    <th>Sec<br>Gr 7</th><th>Sec<br>Gr 8</th><th>Sec<br>Gr 9</th>
-                    <th>Sec<br>Gr 10</th><th>Sec<br>Gr 11</th><th>Sec<br>Gr 12</th>
-                    <th>Sec Total</th>
-                    <th>Grand Total</th>
+                    <th>Gr 1</th><th>Gr 2</th><th>Gr 3</th>
+                    <th>Gr 4</th><th>Gr 5</th><th>Gr 6</th><th>SPED</th>
+                    <th>Elem<br>Total</th>
+                    <th>Gr 7</th><th>Gr 8</th><th>Gr 9</th>
+                    <th>Gr 10</th><th>Gr 11</th><th>Gr 12</th>
+                    <th>Sec<br>Total</th>
+                    <th>Grand<br>Total</th>
                 </tr>
                 </thead>
                 <tbody>
                 <?php
-                // Full list of rows
+                // ---- Define all data rows ----
                 $rows = [
                     ['label' => '<strong>I. GENERAL INFORMATION</strong>', 'type' => 'section'],
                     ['label' => 'A. School Enrolment', 'type' => 'sub'],
                     ['label' => 'a. Male', 'field' => 'enrol_male'],
                     ['label' => 'b. Female', 'field' => 'enrol_female'],
+
                     ['label' => '<strong>II. HEALTH SERVICES</strong>', 'type' => 'section'],
                     ['label' => 'A. Health Appraisal', 'type' => 'sub'],
                     ['label' => '1. No. of Assessed:', 'type' => 'sub2'],
@@ -85,6 +92,7 @@
                     ['label' => 'c. NTP', 'field' => 'vision_ntp'],
                     ['label' => 'MALE', 'field' => 'vision_ntp_male'],
                     ['label' => 'FEMALE', 'field' => 'vision_ntp_female'],
+
                     ['label' => 'B. Treatment / Nursing Intervention Done', 'type' => 'sub'],
                     ['label' => 'a. Learners', 'field' => 'treatment_learners'],
                     ['label' => 'MALE', 'field' => 'treatment_male'],
@@ -92,6 +100,7 @@
                     ['label' => 'c. NTP', 'field' => 'treatment_ntp'],
                     ['label' => 'MALE', 'field' => 'treatment_ntp_male'],
                     ['label' => 'FEMALE', 'field' => 'treatment_ntp_female'],
+
                     ['label' => 'C. No. of Pupils Dewormed', 'type' => 'sub'],
                     ['label' => 'a. 1st Round', 'field' => 'deworm_1st'],
                     ['label' => 'MALE', 'field' => 'deworm_1st_male'],
@@ -99,6 +108,7 @@
                     ['label' => 'b. 2nd Round', 'field' => 'deworm_2nd'],
                     ['label' => 'MALE', 'field' => 'deworm_2nd_male'],
                     ['label' => 'FEMALE', 'field' => 'deworm_2nd_female'],
+
                     ['label' => 'D. No. of Pupils Given Iron Supplement', 'type' => 'sub'],
                     ['label' => 'a. Learners', 'field' => 'iron_learners'],
                     ['label' => 'E. No. of Pupils Immunized (Specify vaccine)', 'type' => 'sub'],
@@ -111,6 +121,7 @@
                     ['label' => 'c. Guidance Counselor', 'field' => 'referral_guidance'],
                     ['label' => 'd. Other facilities', 'field' => 'referral_other'],
                     ['label' => 'e. RHU/District/Provincial Hospital', 'field' => 'referral_hospital'],
+
                     ['label' => '<strong>III. HEALTH EDUCATION</strong>', 'type' => 'section'],
                     ['label' => 'A. No. of Classes given health lectures', 'field' => 'health_lectures'],
                     ['label' => 'B. No. of orientation training conducted to: a. Learners', 'field' => 'orientation_learners'],
@@ -125,11 +136,13 @@
                     ['label' => 'a. Health Activities/programs/contests', 'field' => 'resource_health_activities'],
                     ['label' => 'b. Class Discussion', 'field' => 'resource_class_discussion'],
                     ['label' => 'c. Health Clubs/Organization', 'field' => 'resource_health_clubs'],
+
                     ['label' => '<strong>IV. SCHOOL COMMUNITY ACTIVITIES FOR HEALTH AND NUTRITION</strong>', 'type' => 'section'],
                     ['label' => 'A. PTA/Homeroom Organization Meetings', 'field' => 'community_pta'],
                     ['label' => 'B. Parent Education Seminar/Workshop/Training', 'field' => 'community_parent_seminar'],
                     ['label' => 'C. Home Visits Conducted', 'field' => 'community_home_visits'],
                     ['label' => 'D. Hospital Visits made', 'field' => 'community_hospital_visits'],
+
                     ['label' => '<strong>V. COMMON SIGNS & SYMPTOMS</strong>', 'type' => 'section'],
                     ['label' => 'A. Nutritional Status', 'type' => 'sub'],
                     ['label' => 'a. Normal Weight', 'field' => 'nutrition_normal_weight'],
@@ -141,11 +154,13 @@
                     ['label' => 'g. Stunted', 'field' => 'nutrition_stunted'],
                     ['label' => 'h. Severely stunted', 'field' => 'nutrition_severe_stunted'],
                     ['label' => 'i. Tall', 'field' => 'nutrition_tall'],
+
                     ['label' => 'B. Vision / Auditory', 'type' => 'sub'],
                     ['label' => 'VISUAL - a. Passed', 'field' => 'vision_passed'],
                     ['label' => 'b. Failed', 'field' => 'vision_failed'],
                     ['label' => 'AUDITORY - a. Passed', 'field' => 'auditory_passed'],
                     ['label' => 'b. Failed', 'field' => 'auditory_failed'],
+
                     ['label' => 'C. Skin and Scalp', 'type' => 'sub'],
                     ['label' => 'a. Presence of Lice (Pediculosis)', 'field' => 'skin_lice'],
                     ['label' => 'b. Redness of Skin', 'field' => 'skin_redness'],
@@ -159,6 +174,7 @@
                     ['label' => 'j. Acne / Pimple', 'field' => 'skin_acne'],
                     ['label' => 'k. Capillary refill > 3 sec', 'field' => 'skin_capillary_refill'],
                     ['label' => 'l. Others, specify', 'field' => 'skin_others'],
+
                     ['label' => 'D. Eye and Ears', 'type' => 'sub'],
                     ['label' => 'a. Inflamed fluid', 'field' => 'eye_inflamed_fluid'],
                     ['label' => 'b. Eye Redness', 'field' => 'eye_redness'],
@@ -171,11 +187,13 @@
                     ['label' => 'i. Mucus Discharge', 'field' => 'ear_mucus'],
                     ['label' => 'j. Nosebleeding (Epistaxis)', 'field' => 'nosebleed'],
                     ['label' => 'k. Other, specify', 'field' => 'eye_ear_other'],
+
                     ['label' => 'E. Mouth / Neck / Throat', 'type' => 'sub'],
                     ['label' => 'a. Presence of Lesions', 'field' => 'mouth_lesions'],
                     ['label' => 'b. Inflamed Pharynx', 'field' => 'mouth_inflamed_pharynx'],
                     ['label' => 'c. Enlarged tonsils', 'field' => 'mouth_enlarged_tonsils'],
                     ['label' => 'd. Enlarged lymph nodes', 'field' => 'mouth_lymph_nodes'],
+
                     ['label' => 'F. Heart and Lungs', 'type' => 'sub'],
                     ['label' => 'a. Rales', 'field' => 'heart_rales'],
                     ['label' => 'b. Wheeze', 'field' => 'heart_wheeze'],
@@ -184,9 +202,11 @@
                     ['label' => 'e. Colds', 'field' => 'heart_colds'],
                     ['label' => 'f. Cough', 'field' => 'heart_cough'],
                     ['label' => 'g. Others, specify', 'field' => 'heart_other'],
+
                     ['label' => 'G. Deformities', 'type' => 'sub'],
                     ['label' => 'a. Acquired (Specify)', 'field' => 'deformity_acquired'],
                     ['label' => 'b. Congenital (Specify)', 'field' => 'deformity_congenital'],
+
                     ['label' => 'H. Abdomen', 'type' => 'sub'],
                     ['label' => 'a. Distended', 'field' => 'abdomen_distended'],
                     ['label' => 'b. Abdominal Pain', 'field' => 'abdomen_pain'],
@@ -195,21 +215,19 @@
                     ['label' => 'e. Others, specify', 'field' => 'abdomen_other'],
                 ];
 
-                // Render function: 7 elem inputs, elem total, 6 sec inputs, sec total, grand total
+                // Helper: render 8 elementary + 6 secondary inputs + totals
                 function renderRowCells($fieldKey, $report_data) {
-                    // Elementary: 7 inputs
-                    for ($i = 0; $i < 7; $i++) {
+                    // 8 elementary inputs
+                    for ($i = 0; $i < 8; $i++) {
                         $val = isset($report_data[$fieldKey]['elem'][$i]) ? $report_data[$fieldKey]['elem'][$i] : '';
                         echo '<td><input type="number" class="form-control form-control-sm" data-field="'.$fieldKey.'" data-level="elem" data-index="'.$i.'" value="'.$val.'"></td>';
                     }
-                    // Elementary total
                     echo '<td><input type="number" class="form-control form-control-sm elem-total" data-field="'.$fieldKey.'" readonly></td>';
-                    // Secondary: 6 inputs
-                    for ($i = 0; $i < 7; $i++) {
+                    // 6 secondary inputs
+                    for ($i = 0; $i < 6; $i++) {
                         $val = isset($report_data[$fieldKey]['sec'][$i]) ? $report_data[$fieldKey]['sec'][$i] : '';
                         echo '<td><input type="number" class="form-control form-control-sm" data-field="'.$fieldKey.'" data-level="sec" data-index="'.$i.'" value="'.$val.'"></td>';
                     }
-                    // Secondary total and grand total
                     echo '<td><input type="number" class="form-control form-control-sm sec-total" data-field="'.$fieldKey.'" readonly></td>';
                     echo '<td><input type="number" class="form-control form-control-sm grand-total" data-field="'.$fieldKey.'" readonly></td>';
                 }
@@ -217,7 +235,7 @@
                 $report_data = isset($report_data) ? $report_data : [];
                 foreach ($rows as $row):
                     if (isset($row['type'])) {
-                        $colspan = 18; // indicators + 8 elem + 1 e-total + 6 sec + 1 s-total + 1 grand = 18 columns
+                        $colspan = 18; // indicator + 8 elem + 1 e-total + 6 sec + 1 s-total + 1 grand = 18
                         if ($row['type'] == 'section')
                             echo '<tr class="section-header"><td colspan="'.$colspan.'">'.$row['label'].'</td></tr>';
                         elseif ($row['type'] == 'sub')
@@ -236,46 +254,57 @@
             </table>
         </div>
 
-        <!-- Remarks and signature -->
+        <!-- Other Signs & Symptoms (1-15) and Remarks -->
         <div class="mt-4 p-3 bg-white border rounded">
-            <div class="mb-3">
-                <label for="remarks" class="form-label"><strong>I. Other signs&Symptoms Noted</strong></label> <br>
-                <label>1.</label><textarea class="form-control" id="remarks" rows="1"><?= htmlspecialchars($report_data['remarks'] ?? '') ?></textarea><br>
-                <label>2.</label><textarea class="form-control" id="remarks" rows="1"><?= htmlspecialchars($report_data['remarks'] ?? '') ?></textarea><br>
-                <label>4.</label><textarea class="form-control" id="remarks" rows="1"><?= htmlspecialchars($report_data['remarks'] ?? '') ?></textarea><br>
-                <label>5.</label><textarea class="form-control" id="remarks" rows="1"><?= htmlspecialchars($report_data['remarks'] ?? '') ?></textarea><br>
-                <label>6.</label><textarea class="form-control" id="remarks" rows="1"><?= htmlspecialchars($report_data['remarks'] ?? '') ?></textarea><br>
-                <label>7.</label><textarea class="form-control" id="remarks" rows="1"><?= htmlspecialchars($report_data['remarks'] ?? '') ?></textarea><br>
-                <label>8.</label><textarea class="form-control" id="remarks" rows="1"><?= htmlspecialchars($report_data['remarks'] ?? '') ?></textarea><br>
-                <label>9.</label><textarea class="form-control" id="remarks" rows="1"><?= htmlspecialchars($report_data['remarks'] ?? '') ?></textarea><br>
-                <label>10.</label><textarea class="form-control" id="remarks" rows="1"><?= htmlspecialchars($report_data['remarks'] ?? '') ?></textarea>
+            <h5>I. Other Signs & Symptoms Noted</h5>
+            <div class="row">
+                <?php for ($i = 1; $i <= 15; $i++): ?>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label"><?= $i ?>.</label>
+                        <input type="text" class="form-control form-control-sm extra-field" data-key="other_sign_<?= $i ?>" value="<?= htmlspecialchars($report_data['other_sign_'.$i] ?? '') ?>">
+                    </div>
+                <?php endfor; ?>
             </div>
 
-        <!-- Remarks and signature -->
-        <div class="mt-4 p-3 bg-white border rounded">
-            <div class="mb-3">
+            <div class="mt-3">
                 <label for="remarks" class="form-label"><strong>VI. Remarks</strong></label>
-                <textarea class="form-control" id="remarks" rows="3"><?= htmlspecialchars($report_data['remarks'] ?? '') ?></textarea>
+                <textarea class="form-control extra-field" id="remarks" data-key="remarks" rows="3"><?= htmlspecialchars($report_data['remarks'] ?? '') ?></textarea>
             </div>
+
+            <!-- Signature area (static) -->
             <div class="row mt-4">
-                <div class="col-md-4">
-                    <p>Prepared by:</p><div class="sign-line"></div><p>Nurse II</p>
+                <div class="col-md-3">
+                    <p><strong>Prepared by:</strong></p>
+                    <input type="text" class="form-control form-control-sm extra-field" data-key="prepared_by" 
+                        value="<?= htmlspecialchars($report_data['prepared_by'] ?? '') ?>" placeholder="Name">
+                    <p class="mt-2">Nurse II</p>
                 </div>
-                <div class="col-md-4">
-                    <p>Noted by:</p><div class="sign-line"></div><p>Principal I</p><p>Date: ___________</p>
+                <div class="col-md-3">
+                    <p><strong>Noted by:</strong></p>
+                    <input type="text" class="form-control form-control-sm extra-field" data-key="noted_by" 
+                        value="<?= htmlspecialchars($report_data['noted_by'] ?? '') ?>" placeholder="Name">
+                    <p class="mt-2">Principal I</p>
+                    <p><strong>Date:</strong></p>
+                    <input type="text" class="form-control form-control-sm extra-field" data-key="date" 
+                        value="<?= htmlspecialchars($report_data['date'] ?? '') ?>" placeholder="Date">
                 </div>
-                <div class="col-md-4">
-                    <p>Approved by:</p><div class="sign-line"></div><p>Nurse II</p>
+                <div class="col-md-3">
+                    <p><strong>Approved by:</strong></p>
+                    <input type="text" class="form-control form-control-sm extra-field" data-key="approved_by" 
+                        value="<?= htmlspecialchars($report_data['approved_by'] ?? '') ?>" placeholder="Name">
+                    <p class="mt-2">Nurse II</p>
                 </div>
             </div>
         </div>
     </form>
 </div>
 
+<!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 $(function(){
+    // Recalculate totals for a given field
     function recalcTotals(fieldKey) {
         let elemTotal = 0, secTotal = 0;
         $(`input[data-field="${fieldKey}"][data-level="elem"]`).each(function(){
@@ -291,12 +320,16 @@ $(function(){
         $(`input.grand-total[data-field="${fieldKey}"]`).val(elemTotal + secTotal);
     }
 
+    // Trigger recalc on any numeric input change
     $(document).on('input', 'input[data-field][data-level]', function(){
         recalcTotals($(this).data('field'));
     });
 
+    // Save all data
     $('#saveDataBtn').click(function(){
         let allData = {};
+
+        // Numeric table data
         $('input[data-field][data-level]').each(function(){
             let field = $(this).data('field'), level = $(this).data('level'), idx = $(this).data('index');
             let val = $(this).val() === '' ? null : parseFloat($(this).val());
@@ -304,7 +337,12 @@ $(function(){
             if(level === 'elem') allData[field].elem[idx] = val;
             if(level === 'sec') allData[field].sec[idx] = val;
         });
-        allData['remarks'] = $('#remarks').val();
+
+        // Extra fields (Other signs & remarks)
+        $('.extra-field').each(function(){
+            let key = $(this).data('key');
+            allData[key] = $(this).val();
+        });
 
         $.ajax({
             url: '<?= site_url("shd_reports_controller/save_report_data/".$report->id) ?>',
@@ -314,9 +352,11 @@ $(function(){
             dataType: 'json',
             success: function(res){
                 if(res.status === 'success') alert('Data saved successfully!');
-                else alert('Error saving data');
+                else alert('Error saving data: ' + (res.message || ''));
             },
-            error: function(){ alert('Server error'); }
+            error: function(xhr, status, error){
+                alert('Server error: ' + (xhr.responseText || status));
+            }
         });
     });
 
@@ -341,9 +381,23 @@ $(function(){
                 if(res.status === 'success'){
                     alert('Data imported! Reloading...');
                     location.reload();
-                } else alert('Error: ' + res.message);
+                } else {
+                    alert('Error: ' + res.message);
+                }
             },
-            error: function(){ alert('Upload failed'); },
+            error: function(xhr, status, error){
+                var msg = 'Upload failed';
+                if (xhr.responseText) {
+                    try {
+                        var json = JSON.parse(xhr.responseText);
+                        if (json.message) msg = json.message;
+                        else msg = xhr.responseText;
+                    } catch(e) {
+                        msg = xhr.responseText;
+                    }
+                }
+                alert('Error: ' + msg);
+            },
             complete: function(){
                 $('#uploadExcelBtn').prop('disabled', false).html('<i class="fas fa-file-excel"></i> Upload Excel');
                 $('#excelFileInput').val('');
