@@ -23,7 +23,29 @@ class district_dashboard_model extends CI_Model {
     }
     
     /**
-     * Get school names in a district
+     * Get school IDs in a district. This should be the primary key used for dashboard matching.
+     */
+    private function get_district_school_ids($district_name) {
+        $district_id = $this->get_district_id_by_name($district_name);
+        if (!$district_id) {
+            return array();
+        }
+        
+        $query = $this->db->select('school_id')
+                         ->from('schools')
+                         ->where('school_district_id', $district_id)
+                         ->where('school_id IS NOT NULL')
+                         ->where('school_id !=', '')
+                         ->group_by('school_id')
+                         ->get();
+        
+        $school_ids = $query->result_array();
+        $school_ids = array_values(array_unique(array_filter(array_column($school_ids, 'school_id'))));
+        return $school_ids;
+    }
+
+    /**
+     * Backward-compatible fallback for older records that still depend on names.
      */
     private function get_district_school_names($district_name) {
         $district_id = $this->get_district_id_by_name($district_name);
@@ -45,10 +67,10 @@ class district_dashboard_model extends CI_Model {
      * Now uses the efficient approach from nutritional_model with school level filtering
      */
     public function get_district_nutritional_data($district_name, $assessment_type = 'baseline', $school_level = 'all') {
-        // Get all school names in the district
+        $school_ids = $this->get_district_school_ids($district_name);
         $school_names = $this->get_district_school_names($district_name);
-        
-        if (empty($school_names)) {
+
+        if (empty($school_ids) && empty($school_names)) {
             return [
                 'nutritionalData' => [],
                 'grandTotal' => 0,
@@ -57,9 +79,13 @@ class district_dashboard_model extends CI_Model {
             ];
         }
         
-        // Build query with filters
-        $this->db->where_in('school_name', $school_names);
-        $this->db->where('school_district', $district_name);
+        // Prefer school_id to avoid mismatches when a school's displayed name is changed in user accounts.
+        if (!empty($school_ids)) {
+            $this->db->where_in('school_id', $school_ids);
+        } else {
+            $this->db->where_in('school_name', $school_names);
+            $this->db->where('school_district', $district_name);
+        }
         $this->db->where('assessment_type', $assessment_type);
         $this->db->where('is_deleted', 0);
         
@@ -255,43 +281,41 @@ class district_dashboard_model extends CI_Model {
      * UPDATED: Get assessment counts with school level filtering
      */
     public function get_assessment_counts($district_name, $school_level = 'all') {
+        $school_ids = $this->get_district_school_ids($district_name);
         $school_names = $this->get_district_school_names($district_name);
-        
-        if (empty($school_names)) {
+
+        if (empty($school_ids) && empty($school_names)) {
             return ['baseline' => 0, 'midline' => 0, 'endline' => 0];
         }
-        
-        $this->db->where_in('school_name', $school_names);
-        $this->db->where('school_district', $district_name);
-        $this->db->where('is_deleted', 0);
-        
-        // Apply school level filtering
-        if ($school_level !== 'all') {
-            $this->apply_school_level_filter($school_level);
-        }
-        
-        $baseline = $this->db->where('assessment_type', 'baseline')->count_all_results('nutritional_assessments');
-        
-        // Reset for midline
+
+        $apply_filters = function($type) use ($school_ids, $school_names, $district_name, $school_level) {
+            $this->db->where('is_deleted', 0);
+            $this->db->where('assessment_type', $type);
+
+            if (!empty($school_ids)) {
+                $this->db->where_in('school_id', $school_ids);
+            } else {
+                $this->db->where_in('school_name', $school_names);
+                $this->db->where('school_district', $district_name);
+            }
+
+            if ($school_level !== 'all') {
+                $this->apply_school_level_filter($school_level);
+            }
+        };
+
         $this->db->reset_query();
-        $this->db->where_in('school_name', $school_names);
-        $this->db->where('school_district', $district_name);
-        $this->db->where('is_deleted', 0);
-        if ($school_level !== 'all') {
-            $this->apply_school_level_filter($school_level);
-        }
-        $midline = $this->db->where('assessment_type', 'midline')->count_all_results('nutritional_assessments');
-        
-        // Reset for endline
+        $apply_filters('baseline');
+        $baseline = $this->db->count_all_results('nutritional_assessments');
+
         $this->db->reset_query();
-        $this->db->where_in('school_name', $school_names);
-        $this->db->where('school_district', $district_name);
-        $this->db->where('is_deleted', 0);
-        if ($school_level !== 'all') {
-            $this->apply_school_level_filter($school_level);
-        }
-        $endline = $this->db->where('assessment_type', 'endline')->count_all_results('nutritional_assessments');
-        
+        $apply_filters('midline');
+        $midline = $this->db->count_all_results('nutritional_assessments');
+
+        $this->db->reset_query();
+        $apply_filters('endline');
+        $endline = $this->db->count_all_results('nutritional_assessments');
+
         return [
             'baseline' => $baseline,
             'midline' => $midline,
@@ -352,7 +376,7 @@ class district_dashboard_model extends CI_Model {
             return array();
         }
         
-        $query = $this->db->select('id, name, school_id as code')
+        $query = $this->db->select('id, name, school_id, school_id as code')
                          ->from('schools')
                          ->where('school_district_id', $district_id)
                          ->get();
@@ -361,16 +385,22 @@ class district_dashboard_model extends CI_Model {
         
         $result = array();
         foreach ($schools as $school) {
-            // Check if school has any assessments
-            $has_submitted = $this->db->from('nutritional_assessments')
-                                     ->where('school_name', $school['name'])
-                                     ->where('school_district', $district_name)
-                                     ->where('is_deleted', 0)
-                                     ->count_all_results() > 0;
+            $school_id = !empty($school['school_id']) ? $school['school_id'] : null;
+
+            $this->db->from('nutritional_assessments');
+            $this->db->where('is_deleted', 0);
+            if (!empty($school_id)) {
+                $this->db->where('school_id', $school_id);
+            } else {
+                $this->db->where('school_name', $school['name']);
+                $this->db->where('school_district', $district_name);
+            }
+            $has_submitted = $this->db->count_all_results() > 0;
             
             $result[] = array(
                 'name' => $school['name'],
                 'code' => $school['code'],
+                'school_id' => $school_id,
                 'has_submitted' => $has_submitted
             );
         }
