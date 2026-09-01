@@ -172,43 +172,31 @@ class Division_dashboard_controller extends CI_Controller {
         $user_district = $this->session->userdata('district') ?? 'Unknown District';
         
         $data = array();
-        
-        // Parse user district
         $parsed_district = $user_district ? preg_replace('/\s+(District|Division)$/', '', $user_district) : 'Unknown';
         
-        // ===== ASSESSMENT TYPE HANDLING =====
-        // Get assessment type from URL, POST, or session
+        // ---- Assessment Type ----
         $assessment_type = $this->input->get('assessment_type') ?: 
-                          ($this->input->post('assessment_type') ?: 
-                          ($this->session->userdata('division_assessment_type') ?: 'baseline'));
-        
-        // Validate assessment type
+                        ($this->input->post('assessment_type') ?: 
+                        ($this->session->userdata('division_assessment_type') ?: 'baseline'));
         if (!in_array($assessment_type, ['baseline', 'midline', 'endline'])) {
             $assessment_type = 'baseline';
         }
-        
-        // Save to session
         $this->session->set_userdata('division_assessment_type', $assessment_type);
         $data['assessment_type'] = $assessment_type;
         
-        // ===== SCHOOL LEVEL FILTER HANDLING =====
-        // Get school level filter from URL or session
+        // ---- School Level ----
         $school_level = $this->input->get('school_level') ?: 
-                       ($this->session->userdata('division_school_level') ?: 'all');
-        
-        // Validate school level
+                    ($this->session->userdata('division_school_level') ?: 'all');
         $valid_levels = ['all', 'elementary', 'secondary', 'integrated', 'integrated_elementary', 'integrated_secondary', 'shs_only'];
         if (!in_array($school_level, $valid_levels)) {
             $school_level = 'all';
         }
-        
-        // Save to session
         $this->session->set_userdata('division_school_level', $school_level);
         $data['school_level'] = $school_level;
-
-        // ===== LEGISLATIVE DISTRICT FILTER HANDLING =====
+        
+        // ---- Legislative District ----
         $legislative_district_id = $this->input->get('legislative_district_id') ?: 
-                                   ($this->session->userdata('division_legislative_district_id') ?: null);
+                                ($this->session->userdata('division_legislative_district_id') ?: null);
         if ($legislative_district_id !== null && $legislative_district_id !== '') {
             $legislative_district_id = (int)$legislative_district_id;
             if ($legislative_district_id < 1) {
@@ -219,132 +207,99 @@ class Division_dashboard_controller extends CI_Controller {
         $data['selected_legislative_district_id'] = $legislative_district_id;
         $data['legislative_districts'] = $this->division_dashboard_model->get_legislative_districts();
         
-        // ===== GET NUTRITIONAL DATA WITH FILTERS =====
-        // Get nutritional data for entire division with assessment type, school level, and district filters
-        $data['nutritional_data'] = $this->division_dashboard_model->get_division_nutritional_data($assessment_type, $school_level, $legislative_district_id);
-        $data['grand_total'] = $this->division_dashboard_model->get_division_grand_total($assessment_type, $school_level, $legislative_district_id);
+        // ---- Nutritional Data (direct query, no cache) ----
+        $data['nutritional_data'] = $this->division_dashboard_model->get_division_nutritional_data(
+            $assessment_type,
+            $school_level,
+            $legislative_district_id
+        );
         
-        // Get assessment counts
-        $assessment_counts = $this->division_dashboard_model->get_assessment_counts_division($school_level, $legislative_district_id);
+        $data['grand_total'] = $this->division_dashboard_model->get_division_grand_total(
+            $assessment_type,
+            $school_level,
+            $legislative_district_id
+        );
+        
+        $assessment_counts = $this->division_dashboard_model->get_assessment_counts_division(
+            $school_level,
+            $legislative_district_id
+        );
         $data['baseline_count'] = $assessment_counts['baseline'];
-        $data['midline_count'] = $assessment_counts['midline']; // NEW: Midline count
-        $data['endline_count'] = $assessment_counts['endline'];
+        $data['midline_count']  = $assessment_counts['midline'];
+        $data['endline_count']  = $assessment_counts['endline'];
         
-        // ===== DISTRICT AND SCHOOLS DATA =====
-        // Get all districts with their schools and submission stats DIRECTLY
-        $all_districts = $this->division_dashboard_model->get_all_districts($legislative_district_id);
-        $data['district_schools_summary'] = [];
-        
-        
+        // ---- District Summary (optimised single query) ----
+        $district_summaries = $this->division_dashboard_model->get_district_summary(
+            $assessment_type,
+            $legislative_district_id
+        );
         $total_schools = 0;
         $submitted_schools = 0;
-        
-        foreach ($all_districts as $district) {
-            $district_name = $district['name'];
-            $schools = $this->division_dashboard_model->get_schools_by_district($district_name, $assessment_type);
-            
-            $district_total = count($schools);
-            $district_submitted = 0;
-            
-            foreach ($schools as $school) {
-                if ($school['has_submitted']) {
-                    $district_submitted++;
-                }
-            }
-            
+        $data['district_schools_summary'] = [];
+        foreach ($district_summaries as $row) {
+            $district_name = $row['district_name'];
+            $district_total = (int)$row['total_schools'];
+            $district_submitted = (int)$row['submitted_schools'];
             $total_schools += $district_total;
             $submitted_schools += $district_submitted;
             
             $district_completion = $district_total > 0 ? round(($district_submitted / $district_total) * 100) : 0;
-            $district_status = $district_total > 0 ? 
-                ($district_submitted == $district_total ? 'Completed' : 
-                 ($district_submitted > 0 ? 'In Progress' : 'Not Started')) : 'No Schools';
+            $district_status = $district_total > 0 ?
+                ($district_submitted == $district_total ? 'Completed' :
+                ($district_submitted > 0 ? 'In Progress' : 'Not Started')) : 'No Schools';
             
             $data['district_schools_summary'][$district_name] = [
-                'total_schools' => $district_total,
+                'total_schools'     => $district_total,
                 'submitted_schools' => $district_submitted,
-                'completion_rate' => $district_completion,
-                'status' => $district_status
-                
+                'completion_rate'   => $district_completion,
+                'status'            => $district_status
             ];
         }
         
-        // If totals are zero (unexpected), fall back to model counts to ensure accuracy
-        if ($total_schools == 0) {
-            $total_schools = $this->division_dashboard_model->count_total_schools($school_level);
-        }
-
-        // if ($submitted_schools == 0) {
-        //     // submitted_map was built earlier
-        //     $submitted_schools = isset($submitted_map) && is_array($submitted_map) ? count($submitted_map) : $submitted_schools;
-        // }
-
-        // Calculate overall completion rate
+        // Overall stats
         $overall_completion = $total_schools > 0 ? round(($submitted_schools / $total_schools) * 100) : 0;
-        
-        // Set overall stats
         $data['overall_stats'] = [
-            'total_schools' => $total_schools,
-            'total_submitted' => $submitted_schools,
-            'overall_completion' => $overall_completion
+            'total_schools'     => $total_schools,
+            'total_submitted'   => $submitted_schools,
+            'overall_completion'=> $overall_completion
         ];
         
-        // For backward compatibility
+        // User info
         $data['user_district'] = $user_district;
-        $data['user_schools'] = $this->division_dashboard_model->get_user_schools($user_id, $user_type, $user_district);
         $data['is_division_account'] = strpos(strtolower($user_district), 'division') !== false;
         $data['parsed_user_district'] = $parsed_district;
-        // Load display name from users table `name` column using current user id
+        
         $display_name = '';
         if (!empty($user_id)) {
-            $query = $this->db->select('name')
-                              ->from('users')
-                              ->where('id', $user_id)
-                              ->limit(1)
-                              ->get();
+            $query = $this->db->select('name')->from('users')->where('id', $user_id)->limit(1)->get();
             if ($query && $query->num_rows() > 0) {
-                $row = $query->row();
-                $display_name = !empty($row->name) ? $row->name : '';
+                $display_name = $query->row()->name ?? '';
             }
         }
         $data['user_name'] = $display_name;
         
-        // Get district reports for compatibility (optional)
-        $data['district_reports'] = $this->division_dashboard_model->get_district_reports();
-        $data['district_stats'] = $this->calculate_division_stats($data['district_reports']);
-        
-        // Check if we have data
         $data['has_data'] = !empty($data['nutritional_data']);
         $data['processed_count'] = $data['grand_total'];
-        
         $data['title'] = 'Division Dashboard';
         
-        // Load the full-page division dashboard view
         $this->load->view('division_dashboard', $data);
     }
 
     public function get_district_schools() {
-        // Log the request for debugging
-        log_message('debug', 'get_district_schools called with district: ' . $this->input->get('district'));
-        
-        $this->output->set_content_type('application/json');
-        
-        try {
-            $district_name = $this->input->get('district') ?: '';
-            if (empty($district_name)) {
-                echo json_encode(['success' => false, 'message' => 'District name required']);
-                return;
-            }
-            
-            $assessment_type = $this->session->userdata('division_assessment_type') ?: 'baseline';
-            $schools = $this->division_dashboard_model->get_schools_by_district($district_name, $assessment_type);
-            
-            echo json_encode(['success' => true, 'schools' => $schools]);
-            
-        } catch (Exception $e) {
-            log_message('error', 'get_district_schools error: ' . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
+        $district_name = $this->input->get('district');
+        if (empty($district_name)) {
+            echo json_encode(['success' => false, 'message' => 'District name required']);
+            return;
         }
+        // Get district ID
+        $district = $this->db->select('id')->from('school_districts')->where('name', $district_name)->get()->row();
+        if (!$district) {
+            echo json_encode(['success' => false, 'message' => 'District not found']);
+            return;
+        }
+        $assessment_type = $this->session->userdata('division_assessment_type') ?: 'baseline';
+        $schools = $this->division_dashboard_model->get_schools_with_status($district->id, $assessment_type);
+        echo json_encode(['success' => true, 'schools' => $schools]);
     }
     
     /**

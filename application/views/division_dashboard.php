@@ -13,6 +13,27 @@
         .sex-row-female { background-color: #fce4ec; }
         .sex-row-total { background-color: #f5f5f5; font-weight: bold; }
         .grade-separator td { border-top: 2px solid #dee2e6 !important; }
+        /* Print adjustments: expand table and optimize for landscape print (copied from user dashboard) */
+        @page { size: A4 landscape; margin: 0.5in; }
+        @media print {
+            #tableContainer, #tableContainer .table {
+                width: calc(100% + 3in) !important;
+                max-width: none !important;
+                overflow: visible !important;
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+            #page-content-wrapper, body, html { width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; }
+            #tableContainer .table { table-layout: auto !important; font-size: 13px !important; margin-bottom: 0 !important; }
+            .card, .card-body, #tableContainer { margin-bottom: 0 !important; }
+            table { page-break-after: auto; }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+            tbody { display: table-row-group; }
+            tr { page-break-inside: avoid; }
+            .no-print { display: none !important; }
+            body { -webkit-print-color-adjust: exact; color-adjust: exact; }
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -984,7 +1005,6 @@
         // identifiers for client-side print header
         school_id: '<?= addslashes($this->session->userdata('school_id') ?? '') ?>',
         school_name: '<?= addslashes($this->session->userdata('school_name') ?? '') ?>',
-        user_name: '<?= addslashes($this->session->userdata('name') ?? ($auth_user['name'] ?? '')) ?>'
     };
     </script>
     <script src="<?= base_url(ASSETS_PATH . '/js/division_dashboard.js'); ?>"></script>

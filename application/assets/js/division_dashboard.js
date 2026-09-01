@@ -255,7 +255,6 @@ $(document).ready(function() {
             const tableHtml = isElemVisible ? elemTable.outerHTML : (isShsVisible ? shsTable.outerHTML : secTable.outerHTML);
             const assessmentType = window.DivisionDashboardConfig.assessment_type_display || '';
             let schoolLevelDisplay = window.DivisionDashboardConfig.school_level_display || '';
-            const reportDate = new Date().toLocaleDateString();
 
             try {
                 function pruneEmptyColumns(tableEl) {
@@ -288,60 +287,45 @@ $(document).ready(function() {
                     } catch (e) { return tableEl; }
                 }
 
-                // set document title using user or school name when available (match user dashboard layout)
-                const _docName = (window.DivisionDashboardConfig && (window.DivisionDashboardConfig.user_name || window.DivisionDashboardConfig.school_name || window.DivisionDashboardConfig.user)) || '';
-                const _docTitle = _docName ? (_docName + ' Nutritional Status Report') : 'Nutritional Status Report';
+                // Fixed generic title – no user name, no date
+                const _docTitle = 'Nutritional Status Report';
                 const _docTitleEsc = String(_docTitle).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
                 win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + _docTitleEsc + '</title>' +
                     `
-                    <style>
-                        /* Ask browsers to preserve background colors when printing */
-                        *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                        @page{size:Legal landscape;margin:8mm;}
-                        body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:4px;color:#000;font-size:7px;line-height:1.05;}
-                        table{width:100%;border-collapse:collapse;table-layout:auto;font-size:7px;margin:0;}
-                        th,td{border:0.5px solid #dee2e6;padding:2px;word-wrap:break-word;line-height:1.05;vertical-align:top;}
-                        th:first-child, td:first-child{width:80px;min-width:80px;max-width:80px;}
-                        th:nth-child(2), td:nth-child(2){width:30px;min-width:30px;max-width:30px;}
-                        thead{display:table-header-group;} tfoot{display:table-footer-group;} tbody{display:table-row-group;}
-                        tr, td, th {page-break-inside: avoid; page-break-after: auto;}
-                        .no-print{display:none!important;}
-                        h3{font-size:10px;margin:0 0 2px 0;font-weight:bold;}
-                        p{font-size:7px;margin:0 0 4px 0;}
-                        .print-header{text-align:center;margin-bottom:10px;}
-                    </style>
-                    ` +
+                        <style>
+                            /* Preserve background colors for printing */
+                            *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                            @page{size:Legal landscape;margin:8mm;}
+                            body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:6px;color:#000;font-size:12px;line-height:1.15;}
+                            table{width:100%;border-collapse:collapse;table-layout:auto;font-size:11px;margin:0;}
+                            th,td{border:0.5px solid #dee2e6;padding:4px;word-wrap:break-word;line-height:1.1;vertical-align:top;}
+                            th:first-child, td:first-child{width:100px;min-width:60px;max-width:180px;}
+                            th:nth-child(2), td:nth-child(2){width:40px;min-width:30px;max-width:80px;}
+                            thead{display:table-header-group;} tfoot{display:table-footer-group;} tbody{display:table-row-group;}
+                            tr, td, th {page-break-inside: avoid; page-break-after: auto;}
+                            .no-print{display:none!important;}
+                            h3{font-size:14px;margin:0 0 4px 0;font-weight:bold;}
+                            p{font-size:11px;margin:0 0 6px 0;}
+                            .print-header{text-align:center;margin-bottom:10px;}
+                        </style>
+                        ` +
                     '</head><body>');
-            function escHtml(str) { return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-            function getQueryParam(name) { const params = new URLSearchParams(window.location.search); return params.get(name) || ''; }
-            function findSchoolName() {
-                if (window.DivisionDashboardConfig && window.DivisionDashboardConfig.school_name) return window.DivisionDashboardConfig.school_name;
-                const ps = document.querySelectorAll('p');
-                for (let p of ps) {
-                    const txt = (p.textContent || '').trim();
-                    if (txt.startsWith('Showing nutritional data for')) {
-                        const parts = txt.split('Showing nutritional data for');
-                        if (parts[1]) return parts[1].trim();
-                    }
+                function escHtml(str) { return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+                // Helper to get school ID (if needed)
+                function findSchoolId() {
+                    if (window.DivisionDashboardConfig && window.DivisionDashboardConfig.school_id)
+                        return window.DivisionDashboardConfig.school_id;
+                    const input = document.querySelector('input[name="school_id"]');
+                    if (input && input.value) return input.value;
+                    const params = new URLSearchParams(window.location.search);
+                    return params.get('school_id') || params.get('school') || '';
                 }
-                const sidebarName = document.querySelector('.main-sidebar-text h6');
-                if (sidebarName && sidebarName.textContent.trim()) return sidebarName.textContent.trim();
-                return getQueryParam('school_name') || getQueryParam('school') || '';
-            }
-            function findSchoolId() {
-                if (window.DivisionDashboardConfig && window.DivisionDashboardConfig.school_id) return window.DivisionDashboardConfig.school_id;
-                const input = document.querySelector('input[name="school_id"]');
-                if (input && input.value) return input.value;
-                return getQueryParam('school_id') || getQueryParam('school') || '';
-            }
 
-            const uName = (window.DivisionDashboardConfig && (window.DivisionDashboardConfig.user_name || window.DivisionDashboardConfig.user)) || '';
-            const sName = findSchoolName();
-            const sId = findSchoolId();
-            const titlePrefix = uName || sName ? (escHtml(uName || '') + (uName && sName ? '/' + escHtml(sName) : (!uName ? escHtml(sName) : ''))) : '';
-            const headerTitle = titlePrefix ? (titlePrefix + ' Nutritional Status Report - ' + escHtml(assessmentType)) : ('Nutritional Status Report - ' + escHtml(sName || ''));
-            const idSuffix = sId ? (' | ID: ' + escHtml(sId)) : '';
+                const sId = findSchoolId();
+
                 // Provide a default display label for SHS if not already set
                 if (!schoolLevelDisplay) {
                     switch(window.DivisionDashboardConfig.school_level) {
@@ -352,48 +336,54 @@ $(document).ready(function() {
                     }
                 }
 
+                // --- HEADER: only generic title, no user or school name ---
+                const headerTitle = 'Nutritional Status Report';
+                const idSuffix = sId ? (' | ID: ' + escHtml(sId)) : '';
+
                 win.document.write('<div class="print-header"><h3>' + headerTitle + idSuffix + '</h3><p><strong>Assessment Type:</strong> ' + escHtml(assessmentType) + ' | <strong>School Level:</strong> ' + escHtml(schoolLevelDisplay) + ' | <strong>School ID:</strong> ' + escHtml(sId || '') + '</p></div>');
-            try {
-                const clone = (new DOMParser()).parseFromString(tableHtml, 'text/html').body.firstChild.cloneNode(true);
-                const hidden = document.createElement('div');
-                hidden.style.position = 'fixed'; hidden.style.left = '-9999px'; hidden.style.top = '-9999px'; hidden.style.visibility = 'hidden';
-                document.body.appendChild(hidden);
-                hidden.appendChild(clone);
 
                 try {
-                    // Inline computed background (including images/gradients), color and border for all elements
-                    const elems = clone.querySelectorAll('*');
-                    elems.forEach(el => {
-                        try {
-                            const cs = window.getComputedStyle(el);
-                            if (!cs) return;
-                            const bg = cs.backgroundColor;
-                            const bgImg = cs.backgroundImage;
-                            const isBgVisible = bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent';
-                            if (isBgVisible) {
-                                el.style.backgroundColor = bg;
-                            }
-                            if (bgImg && bgImg !== 'none') {
-                                el.style.backgroundImage = bgImg;
-                                el.style.backgroundRepeat = cs.backgroundRepeat || '';
-                                el.style.backgroundSize = cs.backgroundSize || '';
-                                el.style.backgroundPosition = cs.backgroundPosition || '';
-                                el.style.backgroundClip = cs.backgroundClip || '';
-                            }
-                            if (cs.color) el.style.color = cs.color;
-                            if (cs.borderColor) el.style.borderColor = cs.borderColor;
-                            el.style.webkitPrintColorAdjust = 'exact';
-                            el.style.printColorAdjust = 'exact';
-                        } catch (inner) { /* ignore per-element failures */ }
-                    });
-                } catch (ie) { /* ignore */ }
+                    const clone = (new DOMParser()).parseFromString(tableHtml, 'text/html').body.firstChild.cloneNode(true);
+                    const hidden = document.createElement('div');
+                    hidden.style.position = 'fixed'; hidden.style.left = '-9999px'; hidden.style.top = '-9999px'; hidden.style.visibility = 'hidden';
+                    document.body.appendChild(hidden);
+                    hidden.appendChild(clone);
 
-                const pruned = pruneEmptyColumns(clone);
-                win.document.write(pruned.outerHTML);
-                document.body.removeChild(hidden);
-            } catch (e) {
-                win.document.write(tableHtml);
-            }
+                    try {
+                        // Inline computed background, color, and border for all elements
+                        const elems = clone.querySelectorAll('*');
+                        elems.forEach(el => {
+                            try {
+                                const cs = window.getComputedStyle(el);
+                                if (!cs) return;
+                                const bg = cs.backgroundColor;
+                                const bgImg = cs.backgroundImage;
+                                const isBgVisible = bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent';
+                                if (isBgVisible) {
+                                    el.style.backgroundColor = bg;
+                                }
+                                if (bgImg && bgImg !== 'none') {
+                                    el.style.backgroundImage = bgImg;
+                                    el.style.backgroundRepeat = cs.backgroundRepeat || '';
+                                    el.style.backgroundSize = cs.backgroundSize || '';
+                                    el.style.backgroundPosition = cs.backgroundPosition || '';
+                                    el.style.backgroundClip = cs.backgroundClip || '';
+                                }
+                                if (cs.color) el.style.color = cs.color;
+                                if (cs.borderColor) el.style.borderColor = cs.borderColor;
+                                el.style.webkitPrintColorAdjust = 'exact';
+                                el.style.printColorAdjust = 'exact';
+                            } catch (inner) { /* ignore per-element failures */ }
+                        });
+                    } catch (ie) { /* ignore */ }
+
+                    const pruned = pruneEmptyColumns(clone);
+                    win.document.write(pruned.outerHTML);
+                    document.body.removeChild(hidden);
+                } catch (e) {
+                    win.document.write(tableHtml);
+                }
+
                 win.document.write('</body></html>');
                 win.document.close();
 

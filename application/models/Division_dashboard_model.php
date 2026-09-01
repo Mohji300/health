@@ -174,61 +174,24 @@ class division_dashboard_model extends CI_Model {
     }
 
     /**
-     * NEW: Apply school level filter to queries
+     * Apply school level filter using the `school_level` column.
+     * Assumes `s` is the alias for the schools table.
      */
-    private function apply_school_level_filter($school_level, $grade = null) {
-        if ($school_level === 'all') {
-            return;
-        }
-        
-        if ($school_level === 'secondary') {
-            $this->db->where("(
-                school_name LIKE '%High%' OR 
-                school_name LIKE '%National High School%' OR
-                school_name LIKE '%NHS%' OR
-                school_name LIKE '%Secondary%' OR
-                school_name LIKE '%HighSchool%'
-                AND school_name NOT LIKE '%Integrated%'
-            )");
-        } 
-        elseif ($school_level === 'elementary') {
-            $this->db->where("(
-                school_name NOT LIKE '%High%' AND 
-                school_name NOT LIKE '%Secondary%' AND
-                school_name NOT LIKE '%Integrated%' AND
-                school_name NOT LIKE '%NHS%' AND
-                school_name NOT LIKE '%HighSchool%'
-            )");
-        }
-        elseif ($school_level === 'shs_only') {
-        $this->db->where("(
-            school_name LIKE '%Senior High%' OR 
-            school_name LIKE '%SHS%' OR
-            school_name NOT LIKE '%Elementary%' AND school_name NOT LIKE '%High School%' AND school_name NOT LIKE '%NHS%'
-        )");
-        }
+    private function apply_school_level_filter($school_level) {
+        if ($school_level === 'all') return;
 
-        elseif ($school_level === 'integrated') {
-            $this->db->where("school_name LIKE '%Integrated%'");
-        }
-        elseif ($school_level === 'integrated_elementary') {
-            $this->db->where("school_name LIKE '%Integrated%'");
-            if ($grade) {
-                $elementary_grades = ['Kinder', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'SPED'];
-                $this->db->where_in('grade_level', $elementary_grades);
-            }
-        }
-        elseif ($school_level === 'integrated_secondary') {
-            $this->db->where("school_name LIKE '%Integrated%'");
-            if ($grade) {
-                $secondary_grades = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
-                $this->db->where_in('grade_level', $secondary_grades);
-            }
-        }
-        elseif ($school_level === 'shs_only') {
-            if ($grade) {
-                $this->db->where_in('grade_level', ['Grade 11', 'Grade 12']);
-            }
+        // Map UI levels to column values
+        $level_map = [
+            'elementary'           => 'elementary',
+            'secondary'            => 'secondary',
+            'integrated'           => 'integrated',
+            'shs_only'             => 'shs_only',
+            'integrated_elementary' => 'integrated',
+            'integrated_secondary'  => 'integrated'
+        ];
+
+        if (isset($level_map[$school_level])) {
+            $this->db->where('s.school_level', $level_map[$school_level]);
         }
     }
     
@@ -316,95 +279,63 @@ class division_dashboard_model extends CI_Model {
     }
     
     /**
-     * ENHANCED: Get schools by district name with submission status
+     * Get schools for a district with assessment status in one query
      */
-    public function get_schools_by_district($district_name, $assessment_type = null) {
-        // Get district ID
-        $district = $this->db->select('id')
-                            ->from('school_districts')
-                            ->where('name', $district_name)
-                            ->limit(1)
-                            ->get()
-                            ->row();
-        
-        if (!$district) {
-            return array();
-        }
-        
-        // Get schools with their IDs - IMPORTANT: Get both id and school_id
-        $schools_query = $this->db->select('id, name, school_id as code, school_id')
-                                ->from('schools')
-                                ->where('school_district_id', $district->id)
-                                ->order_by('name')
-                                ->get();
-        
-        $schools = array();
-        if ($schools_query->num_rows() > 0) {
-            foreach ($schools_query->result() as $row) {
-                // Use school_id (the official school code) for checking, NOT the auto-increment id
-                // This matches with nutritional_assessments.school_id
-                
-                // Check for baseline assessments using school_id (official code)
-                $has_baseline = $this->db->from('nutritional_assessments')
-                                        ->where('school_id', $row->school_id)  // Use school_code, not id
-                                        ->where('is_deleted', 0)
-                                        ->where('assessment_type', 'baseline')
-                                        ->count_all_results() > 0;
-                
-                // Check for midline assessments using school_id (official code)
-                $has_midline = $this->db->from('nutritional_assessments')
-                                    ->where('school_id', $row->school_id)  // Use school_code, not id
-                                    ->where('is_deleted', 0)
-                                    ->where('assessment_type', 'midline')
-                                    ->count_all_results() > 0;
-                
-                // Check for endline assessments using school_id (official code)
-                $has_endline = $this->db->from('nutritional_assessments')
-                                    ->where('school_id', $row->school_id)  // Use school_code, not id
-                                    ->where('is_deleted', 0)
-                                    ->where('assessment_type', 'endline')
-                                    ->count_all_results() > 0;
-                
-                // If a specific assessment type is requested, also include the filtered result
-                $has_submitted = false;
-                if (!empty($assessment_type)) {
-                    switch($assessment_type) {
-                        case 'baseline':
-                            $has_submitted = $has_baseline;
-                            break;
-                        case 'midline':
-                            $has_submitted = $has_midline;
-                            break;
-                        case 'endline':
-                            $has_submitted = $has_endline;
-                            break;
-                        default:
-                            $has_submitted = $has_baseline || $has_midline || $has_endline;
-                    }
-                } else {
-                    $has_submitted = $has_baseline || $has_midline || $has_endline;
-                }
-                
-                $schools[] = array(
-                    'id' => $row->id,
-                    'name' => $row->name,
-                    'code' => $row->code,
-                    'school_id' => $row->school_id, // Add the official school code
-                    'has_baseline' => $has_baseline,
-                    'has_midline' => $has_midline,
-                    'has_endline' => $has_endline,
-                    'has_submitted' => $has_submitted,
-                    'assessments' => array(
-                        'baseline' => $has_baseline,
-                        'midline' => $has_midline,
-                        'endline' => $has_endline,
-                        'any' => $has_baseline || $has_midline || $has_endline
-                    )
-                );
+    public function get_schools_with_status($district_id, $assessment_type = null) {
+        $this->db->select("
+            s.id,
+            s.name,
+            s.school_id AS code,
+            s.school_id,
+            MAX(CASE WHEN na.assessment_type = 'baseline' THEN 1 ELSE 0 END) AS has_baseline,
+            MAX(CASE WHEN na.assessment_type = 'midline'  THEN 1 ELSE 0 END) AS has_midline,
+            MAX(CASE WHEN na.assessment_type = 'endline'  THEN 1 ELSE 0 END) AS has_endline
+        ");
+        $this->db->from('schools s');
+        $this->db->join('nutritional_assessments na', 's.school_id = na.school_id AND na.is_deleted = 0', 'left');
+        $this->db->where('s.school_district_id', $district_id);
+        $this->db->group_by('s.id, s.name, s.school_id');
+        $query = $this->db->get();
+        $schools = $query->result_array();
+
+        // Add a computed 'has_submitted' flag for the requested assessment type
+        foreach ($schools as &$school) {
+            $school['has_submitted'] = false;
+            if ($assessment_type) {
+                $key = 'has_' . $assessment_type;
+                $school['has_submitted'] = isset($school[$key]) && $school[$key] == 1;
+            } else {
+                $school['has_submitted'] = ($school['has_baseline'] || $school['has_midline'] || $school['has_endline']) == 1;
             }
+            // keep the assessments array for compatibility
+            $school['assessments'] = [
+                'baseline' => (bool)$school['has_baseline'],
+                'midline'  => (bool)$school['has_midline'],
+                'endline'  => (bool)$school['has_endline'],
+                'any'      => (bool)($school['has_baseline'] || $school['has_midline'] || $school['has_endline'])
+            ];
         }
-        
         return $schools;
+    }
+
+    /**
+     * Get district summary (total and submitted schools) for the given assessment type
+     */
+    public function get_district_summary($assessment_type, $legislative_district_id = null) {
+        $this->db->select("
+            sd.id,
+            sd.name AS district_name,
+            COUNT(DISTINCT s.id) AS total_schools,
+            COUNT(DISTINCT CASE WHEN na.id IS NOT NULL THEN s.id END) AS submitted_schools
+        ");
+        $this->db->from('school_districts sd');
+        $this->db->join('schools s', 'sd.id = s.school_district_id', 'left');
+        $this->db->join('nutritional_assessments na', "s.school_id = na.school_id AND na.assessment_type = '{$assessment_type}' AND na.is_deleted = 0", 'left');
+        if ($legislative_district_id) {
+            $this->db->where('sd.legislative_district_id', $legislative_district_id);
+        }
+        $this->db->group_by('sd.id, sd.name');
+        return $this->db->get()->result_array();
     }
     
     /**
