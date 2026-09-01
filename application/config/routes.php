@@ -79,8 +79,6 @@ $route['superadmin/edit-user/(:num)'] = 'superadmincontroller/edit_user/$1';
 $route['superadmin/update_user_role/(:num)'] = 'superadmincontroller/update_user_role/$1';
 $route['superadmin/update-all-roles'] = 'superadmincontroller/update_all_roles';
 $route['superadmin/delete-user/(:num)'] = 'superadmincontroller/delete_user/$1';
-$route['superadmin/delete-all-assessments'] = 'superadmincontroller/delete_all_nutritional_assessments';
-$route['superadmin/reset-school-info'] = 'superadmincontroller/reset_all_school_info';
 $route['superadmin/reset-user-data/(:num)'] = 'superadmincontroller/reset_user_data/$1';
 
 // ========================
@@ -124,8 +122,6 @@ $route['dashboard'] = 'superadmincontroller/index';
 $route['dashboard/update_user_role/(:num)'] = 'superadmincontroller/update_user_role/$1';
 $route['dashboard/update_all_roles'] = 'superadmincontroller/update_all_roles';
 $route['dashboard/delete_user/(:num)'] = 'superadmincontroller/delete_user/$1';
-$route['dashboard/delete-all-assessments'] = 'superadmincontroller/delete_all_assessments';
-$route['dashboard/reset-school-info'] = 'superadmincontroller/reset_school_info';
 
 // ========================
 // OTHER MODULE ROUTES
@@ -167,6 +163,7 @@ $route['admin/reports/debug_template'] = 'nutritional_assessment_reports/debug_t
 // ========================
 $route['excel_upload'] = 'excel_upload/index';
 $route['excel_upload/upload_excel'] = 'excel_upload/upload_excel';
+$route['excel_upload/update_school'] = 'excel_upload/update_school';
 $route['excel_upload/clear_data'] = 'excel_upload/clear_data';
 
 // ========================
@@ -251,5 +248,15 @@ $route['archive/get_record_details/(:num)'] = 'archive_controller/get_record_det
 $route['archive/restore_record/(:num)'] = 'archive_controller/restore_record/$1';
 $route['archive/export'] = 'archive_controller/export_archive';
 
+// ========================
+// MIGRATION ROUTES
+// ========================
 $route['migrate'] = 'migrate/index';
 $route['migrate/(:any)'] = 'migrate/$1';
+
+// ========================
+// EMR ROUTES
+// ========================
+$route['emr'] = 'emr_controller/index';
+$route['emr/view'] = 'emr_controller/index';
+$route['emr/ui'] = 'emr_controller/index';
