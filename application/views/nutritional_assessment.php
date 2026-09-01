@@ -46,8 +46,8 @@
                       <p class="mb-0"><strong>School Name:</strong> <?= htmlspecialchars($school_name ?? 'Unknown') ?></p>
                   </div>
                   <div class="col-md-6">
-                      <p class="mb-1"><strong>Grade Level:</strong> <?= htmlspecialchars($grade) ?></p>
-                      <p class="mb-0"><strong>Section:</strong> <?= htmlspecialchars($section) ?></p>
+                      <p class="mb-1"><strong>Grade Level:</strong> <span id="gradeLevelDisplay"><?= htmlspecialchars($grade) ?></span></p>
+                      <p class="mb-0"><strong>Section:</strong> <span id="sectionDisplay"><?= htmlspecialchars($section) ?></span></p>
                       <p class="mb-0"><strong>School Year:</strong> <?= htmlspecialchars($school_year ?? 'Not set') ?></p>
                       <p class="mb-0"><strong>Assessment Type:</strong> 
                           <span class="badge <?php 
@@ -140,7 +140,7 @@
                             $hfa_display = 'Tall';
                           }
                         ?>
-                          <tr data-id="<?= $student->id ?>">
+                          <tr data-id="<?= $student->id ?>" data-grade="<?= htmlspecialchars($student->grade_level) ?>">
                             <td class="text-center"><?= $counter++ ?></td>
                             <td><?= htmlspecialchars($student->name) ?></td>
                             <td class="text-center"><?= $student->sex ?></td>
@@ -318,7 +318,7 @@
               </div>
             </div>
 
-            <!-- Student Table Section (Session) -->
+            <!-- Student Table Section -->
             <div class="card no-print">
               <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-table"></i> Student Records (Current Session)</h5>
@@ -357,7 +357,7 @@
                   </table>
                 </div>
 
-                <!-- Server-side Errors Panel (populated after submission) -->
+                <!-- Server-side Errors Panel -->
                 <div id="serverErrorsPanel" class="alert alert-danger d-none mt-3" role="alert">
                   <h5 class="mb-2">Submission Errors</h5>
                   <p id="serverErrorsMessage">The following records could not be saved:</p>
@@ -435,7 +435,30 @@
             <h5 class="modal-title" id="confirmTitle">Confirmation</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
-          <div class="modal-body" id="confirmBody">Are you sure?</div>
+          <div class="modal-body" id="confirmBody">
+              <div class="mb-3" id="beneficiaryGradeGroup" style="display:none;">
+                <label for="beneficiaryGradeSelect" class="form-label fw-bold">Add Grade Indicator</label>
+                <select id="beneficiaryGradeSelect" class="form-select">
+                  <option value="">Select grade</option>
+                  <option value="1">Grade 1</option>
+                  <option value="2">Grade 2</option>
+                  <option value="3">Grade 3</option>
+                  <option value="4">Grade 4</option>
+                  <option value="5">Grade 5</option>
+                  <option value="6">Grade 6</option>
+                  <option value="7">Grade 7</option>
+                  <option value="8">Grade 8</option>
+                  <option value="9">Grade 9</option>
+                  <option value="10">Grade 10</option>
+                  <option value="11">Grade 11</option>
+                  <option value="12">Grade 12</option>
+                  <option value="K">Kinder</option>
+                  <option value="SPED">SPED</option>
+                </select>
+                <div class="form-text">Choose the beneficiary indicator grade. This will display as Grade X (&lt;indicator&gt;).</div>
+              </div>
+              <p class="mb-0" id="confirmBodyText">Are you sure?</p>
+          </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
             <button type="button" class="btn btn-danger" id="confirmYesBtn">Yes, Clear All</button>
@@ -481,6 +504,7 @@
         redirect_after: '<?= site_url("sbfp/dashboard"); ?>'
       };
       var existingWeighingDate = '<?php echo isset($existing_weighing_date) ? $existing_weighing_date : ''; ?>';
+      var currentGrade = <?= json_encode($grade ?? '') ?>;
     </script>
     
     <script src="<?= base_url(ASSETS_PATH . '/js/nutritional_assessment.js'); ?>"></script>
@@ -494,6 +518,10 @@
 
         var confirmBtn = document.getElementById('confirmYesBtn');
         var confirmModalEl = document.getElementById('confirmModal');
+        var confirmModal = new bootstrap.Modal(confirmModalEl);
+        var confirmBodyText = document.getElementById('confirmBodyText');
+        var gradeSelect = document.getElementById('beneficiaryGradeSelect');
+        var gradeSelectGroup = document.getElementById('beneficiaryGradeGroup');
 
         function init() {
           // Single toggle: show modal
@@ -510,13 +538,17 @@
               pendingNewValue = newValue;
               pendingButton = this;
 
-              // Change to GREEN for beneficiary update
-              confirmBtn.textContent = 'Yes, Update';
-              confirmBtn.className = 'btn btn-success';
+              if (gradeSelectGroup) {
+                gradeSelectGroup.style.display = '';
+              }
+              if (gradeSelect) {
+                gradeSelect.value = '1';
+              }
 
               document.getElementById('confirmTitle').textContent = 'Confirm Beneficiary Update';
-              document.getElementById('confirmBody').innerHTML = 
-                'Are you sure you want to <strong>' + actionText + '</strong> this student as a <strong>' + statusText + '</strong>?';
+              if (confirmBodyText) {
+                confirmBodyText.innerHTML = 'Are you sure you want to <strong>' + actionText + '</strong> this student as a <strong>' + statusText + '</strong>?';
+              }
 
               if (confirmModal) {
                   confirmModal.show();
@@ -539,28 +571,36 @@
           function showAllConfirmation(value, statusText) {
             pendingAction = 'all';
             pendingNewValue = value;
+            if (gradeSelectGroup) {
+              gradeSelectGroup.style.display = 'none';
+            }
 
             // Change to GREEN for bulk beneficiary update
             confirmBtn.textContent = 'Yes, Update All';
             confirmBtn.className = 'btn btn-success';
 
             document.getElementById('confirmTitle').textContent = 'Confirm Bulk Update';
-            document.getElementById('confirmBody').innerHTML = 
-              'Are you sure you want to mark <strong>ALL</strong> students as <strong>' + statusText + '</strong>? This action cannot be undone.';
+            if (confirmBodyText) {
+              confirmBodyText.innerHTML = 'Are you sure you want to mark <strong>ALL</strong> students as <strong>' + statusText + '</strong>? This action cannot be undone.';
+            }
 
-          if (confirmModal) {
+            if (confirmModal) {
               confirmModal.show();
-          } else {
+            } else {
               // fallback (should not happen)
               var modal = new bootstrap.Modal(confirmModalEl);
               modal.show();
-          }
+            }
           }
 
           // Handle modal confirm button click
           confirmBtn.addEventListener('click', function() {
+            var selectedIndicator = '';
+            if (gradeSelect && gradeSelect.value) {
+              selectedIndicator = gradeSelect.value;
+            }
             if (pendingAction === 'single') {
-              executeSingleToggle(pendingId, pendingNewValue, pendingButton);
+              executeSingleToggle(pendingId, pendingNewValue, pendingButton, selectedIndicator);
             } else if (pendingAction === 'all') {
               executeAllToggle(pendingNewValue);
             }
@@ -572,22 +612,35 @@
             // Reset to RED (default for delete/clear)
             confirmBtn.textContent = 'Yes, Clear All';
             confirmBtn.className = 'btn btn-danger';
+            if (gradeSelectGroup) {
+              gradeSelectGroup.style.display = 'none';
+            }
           });
 
           // Reset to RED when modal is hidden (e.g., user clicks Cancel)
           confirmModalEl.addEventListener('hidden.bs.modal', function() {
             if (pendingAction === null) {
+              if (gradeSelectGroup) {
+                gradeSelectGroup.style.display = '';
+              }
+              if (confirmBodyText) {
+                confirmBodyText.innerHTML = 'Are you sure?';
+              }
               confirmBtn.textContent = 'Yes, Clear All';
               confirmBtn.className = 'btn btn-danger';
             }
           });
         }
 
-        function executeSingleToggle(id, newValue, btn) {
+        function executeSingleToggle(id, newValue, btn, selectedIndicator) {
+          var formData = new URLSearchParams();
+          formData.append('id', id);
+          formData.append('beneficiary', newValue);
+
           fetch('<?= site_url("nutritionalassessment/toggle_beneficiary") ?>', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'id=' + encodeURIComponent(id) + '&beneficiary=' + encodeURIComponent(newValue)
+            body: formData.toString()
           })
           .then(response => response.json())
           .then(resp => {
@@ -601,20 +654,35 @@
                 statusCell.innerHTML = '<span class="badge bg-secondary">No</span>';
                 btn.dataset.current = 'No';
               }
+              var rowGrade = (row.dataset.grade || '').trim();
+              var gradeCell = row.querySelector('td:nth-child(4)');
+              if (gradeCell && rowGrade) {
+                var parts = gradeCell.textContent.split('/');
+                var section = parts[1] ? parts[1].trim() : '';
+                var originalGrade = row.dataset.grade || parts[0].trim();
+                var gradeText = originalGrade;
+                if (newValue === 'Yes' && selectedIndicator) {
+                  gradeText += ' (' + selectedIndicator + ')';
+                }
+                if (section) {
+                  gradeText += ' / ' + section;
+                }
+                gradeCell.textContent = gradeText;
+              }
               showNotification('Beneficiary status updated.', 'success');
-              if (confirmModal) confirmModal.hide();   // <-- ADD THIS
+              if (confirmModal) confirmModal.hide();
             } else {
               showNotification('Error: ' + (resp.message || 'Could not update'), 'danger');
-              if (confirmModal) confirmModal.hide();   // <-- AND THIS
+              if (confirmModal) confirmModal.hide();
             }
           })
           .catch(function() {
             showNotification('Server error. Please try again.', 'danger');
-            if (confirmModal) confirmModal.hide();     // <-- AND THIS
+            if (confirmModal) confirmModal.hide();
           });
         }
 
-        function executeAllToggle(value) {
+        function executeAllToggle(value, targetGrade) {
           var data = {
             legislative_district: '<?= htmlspecialchars($legislative_district) ?>',
             school_district: '<?= htmlspecialchars($school_district) ?>',
@@ -623,7 +691,8 @@
             section: '<?= htmlspecialchars($section) ?>',
             school_year: '<?= htmlspecialchars($school_year) ?>',
             assessment_type: '<?= htmlspecialchars($assessment_type) ?>',
-            beneficiary: value
+            beneficiary: value,
+            target_grade: targetGrade || currentGrade
           };
 
           var formData = new URLSearchParams();
@@ -640,16 +709,20 @@
           .then(resp => {
             if (resp.success) {
               showNotification('Updated ' + (resp.updated || 0) + ' student(s).', 'success');
-              if (confirmModal) confirmModal.hide();   // <-- ADD THIS
-              location.reload();
+              var gradeLevelDisplay = document.getElementById('gradeLevelDisplay');
+              if (gradeLevelDisplay && !gradeLevelDisplay.textContent.includes('(additional)')) {
+                gradeLevelDisplay.textContent += ' (additional)';
+              }
+              if (confirmModal) confirmModal.hide();
+              setTimeout(function() { location.reload(); }, 1000);
             } else {
               showNotification('Error updating all.', 'danger');
-              if (confirmModal) confirmModal.hide();   // <-- ADD THIS
+              if (confirmModal) confirmModal.hide();
             }
           })
           .catch(function() {
             showNotification('Server error.', 'danger');
-            if (confirmModal) confirmModal.hide();     // <-- ADD THIS
+            if (confirmModal) confirmModal.hide();
           });
         }
 

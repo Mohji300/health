@@ -667,10 +667,11 @@ class Nutritionalassessment extends CI_Controller {
         $school_year = $this->input->post('school_year');
         $assessment_type = $this->input->post('assessment_type');
         $beneficiary = $this->input->post('beneficiary'); // 'Yes' or 'No'
+        $target_grade = $this->input->post('target_grade');
 
         $updated = $this->nutritional_assessment_model->update_all_beneficiaries(
             $legislative_district, $school_district, $school_id, $grade, $section,
-            $school_year, $assessment_type, $beneficiary
+            $school_year, $assessment_type, $beneficiary, $target_grade
         );
 
         if ($updated !== false) {

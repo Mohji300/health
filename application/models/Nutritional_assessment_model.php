@@ -289,6 +289,39 @@ class nutritional_assessment_model extends CI_Model {
     /**
      * Update beneficiary status for a single student by ID
      */
+    public function normalize_grade_level($grade_level)
+    {
+        if (empty($grade_level)) {
+            return '';
+        }
+
+        $grade = trim($grade_level);
+        $normalized = strtolower($grade);
+
+        $map = [
+            'kinder' => 'Kinder',
+            'kindergarten' => 'Kindergarten',
+            'grade 1' => 'Grade 1',
+            'grade 2' => 'Grade 2',
+            'grade 3' => 'Grade 3',
+            'grade 4' => 'Grade 4',
+            'grade 5' => 'Grade 5',
+            'grade 6' => 'Grade 6',
+            'grade 7' => 'Grade 7',
+            'grade 8' => 'Grade 8',
+            'grade 9' => 'Grade 9',
+            'grade 10' => 'Grade 10',
+            'grade 11' => 'Grade 11',
+            'grade 12' => 'Grade 12',
+            'sped' => 'SPED'
+        ];
+
+        $normalized = preg_replace('/\s+\(/', ' (', $normalized); // preserve markers if present
+        $normalized = preg_replace('/\s+$/', '', $normalized);
+
+        return isset($map[$normalized]) ? $map[$normalized] : ucwords($normalized);
+    }
+
     public function update_beneficiary_status($id, $beneficiary)
     {
         $this->db->where('id', $id);
@@ -299,16 +332,19 @@ class nutritional_assessment_model extends CI_Model {
      * Update beneficiary status for all students in a section
      * Returns number of affected rows or false on error
      */
-    public function update_all_beneficiaries($legislative_district, $school_district, $school_id, $grade, $section, $school_year, $assessment_type, $beneficiary)
+    public function update_all_beneficiaries($legislative_district, $school_district, $school_id, $grade, $section, $school_year, $assessment_type, $beneficiary, $target_grade = null)
     {
+        $grade_filter = $this->normalize_grade_level($grade);
+
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
         $this->db->where('school_id', $school_id);
-        $this->db->where('grade_level', $grade);
+        $this->db->where('grade_level', $grade_filter);
         $this->db->where('section', $section);
         $this->db->where('year', $school_year);
         $this->db->where('assessment_type', $assessment_type);
         $this->db->where('is_deleted', 0);
+
         $this->db->update('nutritional_assessments', ['sbfp_beneficiary' => $beneficiary]);
         return $this->db->affected_rows();
     }

@@ -25,13 +25,13 @@ class nutritional_model extends CI_Model {
         // Filter out deleted records
         $this->db->where('is_deleted', 0);
 
-        //  Filter by school_id if provided
+        // Prefer school_id over school_name so renamed school accounts still map to the correct school.
         if (!empty($school_id)) {
             $this->db->where('school_id', $school_id);
         }
 
-        // Secondary school filter (filter by school_name)
-        if ($school_name) {
+        // Secondary school filter (filter by school_name only when school_id is unavailable)
+        if ($school_name && empty($school_id)) {
             $this->db->where('school_name', $school_name);
         }
 
@@ -303,13 +303,13 @@ class nutritional_model extends CI_Model {
      */
     public function get_all_assessments($school_name = null, $school_level = 'all', $school_id = null)
     {
-        //  Filter by school_id if provided
+        // Prefer school_id over school_name so renamed school accounts still map to the correct school.
         if (!empty($school_id)) {
             $this->db->where('school_id', $school_id);
         }
         
-        // Secondary school filter
-        if ($school_name) {
+        // Secondary school filter only when no school_id is present.
+        if ($school_name && empty($school_id)) {
             $this->db->where('school_name', $school_name);
         }
         
@@ -378,13 +378,13 @@ class nutritional_model extends CI_Model {
     {
         $this->db->select('nutritional_status, COUNT(*) as count');
         
-        //  PRIMARY FILTER: Filter by school_id if provided
+        // PRIMARY FILTER: Prefer school_id over school_name so renamed accounts still match their school.
         if (!empty($school_id)) {
             $this->db->where('school_id', $school_id);
         }
         
-        // Secondary school filter
-        if ($school_name) {
+        // Secondary school filter only when no school_id is present.
+        if ($school_name && empty($school_id)) {
             $this->db->where('school_name', $school_name);
         }
         
