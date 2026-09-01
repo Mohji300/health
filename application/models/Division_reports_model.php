@@ -638,6 +638,95 @@ public function get_sbfp_beneficiaries($filters = [])
     }
 
     /**
+     * Get all students for export in chunks (limit/offset)
+     */
+    public function get_all_students_for_export_chunk($filters = [], $limit = 1000, $offset = 0)
+    {
+        $this->db->select('*');
+        $this->db->from($this->table);
+        $this->db->where('is_deleted', FALSE);
+
+        // Apply filters
+        $this->apply_filters($filters);
+
+        $this->db->order_by('school_name', 'ASC');
+        $this->db->order_by('grade_level', 'ASC');
+        $this->db->order_by('section', 'ASC');
+        $this->db->order_by('name', 'ASC');
+        $this->db->limit($limit, $offset);
+
+        $query = $this->db->get();
+        return $query->result();
+    }
+
+    /**
+     * Get SBFP beneficiaries in chunks
+     */
+    public function get_sbfp_beneficiaries_chunk($filters = [], $limit = 1000, $offset = 0)
+    {
+        $this->db->select('*');
+        $this->db->from($this->table);
+        $this->db->where('is_deleted', FALSE);
+        $this->db->where('sbfp_beneficiary', 'Yes');
+
+        // Apply other filters
+        if (!empty($filters['legislative_district'])) {
+            $this->db->where('legislative_district', $filters['legislative_district']);
+        }
+        if (!empty($filters['school_district'])) {
+            $this->db->where('school_district', $filters['school_district']);
+        }
+        if (!empty($filters['school_name'])) {
+            $this->db->where('school_name', $filters['school_name']);
+        }
+        if (!empty($filters['grade_level'])) {
+            $this->db->where('grade_level', $filters['grade_level']);
+        }
+        if (!empty($filters['assessment_type'])) {
+            $this->db->where('assessment_type', $filters['assessment_type']);
+        }
+        if (!empty($filters['date_from'])) {
+            $this->db->where('DATE(created_at) >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('DATE(created_at) <=', $filters['date_to']);
+        }
+
+        $this->db->order_by('school_name', 'ASC');
+        $this->db->order_by('grade_level', 'ASC');
+        $this->db->order_by('section', 'ASC');
+        $this->db->order_by('name', 'ASC');
+        $this->db->limit($limit, $offset);
+
+        $query = $this->db->get();
+        return $query->result();
+    }
+
+    /**
+     * Get students by nutritional status in chunks
+     */
+    public function get_students_by_nutritional_status_chunk($status, $filters = [], $limit = 1000, $offset = 0)
+    {
+        $this->db->select('*');
+        $this->db->from($this->table);
+        $this->db->where('is_deleted', FALSE);
+
+        $this->db->where('LOWER(nutritional_status)', strtolower($status));
+
+        // Apply other filters
+        $this->apply_filters($filters);
+
+        $this->db->order_by('school_name', 'ASC');
+        $this->db->order_by('grade_level', 'ASC');
+        $this->db->order_by('section', 'ASC');
+        $this->db->order_by('name', 'ASC');
+        $this->db->limit($limit, $offset);
+
+        $query = $this->db->get();
+        return $query->result();
+    }
+
+    /**
      * Get nutritional statistics summary (for statistics page cards)
      */
     public function get_nutritional_statistics_summary($filters = [])

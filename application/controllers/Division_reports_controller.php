@@ -933,21 +933,10 @@ public function export_statistics() {
         'nutritional_status' => $this->input->get('nutritional_status')
     ];
 
-    // Get students based on nutritional status filter
+    // Get students based on nutritional status filter (streamed in batches)
     $status_filter = $filters['nutritional_status'] ?? '';
-    $students_to_export = [];
-    
-    if ($status_filter === '') {
-        // When "All Statuses" is selected, export all students
-        $students_to_export = $this->division_reports_model->get_all_students_for_export($filters);
-    } else if ($status_filter === 'sbfp_beneficiary') {
-        // When "SBFP Beneficiary" is selected, export only SBFP beneficiaries
-        $students_to_export = $this->division_reports_model->get_sbfp_beneficiaries($filters);
-    } else if (!empty($status_filter)) {
-        if (in_array($status_filter, ['severely wasted', 'wasted', 'normal', 'overweight', 'obese'])) {
-            $students_to_export = $this->division_reports_model->get_students_by_nutritional_status($status_filter, $filters);
-        }
-    }
+    $batchSize = 1000;
+    $offset = 0;
     
     // Set headers for CSV download
     header('Content-Type: text/csv; charset=utf-8');
@@ -995,31 +984,99 @@ public function export_statistics() {
         'Created Date'
     ]);
     
-    // Add students
-    foreach ($students_to_export as $student) {
-        fputcsv($output, [
-            ucfirst($student->assessment_type ?? 'baseline'),
-            $student->school_name ?? 'N/A',
-            $student->school_id ?? 'N/A',
-            $student->legislative_district ?? 'N/A',
-            $student->school_district ?? 'N/A',
-            $student->grade_level ?? 'N/A',
-            $student->section ?? 'N/A',
-            $student->name ?? 'N/A',
-            $student->nutritional_status ?? 'N/A',
-            $student->sbfp_beneficiary ?? 'N/A',
-            $student->birthday ?? 'N/A',
-            $student->sex ?? 'N/A',
-            $student->age ?? 'N/A',
-            $student->weight ?? 'N/A',
-            $student->height ?? 'N/A',
-            $student->bmi ?? 'N/A',
-            $student->height_for_age ?? 'N/A',
-            $student->date_of_weighing ?? 'N/A',
-            !empty($student->created_at) ? date('M j, Y', strtotime($student->created_at)) : 'N/A'
-        ]);
+    // Stream rows in batches to reduce memory usage
+    if ($status_filter === '') {
+        do {
+            $rows = $this->division_reports_model->get_all_students_for_export_chunk($filters, $batchSize, $offset);
+            foreach ($rows as $student) {
+                fputcsv($output, [
+                    ucfirst($student->assessment_type ?? 'baseline'),
+                    $student->school_name ?? 'N/A',
+                    $student->school_id ?? 'N/A',
+                    $student->legislative_district ?? 'N/A',
+                    $student->school_district ?? 'N/A',
+                    $student->grade_level ?? 'N/A',
+                    $student->section ?? 'N/A',
+                    $student->name ?? 'N/A',
+                    $student->nutritional_status ?? 'N/A',
+                    $student->sbfp_beneficiary ?? 'N/A',
+                    $student->birthday ?? 'N/A',
+                    $student->sex ?? 'N/A',
+                    $student->age ?? 'N/A',
+                    $student->weight ?? 'N/A',
+                    $student->height ?? 'N/A',
+                    $student->bmi ?? 'N/A',
+                    $student->height_for_age ?? 'N/A',
+                    $student->date_of_weighing ?? 'N/A',
+                    !empty($student->created_at) ? date('M j, Y', strtotime($student->created_at)) : 'N/A'
+                ]);
+            }
+            $offset += $batchSize;
+            if (function_exists('ob_flush')) { ob_flush(); }
+            flush();
+        } while (!empty($rows));
+    } else if ($status_filter === 'sbfp_beneficiary') {
+        do {
+            $rows = $this->division_reports_model->get_sbfp_beneficiaries_chunk($filters, $batchSize, $offset);
+            foreach ($rows as $student) {
+                fputcsv($output, [
+                    ucfirst($student->assessment_type ?? 'baseline'),
+                    $student->school_name ?? 'N/A',
+                    $student->school_id ?? 'N/A',
+                    $student->legislative_district ?? 'N/A',
+                    $student->school_district ?? 'N/A',
+                    $student->grade_level ?? 'N/A',
+                    $student->section ?? 'N/A',
+                    $student->name ?? 'N/A',
+                    $student->nutritional_status ?? 'N/A',
+                    $student->sbfp_beneficiary ?? 'N/A',
+                    $student->birthday ?? 'N/A',
+                    $student->sex ?? 'N/A',
+                    $student->age ?? 'N/A',
+                    $student->weight ?? 'N/A',
+                    $student->height ?? 'N/A',
+                    $student->bmi ?? 'N/A',
+                    $student->height_for_age ?? 'N/A',
+                    $student->date_of_weighing ?? 'N/A',
+                    !empty($student->created_at) ? date('M j, Y', strtotime($student->created_at)) : 'N/A'
+                ]);
+            }
+            $offset += $batchSize;
+            if (function_exists('ob_flush')) { ob_flush(); }
+            flush();
+        } while (!empty($rows));
+    } else {
+        do {
+            $rows = $this->division_reports_model->get_students_by_nutritional_status_chunk($status_filter, $filters, $batchSize, $offset);
+            foreach ($rows as $student) {
+                fputcsv($output, [
+                    ucfirst($student->assessment_type ?? 'baseline'),
+                    $student->school_name ?? 'N/A',
+                    $student->school_id ?? 'N/A',
+                    $student->legislative_district ?? 'N/A',
+                    $student->school_district ?? 'N/A',
+                    $student->grade_level ?? 'N/A',
+                    $student->section ?? 'N/A',
+                    $student->name ?? 'N/A',
+                    $student->nutritional_status ?? 'N/A',
+                    $student->sbfp_beneficiary ?? 'N/A',
+                    $student->birthday ?? 'N/A',
+                    $student->sex ?? 'N/A',
+                    $student->age ?? 'N/A',
+                    $student->weight ?? 'N/A',
+                    $student->height ?? 'N/A',
+                    $student->bmi ?? 'N/A',
+                    $student->height_for_age ?? 'N/A',
+                    $student->date_of_weighing ?? 'N/A',
+                    !empty($student->created_at) ? date('M j, Y', strtotime($student->created_at)) : 'N/A'
+                ]);
+            }
+            $offset += $batchSize;
+            if (function_exists('ob_flush')) { ob_flush(); }
+            flush();
+        } while (!empty($rows));
     }
-    
+
     fclose($output);
     exit;
 }
