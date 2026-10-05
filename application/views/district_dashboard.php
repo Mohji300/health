@@ -341,6 +341,9 @@ $hfaFields = ['severely_stunted','stunted','normal_hfa','tall','pupils_height'];
                             <button id="btnPrint" class="btn btn-success">
                                 <i class="fas fa-print me-1"></i> Print Report
                             </button>
+                            <button id="btnExportExcel" class="btn btn-primary ms-2" type="button">
+                                <i class="fas fa-file-excel me-1"></i> Export Excel
+                            </button>
                         </div>
                     </div>
                     

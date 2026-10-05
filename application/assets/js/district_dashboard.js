@@ -102,6 +102,39 @@ $(document).ready(function() {
     const secTable = document.getElementById('secondaryTable');
     const shsTable = document.getElementById('shsTable');
 
+    function getVisibleReportTable() {
+        if (elemTable && !elemTable.classList.contains('d-none')) return elemTable;
+        if (shsTable && !shsTable.classList.contains('d-none')) return shsTable;
+        return secTable;
+    }
+
+    const btnExportExcel = document.getElementById('btnExportExcel');
+    if (btnExportExcel) {
+        btnExportExcel.addEventListener('click', function() {
+            const table = getVisibleReportTable();
+            if (!table) {
+                alert('No report table is available to export.');
+                return;
+            }
+
+            const config = window.DistrictDashboardConfig || {};
+            const assessmentType = config.assessment_type_display || 'Report';
+            const districtName = config.district_name || 'District';
+            const safePart = value => String(value).replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '');
+            const filename = `${safePart(districtName) || 'District'}_${safePart(assessmentType)}_Nutritional_Report.xls`;
+            const workbookHtml = `<!doctype html><html><head><meta charset="utf-8"></head><body>${table.outerHTML}</body></html>`;
+            const blob = new Blob([workbookHtml], { type: 'application/vnd.ms-excel' });
+            const downloadUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(downloadUrl);
+        });
+    }
+
     if (btnPrint) {
         btnPrint.addEventListener('click', function() {
             const win = window.open('', '_blank');
