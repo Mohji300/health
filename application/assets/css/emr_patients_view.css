@@ -1,0 +1,468 @@
+/* ============================================================
+   PATIENTS & FOLLOW-UPS — page-specific styles
+   (Global layout, cards, sidebar, header come from emr_view.css)
+   ============================================================ */
+
+/* ===== PAGE HEADER ===== */
+.page-header {
+    position: relative;
+    min-height: 132px;
+    padding: 22px 28px;
+    overflow: hidden;
+    border: 1px solid #d8e8e8;
+    border-left: 5px solid #0f766e;
+    border-radius: 10px;
+    background: linear-gradient(105deg, #eef7f5 0%, #f8fbfc 68%, #edf5fa 100%);
+    box-shadow: 0 3px 12px rgba(15, 72, 78, .06);
+}
+.page-header-copy { min-width: 0; }
+.page-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 5px;
+    color: #0f766e;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.page-eyebrow i { font-size: 12px; }
+.page-header #pageTitle {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 28px;
+    line-height: 1.2;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+.page-header #pageTitle span { color: #0f766e; }
+.page-header #pageTitle::after { display: none; }
+.page-subtitle {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.5;
+    margin-top: 6px;
+}
+.page-header-mark {
+    display: grid;
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    place-items: center;
+    margin-left: 24px;
+    border: 1px solid #c7e3df;
+    border-radius: 10px;
+    background: #e0f1ed;
+    color: #0f766e;
+    font-size: 27px;
+}
+.section-title { color: #0f172a; font-weight: 600; }
+.section-title i { color: #2563eb; }
+
+/* ===== ROLE BADGES (page-specific variants) ===== */
+.role-user { background: #d1fae5; color: #065f46; }
+
+/* ==== BODY ==== */
+body {
+    background: #f1f5f9;
+}
+
+/* ===== TABLE ===== */
+#patientsTable td { vertical-align: middle; font-size: 13.5px; }
+#patientsTable td .btn-sm { margin-right: 2px; }
+
+/* ===== SCHOOL AUTOCOMPLETE ===== */
+#schoolSuggestions {
+    position: absolute;
+    z-index: 1000;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* ===== WIZARD STEP INDICATORS ===== */
+.step-indicators {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.step-indicators .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: #e9ecef;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all .2s ease;
+}
+.step-indicators .step.active {
+    background: linear-gradient(135deg, #2563eb, #06b6d4);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, .25);
+}
+.step-indicators .step.done {
+    background: #d1fae5;
+    color: #065f46;
+}
+.step-content { display: none; }
+.step-content.active { display: block; }
+
+/* ===== LAB SUB-TABS ===== */
+.lab-sub-tabs.nav-pills .nav-link {
+    font-size: 14px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    color: #475569;
+    font-weight: 500;
+    margin-right: 6px;
+}
+.lab-sub-tabs.nav-pills .nav-link.active {
+    background: linear-gradient(135deg, #2563eb, #06b6d4);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, .25);
+}
+.lab-sub-content { display: none; }
+.lab-sub-content.active { display: block; }
+
+/* ===== DYNAMIC LAB ROWS ===== */
+.dynamic-row {
+    background: #f8fafc;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 3px solid #2563eb;
+}
+.dynamic-row .btn-remove {
+    color: #dc3545;
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+.dynamic-row .btn-remove:hover { color: #a71d2a; }
+.add-btn { margin-top: 8px; border-radius: 8px; }
+.empty-lab-msg {
+    color: #94a3b8;
+    font-style: italic;
+    padding: 10px 0;
+    font-size: 13px;
+}
+
+/* ===== FORCE UPPERCASE ON TEXT INPUTS ===== */
+input:not([type="date"]):not([type="hidden"]):not([readonly]):not([type="number"]),
+textarea {
+    text-transform: uppercase;
+}
+input::placeholder,
+textarea::placeholder { text-transform: none; }
+
+/* ===== PRESCRIPTION / MEDICATION ===== */
+.med-search-wrapper { position: relative; }
+.med-search-results {
+    position: absolute;
+    top: 100%; left: 0; right: 0;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .12);
+}
+.med-search-results .list-group-item {
+    cursor: pointer;
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+.med-search-results .list-group-item:hover { background: #eff6ff; }
+
+.med-entry {
+    background: #f8fafc;
+    padding: 14px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    border-left: 3px solid #06b6d4;
+    position: relative;
+}
+.med-entry .btn-remove-med {
+    position: absolute;
+    top: 8px; right: 10px;
+    background: none;
+    border: none;
+    color: #dc3545;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 6px;
+}
+.med-entry .btn-remove-med:hover { color: #a71d2a; }
+
+.prescription-summary {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-top: 15px;
+}
+
+/* ===== TIMELINE (reused in patient details modal) ===== */
+.timeline { position: relative; padding-left: 30px; }
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, #2563eb, #06b6d4);
+    border-radius: 2px;
+}
+.timeline-item { position: relative; margin-bottom: 18px; }
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -22px; top: 6px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+}
+.timeline-item .timeline-date {
+    font-size: 12px;
+    font-weight: 600;
+    color: #2563eb;
+    margin-bottom: 4px;
+}
+.timeline-item .timeline-content {
+    background: #f8fafc;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border-left: 3px solid #06b6d4;
+    font-size: 13px;
+}
+
+/* ===== BADGES ===== */
+.badge-status { padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge-active { background: #d1fae5; color: #065f46; }
+.badge-inactive { background: #fee2e2; color: #991b1b; }
+
+/* ============================================================
+   MODAL POLISH — close button + form controls
+   ============================================================ */
+
+/* ---------- 1. Close button — white X on gradient header ---------- */
+#emrModal .modal-header .btn-close,
+#viewPatientModal .modal-header .btn-close,
+#viewVisitModal .modal-header .btn-close {
+    box-sizing: content-box;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0.5rem;
+    border: 0;
+    border-radius: 50%;
+    background: transparent
+        url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23ffffff'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e")
+        center / 1rem 1rem no-repeat;
+    opacity: 0.9;
+    transition: background-color .15s ease, opacity .15s ease;
+}
+#emrModal .modal-header .btn-close:hover,
+#viewPatientModal .modal-header .btn-close:hover,
+#viewVisitModal .modal-header .btn-close:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, .22);
+}
+#emrModal .modal-header .btn-close:focus,
+#viewPatientModal .modal-header .btn-close:focus,
+#viewVisitModal .modal-header .btn-close:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, .45);
+}
+
+/* ---------- 2. Form controls: white by default, gray when read-only ---------- */
+#emrModal .modal-body .form-control:not(.form-control-sm),
+#emrModal .modal-body .form-select {
+    display: block;
+    width: 100%;
+    padding: .5rem .75rem;
+    font-size: .9375rem;
+    line-height: 1.5;
+    color: #1e293b;
+    background-color: #ffffff;               /* editable fields = white */
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    min-height: 42px;
+    transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+
+#emrModal .modal-body .form-select {
+    padding-right: 2.25rem;
+    background-position: right .75rem center;
+    background-size: 14px 12px;
+    background-repeat: no-repeat;
+    text-transform: uppercase;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+#emrModal .modal-body textarea.form-control {
+    min-height: 64px;
+    padding: .5rem .75rem;
+    text-transform: uppercase;
+}
+
+/* ---- Read-only & disabled fields = light gray (non-editable) ---- */
+#emrModal .modal-body .form-control[readonly],
+#emrModal .modal-body .form-control:disabled,
+#emrModal .modal-body .form-select:disabled {
+    background-color: #f1f5f9;
+    color: #64748b;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+#emrModal .modal-body .form-control[readonly]:focus,
+#emrModal .modal-body .form-control:disabled:focus {
+    background-color: #f1f5f9;
+    border-color: #e2e8f0;
+    box-shadow: none;
+    outline: none;
+}
+
+/* Focus ring — only on editable fields */
+#emrModal .modal-body .form-control:focus:not(.form-control-sm):not([readonly]):not(:disabled),
+#emrModal .modal-body .form-select:focus:not(:disabled) {
+    border-color: #2563eb;
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+    outline: none;
+}
+
+/* Small lab-row inputs keep their compact size */
+#emrModal .modal-body .form-control-sm {
+    padding: .25rem .5rem;
+    font-size: .8125rem;
+    border-radius: 6px;
+    min-height: 0;
+    height: auto;
+}
+
+/* ===== MODAL BODY PADDING ===== */
+#emrModal .modal-body,
+#viewPatientModal .modal-body,
+#viewVisitModal .modal-body { padding: 22px; }
+
+/* ===== PATIENT SEARCH ===== */
+.patient-search-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 260px;
+}
+.patient-search-wrapper .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 13px;
+    pointer-events: none;
+    transition: color .15s ease;
+}
+.patient-search-input {
+    padding-left: 34px;
+    padding-right: 34px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    font-size: 13.5px;
+    transition: all .15s ease;
+    /* override the global uppercase rule for this input */
+    text-transform: none !important;
+}
+.patient-search-input::placeholder {
+    color: #94a3b8;
+    text-transform: none;
+}
+.patient-search-input:focus {
+    border-color: #2563eb;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+}
+.patient-search-wrapper:focus-within .search-icon {
+    color: #2563eb;
+}
+
+.btn-clear-search {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: #e2e8f0;
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+.btn-clear-search:hover {
+    background: #cbd5e1;
+    color: #334155;
+}
+.btn-clear-search.visible {
+    display: flex;
+}
+
+/* ===== SEARCH SUMMARY ===== */
+.search-summary {
+    font-size: 12.5px;
+    color: #64748b;
+    padding-left: 2px;
+}
+.search-summary strong { color: #0f172a; }
+
+/* ===== EMPTY STATE ROW ===== */
+#patientsTable .empty-state {
+    padding: 32px 0;
+    color: #94a3b8;
+    font-style: italic;
+}
+#patientsTable .empty-state i {
+    display: block;
+    font-size: 28px;
+    margin-bottom: 8px;
+    color: #cbd5e1;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 575px) {
+    .page-header {
+        min-height: 112px;
+        padding: 18px 16px;
+    }
+    .page-header #pageTitle { font-size: 22px; }
+    .page-header-mark {
+        flex-basis: 46px;
+        width: 46px;
+        height: 46px;
+        margin-left: 12px;
+        font-size: 20px;
+    }
+    .patient-search-wrapper { width: 100%; }
+    .patient-search-wrapper + .btn { flex-shrink: 0; }
+}

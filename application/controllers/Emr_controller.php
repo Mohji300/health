@@ -21,4 +21,12 @@ class Emr_controller extends CI_Controller {
         // The view is a self-contained UI page
         $this->load->view('emr_view');
     }
+
+    public function patients()
+    {
+        // Require login – already handled in __construct
+        // Load the patients view
+        $this->load->view('emr_patients_view');
+    }
+
 }
