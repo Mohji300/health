@@ -118,14 +118,41 @@
             <div class="card shadow-sm mt-4">
                 <div class="card-header bg-success text-white">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <h5 class="mb-0"><i class="fas fa-edit"></i> Uploaded School Data Editor</h5>
-                        <form class="d-flex align-items-center gap-2" action="<?php echo site_url('excel_upload'); ?>" method="get">
-                            <input type="text" class="form-control form-control-sm" name="search" value="<?php echo htmlspecialchars($search ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="Search school data" aria-label="Search uploaded school data">
-                            <button type="submit" class="btn btn-light btn-sm"><i class="fas fa-search"></i> Search</button>
-                            <?php if (!empty($search)): ?>
-                                <a href="<?php echo site_url('excel_upload'); ?>" class="btn btn-outline-light btn-sm"><i class="fas fa-times"></i> Clear</a>
-                            <?php endif; ?>
-                        </form>
+                        <h5 class="mb-0">
+                            <i class="fas fa-edit"></i> Uploaded School Data Editor
+                        </h5>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- ADD SCHOOL BUTTON -->
+                            <button type="button"
+                                    class="btn btn-light btn-sm add-school-btn"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#addSchoolModal">
+                                <i class="fas fa-plus"></i> Add School
+                            </button>
+
+                            <form class="d-flex align-items-center gap-2"
+                                action="<?php echo site_url('excel_upload'); ?>"
+                                method="get">
+                                <input type="text"
+                                    class="form-control form-control-sm"
+                                    name="search"
+                                    value="<?php echo htmlspecialchars($search ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                                    placeholder="Search school data"
+                                    aria-label="Search uploaded school data">
+
+                                <button type="submit" class="btn btn-light btn-sm">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+
+                                <?php if (!empty($search)): ?>
+                                    <a href="<?php echo site_url('excel_upload'); ?>"
+                                    class="btn btn-outline-light btn-sm">
+                                        <i class="fas fa-times"></i> Clear
+                                    </a>
+                                <?php endif; ?>
+                            </form>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
@@ -392,6 +419,153 @@
             </div>
         </div>
     </div>
+    <!-- Add School Modal -->
+        <div class="modal fade"
+            id="addSchoolModal"
+            tabindex="-1"
+            aria-labelledby="addSchoolModalLabel"
+            aria-hidden="true">
+
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+
+                    <form action="<?php echo site_url('excel_upload/add_school'); ?>"
+                        method="post">
+
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title" id="addSchoolModalLabel">
+                                <i class="fas fa-school"></i> Add New School
+                            </h5>
+
+                            <button type="button"
+                                    class="btn-close btn-close-white"
+                                    data-bs-dismiss="modal"
+                                    aria-label="Close">
+                            </button>
+                        </div>
+
+                        <div class="modal-body">
+
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                Enter the school information below.
+                                A user account will also be created using the School ID.
+                            </div>
+
+                            <div class="row g-3">
+
+                                <!-- School ID -->
+                                <div class="col-md-6">
+                                    <label for="add_school_id" class="form-label">
+                                        School ID <span class="text-danger">*</span>
+                                    </label>
+
+                                    <input type="text"
+                                        class="form-control"
+                                        id="add_school_id"
+                                        name="school_id"
+                                        required
+                                        placeholder="e.g. 113374">
+                                </div>
+
+                                <!-- School Name -->
+                                <div class="col-md-6">
+                                    <label for="add_school_name" class="form-label">
+                                        School Name <span class="text-danger">*</span>
+                                    </label>
+
+                                    <input type="text"
+                                        class="form-control"
+                                        id="add_school_name"
+                                        name="school_name"
+                                        required
+                                        placeholder="e.g. Aroroy East CS">
+                                </div>
+
+                                <!-- School District -->
+                                <div class="col-md-6">
+                                    <label for="add_school_district" class="form-label">
+                                        School District <span class="text-danger">*</span>
+                                    </label>
+
+                                    <input type="text"
+                                        class="form-control"
+                                        id="add_school_district"
+                                        name="school_district"
+                                        required
+                                        placeholder="e.g. Aroroy East">
+                                </div>
+
+                                <!-- Legislative District -->
+                                <div class="col-md-6">
+                                    <label for="add_legislative_district" class="form-label">
+                                        Legislative District <span class="text-danger">*</span>
+                                    </label>
+
+                                    <input type="text"
+                                        class="form-control"
+                                        id="add_legislative_district"
+                                        name="legislative_district"
+                                        required
+                                        placeholder="e.g. 1st District">
+                                </div>
+
+                                <!-- School Level -->
+                                <div class="col-md-6">
+                                    <label for="add_school_level" class="form-label">
+                                        School Level
+                                    </label>
+
+                                    <select class="form-select"
+                                            id="add_school_level"
+                                            name="school_level">
+
+                                        <option value="Elementary">Elementary</option>
+                                        <option value="Secondary">Secondary</option>
+                                        <option value="Private">Private</option>
+                                        <option value="Integrated">Integrated</option>
+                                        <option value="Unknown">Unknown</option>
+
+                                    </select>
+                                </div>
+
+                                <!-- School Size -->
+                                <div class="col-md-6">
+                                    <label for="add_school_size" class="form-label">
+                                        School Size
+                                    </label>
+
+                                    <input type="number"
+                                        class="form-control"
+                                        id="add_school_size"
+                                        name="school_size"
+                                        min="0"
+                                        placeholder="Number of students">
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    data-bs-dismiss="modal">
+                                Close
+                            </button>
+
+                            <button type="submit"
+                                    class="btn btn-success">
+                                <i class="fas fa-plus"></i> Add School
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+        </div>
     <?php endif; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

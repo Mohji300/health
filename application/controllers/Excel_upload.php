@@ -69,6 +69,96 @@ class Excel_upload extends CI_Controller {
         redirect('excel_upload');
     }
 
+    public function add_school() {
+
+        $role = $this->session->userdata('role') ?: 'user';
+
+        // Only admins can add schools
+        if (!in_array($role, array('admin', 'super_admin'))) {
+            $this->session->set_flashdata(
+                'error',
+                'Only admin roles can add school data.'
+            );
+
+            redirect('excel_upload');
+        }
+
+        $school_id = trim((string) ($this->input->post('school_id') ?? ''));
+        $school_name = trim((string) ($this->input->post('school_name') ?? ''));
+        $school_level = trim((string) ($this->input->post('school_level') ?? ''));
+        $school_district = trim((string) ($this->input->post('school_district') ?? ''));
+        $legislative_district = trim((string) ($this->input->post('legislative_district') ?? ''));
+        $school_size = trim((string) ($this->input->post('school_size') ?? ''));
+
+        // Validate required fields
+        if (
+            empty($school_id) ||
+            empty($school_name) ||
+            empty($school_district) ||
+            empty($legislative_district)
+        ) {
+
+            $this->session->set_flashdata(
+                'error',
+                'Please complete every required school field.'
+            );
+
+            redirect('excel_upload');
+        }
+
+        // Determine school level automatically if not selected
+        if (empty($school_level) || $school_level === 'Unknown') {
+            $school_level = $this->determineSchoolLevelFromId($school_id);
+        }
+
+        // Prepare school data
+        $school_data = array(
+            'school_id' => $school_id,
+            'school_name' => $school_name,
+            'school_level' => $school_level,
+            'school_district' => $school_district,
+            'legislative_district' => $legislative_district,
+            'school_size' => ($school_size !== '')
+                ? (int) $school_size
+                : null
+        );
+
+        // Insert school
+        $school_result = $this->excel_model->add_school($school_data);
+
+        if (!$school_result['success']) {
+
+            $this->session->set_flashdata(
+                'error',
+                $school_result['message']
+            );
+
+            redirect('excel_upload');
+        }
+
+        // Create user account for the school
+        $user_result = $this->createUserAccount($school_data);
+
+        if ($user_result['success']) {
+
+            $this->session->set_flashdata(
+                'success',
+                'School added successfully. User account was also created.'
+            );
+
+        } else {
+
+            // School was added but user creation failed
+            $this->session->set_flashdata(
+                'success',
+                'School added successfully, but the user account could not be created: '
+                . $user_result['message']
+            );
+        }
+
+        redirect('excel_upload');
+    }
+
     public function upload_excel() {
         ini_set('memory_limit', '1024M');
         ini_set('max_execution_time', 300);

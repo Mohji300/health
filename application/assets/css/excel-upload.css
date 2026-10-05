@@ -363,3 +363,31 @@ ol.small li {
     visibility: visible;
     bottom: 150%;
 }
+
+/* Add School Button */
+.add-school-btn {
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.add-school-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Add School Modal */
+#addSchoolModal .modal-header {
+    background: linear-gradient(45deg, #28a745, #1e7e34) !important;
+}
+
+#addSchoolModal .form-label {
+    font-weight: 600;
+}
+
+#addSchoolModal .text-danger {
+    font-weight: bold;
+}
+
+#addSchoolModal .alert-info {
+    border-left: 4px solid #17a2b8;
+}

@@ -407,6 +407,118 @@ class excel_model extends CI_Model {
         }
     }
 
+    public function add_school($school) {
+
+        $this->db->trans_start();
+
+        try {
+
+            // Check if School ID already exists
+            $existing_school = $this->db
+                ->where('school_id', $school['school_id'])
+                ->get('schools')
+                ->row();
+
+            if ($existing_school) {
+
+                $this->db->trans_rollback();
+
+                return array(
+                    'success' => false,
+                    'message' => 'A school with School ID '
+                        . $school['school_id']
+                        . ' already exists.'
+                );
+            }
+
+            // Get or create Legislative District
+            $legislative_id = $this->ensure_legislative_district(
+                $school['legislative_district']
+            );
+
+            if (!$legislative_id) {
+
+                $this->db->trans_rollback();
+
+                return array(
+                    'success' => false,
+                    'message' => 'Invalid legislative district.'
+                );
+            }
+
+            // Get or create School District
+            $district_id = $this->ensure_school_district(
+                $school['school_district'],
+                $legislative_id
+            );
+
+            if (!$district_id) {
+
+                $this->db->trans_rollback();
+
+                return array(
+                    'success' => false,
+                    'message' => 'Invalid school district.'
+                );
+            }
+
+            // Insert school
+            $insert_data = array(
+                'school_id' => $school['school_id'],
+                'name' => $school['school_name'],
+                'school_district_id' => $district_id,
+                'school_level' => $school['school_level'],
+                'school_size' => $school['school_size'],
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            );
+
+            $this->db->insert('schools', $insert_data);
+
+            if ($this->db->affected_rows() <= 0) {
+
+                $this->db->trans_rollback();
+
+                return array(
+                    'success' => false,
+                    'message' => 'Failed to add school to the database.'
+                );
+            }
+
+            $school_db_id = $this->db->insert_id();
+
+            $this->db->trans_complete();
+
+            if ($this->db->trans_status() === FALSE) {
+
+                return array(
+                    'success' => false,
+                    'message' => 'Database transaction failed.'
+                );
+            }
+
+            return array(
+                'success' => true,
+                'id' => $school_db_id,
+                'message' => 'School added successfully.'
+            );
+
+        } catch (Exception $e) {
+
+            $this->db->trans_rollback();
+
+            log_message(
+                'error',
+                'Error adding school: ' . $e->getMessage()
+            );
+
+            return array(
+                'success' => false,
+                'message' => 'Error adding school: ' . $e->getMessage()
+            );
+        }
+    }
+
     private function ensure_legislative_district($name) {
         $name = trim($name);
         if (empty($name)) {
