@@ -203,6 +203,7 @@ $route['district/reports/comparison_report'] = 'district_reports_controller/comp
 // ========================
 $route['division_dashboard'] = 'division_dashboard_controller/index';
 $route['division_dashboard/get_district_schools/(:any)'] = 'division_dashboard_controller/get_district_schools/$1';
+$route['division_dashboard/get_district_report'] = 'division_dashboard_controller/get_district_report';
 $route['division_dashboard/get_school_details/(:any)'] = 'division_dashboard_controller/get_school_details/$1';
 
 // ========================
@@ -257,6 +258,9 @@ $route['migrate/(:any)'] = 'migrate/$1';
 // ========================
 // EMR ROUTES
 // ========================
+$route['doctor'] = 'emr_controller/index';
 $route['emr'] = 'emr_controller/index';
 $route['emr/view'] = 'emr_controller/index';
 $route['emr/ui'] = 'emr_controller/index';
+$route['emr_api/patient/(:num)'] = 'emr_api/patient/$1';
+$route['emr_api'] = 'emr_api/index';
