@@ -177,6 +177,58 @@ $(document).ready(function() {
     
     // Print functionality
     const btnPrint = document.getElementById('btnPrint');
+
+    function getVisibleReportTable() {
+        if (displayMode === 'shs_only') {
+            return document.getElementById('shsTable');
+        }
+        if (displayMode === 'elementary_only') {
+            return document.getElementById('elementaryTable');
+        }
+        if (displayMode === 'secondary_only') {
+            return document.getElementById('secondaryTable');
+        }
+        if (displayMode === 'integrated') {
+            const elementaryTable = document.getElementById('elementaryTable');
+            const secondaryTable = document.getElementById('secondaryTable');
+
+            if (elementaryTable && !elementaryTable.classList.contains('d-none')) {
+                return elementaryTable;
+            }
+            if (secondaryTable && !secondaryTable.classList.contains('d-none')) {
+                return secondaryTable;
+            }
+            return elementaryTable || secondaryTable;
+        }
+        return document.getElementById('elementaryTable');
+    }
+
+    const btnExportExcel = document.getElementById('btnExportExcel');
+
+    if (btnExportExcel) {
+        btnExportExcel.addEventListener('click', () => {
+            const table = getVisibleReportTable();
+            if (!table) {
+                alert('No report table is available to export.');
+                return;
+            }
+
+            const assessmentType = window.user_dashboard_controllerConfig.assessment_type_display || 'Report';
+            const schoolName = window.user_dashboard_controllerConfig.school_name || 'School';
+            const safePart = (value) => String(value).replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '');
+            const filename = `${safePart(schoolName) || 'School'}_${safePart(assessmentType)}_Nutritional_Report.xls`;
+            const workbookHtml = `<!doctype html><html><head><meta charset="utf-8"></head><body>${table.outerHTML}</body></html>`;
+            const blob = new Blob([workbookHtml], { type: 'application/vnd.ms-excel' });
+            const downloadUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(downloadUrl);
+        });
+    }
     
     if (btnPrint) {
         btnPrint.addEventListener('click', () => {
