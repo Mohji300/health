@@ -19,13 +19,13 @@ $(document).ready(function() {
                         { "orderable": false, "targets": [8, 9] }
                     ],
                     "language": {
-                        "emptyTable": "No reports available",
-                        "info": "Showing _START_ to _END_ of _TOTAL_ reports",
-                        "infoEmpty": "Showing 0 to 0 of 0 reports",
-                        "infoFiltered": "(filtered from _MAX_ total reports)",
-                        "lengthMenu": "Show _MENU_ reports",
+                        "emptyTable": "No records available",
+                        "info": "Showing _START_ to _END_ of _TOTAL_ records",
+                        "infoEmpty": "Showing 0 to 0 of 0 records",
+                        "infoFiltered": "(filtered from _MAX_ total records)",
+                        "lengthMenu": "Show _MENU_ records",
                         "search": "Search:",
-                        "zeroRecords": "No matching reports found",
+                        "zeroRecords": "No matching records found",
                         "paginate": {
                             "first": "First",
                             "last": "Last",
@@ -314,7 +314,7 @@ $(document).ready(function() {
         const table = $('#reportsTable').DataTable();
         if (table) {
             const count = table.rows({ search: 'applied' }).count();
-            $('#reportCount').text(`${count.toLocaleString()} Reports`);
+            $('#reportCount').text(`${count.toLocaleString()} Records`);
         }
     }
     
