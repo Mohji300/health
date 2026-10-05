@@ -312,7 +312,7 @@
               </h6>
               <div class="d-flex align-items-center">
                 <span class="badge bg-primary rounded-pill me-3" id="reportCount">
-                  <?php echo number_format(count($reports)); ?> Reports
+                  <?php echo number_format(count($student_reports ?? [])); ?> Records
                 </span>
                 <div>
                   <a href="<?php echo site_url($reports_base . '/export?' . http_build_query($current_filters)); ?>" 
@@ -323,7 +323,7 @@
               </div>
             </div>
             <div class="card-body">
-              <?php if (empty($reports)): ?>
+              <?php if (empty($student_reports)): ?>
                 <div class="text-center py-5" id="noReportsMessage">
                   <i class="fas fa-inbox fa-4x text-gray-300 mb-3"></i>
                   <h5 class="text-gray-500 mb-2">No reports found</h5>
@@ -337,85 +337,62 @@
                   <table class="table table-bordered table-hover" id="reportsTable" width="100%" cellspacing="0">
                     <thead class="table-light">
                       <tr>
+                        <th>Assessment Type</th>
                         <th>School Name</th>
                         <th>School ID</th>
-                        <th>Legislative District</th>
-                        <th>School District</th>
-                        <th>Grade Level</th>
-                        <th>Section</th>
-                        <th>Assessment Type</th>
-                        <th class="text-center">Students</th>
-                        <th>Date Submitted</th>
-                        <th class="text-center">Export</th>
+                        <th>District</th>
+                        <th>Grade</th>
+                        <th>Student Name</th>
+                        <th>Age</th>
+                        <th>Sex</th>
+                        <th>Weight (kg)</th>
+                        <th>Height (m)</th>
+                        <th>BMI</th>
+                        <th>Status</th>
+                        <th>SBFP</th>
+                        <th>Date</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <?php foreach ($reports as $report): ?>
-                        <?php 
-                          $assessment_type_class = ($report->assessment_type == 'baseline') ? 'badge-baseline' : (($report->assessment_type == 'midline') ? 'badge-midline' : 'badge-endline');
-                          $assessment_icon = ($report->assessment_type == 'baseline') ? 'flag' : 'flag';
+                      <?php foreach (($student_reports ?? []) as $report): ?>
+                        <?php
+                          $assessment_type_class = ($report->assessment_type ?? '') == 'baseline' ? 'bg-primary' : (($report->assessment_type ?? '') == 'midline' ? 'bg-warning text-dark' : 'bg-success');
+                          $status = strtolower($report->nutritional_status ?? '');
+                          $status_class = $status == 'severely wasted' ? 'bg-danger' : ($status == 'wasted' ? 'bg-warning text-dark' : ($status == 'normal' ? 'bg-success' : ($status == 'overweight' ? 'bg-info text-dark' : ($status == 'obese' ? 'bg-primary' : 'bg-secondary'))));
                         ?>
                         <tr>
-                          <td class="fw-bold text-primary">
-                            <i class="fas fa-school me-1"></i> <?php echo htmlspecialchars($report->school_name ?? 'N/A'); ?>
-                          </td>
                           <td>
-                            <span class="badge bg-dark">
-                              <i class="fas fa-id-card me-1"></i> <?php echo htmlspecialchars($report->school_id ?? 'N/A'); ?>
+                            <span class="badge <?php echo $assessment_type_class; ?>">
+                              <?php echo htmlspecialchars(ucfirst($report->assessment_type ?? 'N/A')); ?>
                             </span>
                           </td>
                           <td>
-                            <span class="badge bg-primary">
-                              <i class="fas fa-landmark me-1"></i> <?php echo htmlspecialchars($report->legislative_district ?? 'N/A'); ?>
+                            <?php echo htmlspecialchars($report->school_name ?? 'N/A'); ?>
+                          </td>
+                          <td>
+                            <?php echo htmlspecialchars($report->school_id ?? 'N/A'); ?>
+                          </td>
+                          <td>
+                            <?php echo htmlspecialchars($report->school_district ?? 'N/A'); ?>
+                          </td>
+                          <td><?php echo htmlspecialchars($report->grade_level ?? 'N/A'); ?></td>
+                          <td><?php echo htmlspecialchars($report->name ?? 'N/A'); ?></td>
+                          <td><?php echo htmlspecialchars($report->age ?? 'N/A'); ?></td>
+                          <td><?php echo htmlspecialchars($report->sex ?? 'N/A'); ?></td>
+                          <td><?php echo number_format((float)($report->weight ?? 0), 2); ?></td>
+                          <td><?php echo number_format((float)($report->height ?? 0), 2); ?></td>
+                          <td class="fw-bold"><?php echo number_format((float)($report->bmi ?? 0), 2); ?></td>
+                          <td>
+                            <span class="badge <?php echo $status_class; ?>">
+                              <?php echo htmlspecialchars($report->nutritional_status ?? 'N/A'); ?>
                             </span>
                           </td>
                           <td>
-                            <span class="badge bg-success">
-                              <i class="fas fa-map-marker-alt me-1"></i> <?php echo htmlspecialchars($report->school_district ?? 'N/A'); ?>
+                            <span class="badge <?php echo ($report->sbfp_beneficiary ?? 'No') == 'Yes' ? 'bg-success' : 'bg-secondary'; ?>">
+                              <?php echo htmlspecialchars($report->sbfp_beneficiary ?? 'No'); ?>
                             </span>
                           </td>
-                          <td>
-                            <span class="badge bg-info"><?php echo htmlspecialchars($report->grade_level ?? 'N/A'); ?></span>
-                          </td>
-                          <td><?php echo htmlspecialchars($report->section ?? 'N/A'); ?></td>
-                          <td>
-                            <span class="badge <?php echo $assessment_type_class; ?> text-white">
-                              <i class="fas fa-<?php echo $assessment_icon; ?> me-1"></i> 
-                              <?php echo ucfirst($report->assessment_type ?? 'baseline'); ?>
-                            </span>
-                          </td>
-                          <td class="text-center">
-                            <span class="badge bg-primary rounded-pill py-2 px-3">
-                              <i class="fas fa-users me-1"></i> <?php echo $report->student_count ?? 0; ?>
-                            </span>
-                          </td>
-                          <td>
-                            <?php if (!empty($report->first_submission)): ?>
-                              <span class="badge bg-light text-dark">
-                                <i class="fas fa-calendar-day me-1"></i> <?php echo date('M j, Y', strtotime($report->first_submission)); ?>
-                              </span>
-                            <?php else: ?>
-                              <span class="text-muted">N/A</span>
-                            <?php endif; ?>
-                          </td>
-                          <td class="text-center">
-                            <a href="<?php echo site_url($reports_base . '/export_detail?' . http_build_query([
-                              'legislative_district' => $report->legislative_district ?? '',
-                              'school_district' => $report->school_district ?? '',
-                              'school_name' => $report->school_name ?? '',
-                              'school_id' => $report->school_id ?? '',
-                              'grade_level' => $report->grade_level ?? '',
-                              'section' => $report->section ?? '',
-                              'section_id' => $report->section_id ?? '',
-                              'year' => $report->year ?? '',
-                              'assessment_type' => $report->assessment_type ?? 'baseline'
-                            ])); ?>" 
-                              class="btn btn-success btn-sm export-detail-btn" 
-                              title="Export to Excel/CSV" 
-                              data-bs-toggle="tooltip">
-                                <i class="fas fa-file-export me-1"></i> Export
-                            </a>
-                          </td>
+                          <td><?php echo !empty($report->date_of_weighing) ? date('M j, Y', strtotime($report->date_of_weighing)) : 'N/A'; ?></td>
                         </tr>
                       <?php endforeach; ?>
                     </tbody>
@@ -434,10 +411,10 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script>
         const reportsConfig = {
-            totalReports: <?php echo count($reports); ?>,
+            totalReports: <?php echo count($student_reports ?? []); ?>,
             currentFilters: <?php echo json_encode($current_filters); ?>,
             baseUrl: '<?php echo site_url($reports_base); ?>',
-            hasReports: <?php echo !empty($reports) ? 'true' : 'false'; ?>,
+            hasReports: <?php echo !empty($student_reports) ? 'true' : 'false'; ?>,
             isRegularUser: <?php echo $is_regular_user ? 'true' : 'false'; ?>
         };
     </script>
