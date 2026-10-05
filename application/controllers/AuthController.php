@@ -98,7 +98,7 @@ class Authcontroller extends CI_Controller {
         $role = $user->role;
         
         // For ALL roles, check if school info is completed
-        $needs_school_info = empty($user->school_id) || !$user->school_info_completed;
+        $needs_school_info = $role !== 'doctor' && (empty($user->school_id) || !$user->school_info_completed);
         
         if ($needs_school_info) {
             // Redirect ALL roles to school info form if not completed
@@ -111,6 +111,9 @@ class Authcontroller extends CI_Controller {
                     break;
                 case 'district':
                     redirect('district_dashboard');
+                    break;
+                case 'doctor':
+                    redirect('emr');
                     break;
                 case 'super_admin':
                 case 'admin':
