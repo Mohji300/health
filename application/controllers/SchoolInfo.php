@@ -182,6 +182,9 @@ class Schoolinfo extends CI_Controller {
             case 'district':
                 redirect('district_dashboard');
                 break;
+            case 'doctor':
+                redirect('emr');
+                break;
             case 'user':
                 redirect('users/dashboard');
                 break;
