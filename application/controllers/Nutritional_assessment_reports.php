@@ -59,6 +59,19 @@ class Nutritional_assessment_reports extends CI_Controller {
             $section_id
         );
 
+        // Keep the report table at student level, like the Division consolidated table.
+        $data['student_reports'] = $this->nutritional_assessment_model->get_export_data_with_filters(
+            $legislative_district,
+            $school_district,
+            $school_name,
+            $grade_level,
+            $date_from,
+            $date_to,
+            $assessment_type,
+            $school_id,
+            $section_id
+        );
+
         if (in_array($role, ['admin', 'super_admin', 'district', 'division'])) {
             $data['legislative_districts'] = $this->nutritional_assessment_model->get_unique_legislative_districts();
             $data['school_districts'] = $this->nutritional_assessment_model->get_unique_school_districts();
