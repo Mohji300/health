@@ -3,10 +3,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Migrate extends CI_Controller {
 
+    /**
+     * Order matters: lowest version first.
+     * Each method must be idempotent (safe to re-run).
+     */
+    private $versions = [
+        20261001000003 => 'add_impression_norm',
+        20261005000004 => 'add_xray_results',
+    ];
+
     public function __construct()
     {
         parent::__construct();
         $this->load->database();
+        $this->load->dbforge();
     }
 
     public function index()
@@ -14,106 +24,160 @@ class Migrate extends CI_Controller {
         error_reporting(E_ALL);
         ini_set('display_errors', 1);
 
-        echo "<h2>Manual Migration – No Library</h2>";
+        echo "<h2>EMR Migration</h2>";
+        echo "<pre style='font-family: monospace; line-height: 1.4;'>";
 
-        // // ---------- 1. Add 'section_id' column ----------
-        // if (!$this->db->field_exists('section_id', 'nutritional_assessments')) {
-        //     echo "Adding column 'section_id'...<br>";
-        //     if ($this->db->query("ALTER TABLE nutritional_assessments ADD section_id INT(11) NULL AFTER section")) {
-        //         echo "Column 'section_id' added.<br>";
-        //     } else {
-        //         echo "Failed: " . $this->db->error()['message'] . "<br>";
-        //         return;
-        //     }
-        // } else {
-        //     echo "Column 'section_id' already exists.<br>";
-        // }
+        $applied = $this->applied_versions();
+        $ran = 0;
 
-        // ---------- 2. Add beneficiary flag columns ----------
-        $beneficiary_fields = [
-            'classification_of_beneficiary' => "ENUM('Primary','Secondary') NULL DEFAULT NULL",
-            'pregnant'                      => "ENUM('Yes','No') NULL DEFAULT NULL",
-            'with_0_1_year_old_child'       => "ENUM('Yes','No') NULL DEFAULT NULL",
-            'dewormed'                      => "ENUM('Yes','No') NULL DEFAULT NULL",
-            'parent_consent_milk'           => "ENUM('Yes','No') NULL DEFAULT NULL",
-            'participation_4ps'             => "ENUM('Yes','No') NULL DEFAULT NULL",
-            'previous_sbfp'                 => "ENUM('Yes','No') NULL DEFAULT NULL",
-        ];
-
-        foreach ($beneficiary_fields as $column => $definition) {
-            if (!$this->db->field_exists($column, 'nutritional_assessments')) {
-                echo "Adding column '$column'...<br>";
-                $sql = "ALTER TABLE nutritional_assessments ADD $column $definition";
-                if ($this->db->query($sql)) {
-                    echo "Column '$column' added.<br>";
-                } else {
-                    echo "Failed to add '$column': " . $this->db->error()['message'] . "<br>";
-                }
-            } else {
-                echo "Column '$column' already exists.<br>";
+        foreach ($this->versions as $version => $method) {
+            if (in_array((string) $version, $applied, true)) {
+                echo "[skip] {$version} already applied\n";
+                continue;
             }
+
+            echo "[run]  {$version} ({$method})\n";
+
+            $this->db->trans_start();
+            $this->{$method}();
+            $this->record_version($version);
+
+            if ($this->db->trans_status() === false) {
+                $this->db->trans_rollback();
+                echo "[fail] {$version} rolled back\n";
+                echo "</pre>";
+                return;
+            }
+
+            $this->db->trans_commit();
+            echo "[ok]   {$version} applied\n\n";
+            $ran++;
         }
 
-        // // ---------- 3. Backfill section_id (safe to re-run) ----------
-        // echo "Backfilling 'section_id'...<br>";
-        // $this->db->query("
-        //     UPDATE nutritional_assessments na
-        //     JOIN grade_sections gs 
-        //         ON na.grade_level = gs.grade 
-        //         AND na.section = gs.section 
-        //         AND na.year = gs.year 
-        //         AND na.legislative_district = gs.legislative_district
-        //         AND na.school_district = gs.school_district
-        //     SET na.section_id = gs.id
-        //     WHERE na.section_id IS NULL
-        // ");
-        // echo "Backfill completed.<br>";
-
-        // // ---------- 4. Add indexes if missing ----------
-        // $indexes = [
-        //     'nutritional_assessments' => [
-        //         'idx_section_id'        => ['section_id'],
-        //         'idx_assessment_deleted'=> ['assessment_type', 'is_deleted'],
-        //         'idx_school'            => ['school_id'],
-        //         'idx_grade_sex'         => ['grade_level', 'sex'],
-        //         // Optional – you may add indexes on beneficiary columns if needed
-        //         // 'idx_classification' => ['classification_of_beneficiary'],
-        //     ],
-        //     'schools' => [
-        //         'idx_district' => ['school_district_id'],
-        //     ],
-        //     'school_districts' => [
-        //         'idx_legislative' => ['legislative_district_id'],
-        //     ],
-        // ];
-
-        // foreach ($indexes as $table => $indices) {
-        //     foreach ($indices as $idx_name => $columns) {
-        //         $exists = $this->db->query("SHOW INDEX FROM `{$table}` WHERE Key_name = '{$idx_name}'")->num_rows();
-        //         if ($exists > 0) {
-        //             echo "Index '{$idx_name}' already exists on {$table}. Skipping.<br>";
-        //             continue;
-        //         }
-        //         $col_list = implode('`, `', $columns);
-        //         $sql = "ALTER TABLE `{$table}` ADD INDEX `{$idx_name}` (`{$col_list}`)";
-        //         $this->db->query($sql);
-        //         echo "Added index '{$idx_name}' on {$table}.<br>";
-        //     }
-        // }
-
-        // ---------- 5. Record migration version ----------
-        $this->ensure_version_inserted();
+        echo "Done. Applied {$ran} migration(s).\n";
+        echo "</pre>";
     }
 
-    private function ensure_version_inserted()
+    // --------------------------------------------------------------
+    // Version bookkeeping
+    // --------------------------------------------------------------
+    private function applied_versions()
     {
-        $version = 20260107120000; // Update this timestamp if you want a new version
-        $query = $this->db->query("SELECT * FROM migrations WHERE version = $version");
-        if ($query->num_rows() == 0) {
-            $this->db->query("INSERT INTO migrations (version) VALUES ($version)");
-            echo "Version $version recorded.<br>";
-        } else {
-            echo "Version already recorded.<br>";
+        if (!$this->db->table_exists('migrations')) {
+            $this->db->query("
+                CREATE TABLE migrations (
+                    version BIGINT NOT NULL PRIMARY KEY,
+                    applied_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+            return [];
         }
+
+        return array_map(
+            fn($row) => (string) $row->version,
+            $this->db->select('version')->get('migrations')->result()
+        );
+    }
+
+    private function record_version($version)
+    {
+        $this->db->insert('migrations', ['version' => $version]);
+    }
+
+    // --------------------------------------------------------------
+    // 20261001000003 — impression_norm + backfill + index
+    // --------------------------------------------------------------
+    private function add_impression_norm()
+    {
+        if (!$this->db->table_exists('emr_followups')) {
+            echo "  ! emr_followups not found — aborting this step\n";
+            return;
+        }
+
+        if (!$this->column_exists('emr_followups', 'impression_norm')) {
+            if (!$this->db->query("
+                ALTER TABLE emr_followups
+                ADD COLUMN impression_norm VARCHAR(191) NULL DEFAULT NULL AFTER impression
+            ")) {
+                echo "  ! failed to add impression_norm: " . $this->db->error()['message'] . "\n";
+                return;
+            }
+            echo "  + added column impression_norm\n";
+        } else {
+            echo "  = column impression_norm already exists\n";
+        }
+
+        // Backfill. LEFT(...,191) prevents "Data too long" in strict mode.
+        if (!$this->db->query("
+            UPDATE emr_followups
+            SET impression_norm = LEFT(
+                UPPER(TRIM(REGEXP_REPLACE(impression, '[[:space:]]+', ' '))),
+                191
+            )
+            WHERE impression IS NOT NULL
+              AND impression <> ''
+              AND (impression_norm IS NULL OR impression_norm = '')
+        ")) {
+            echo "  ! backfill skipped: " . $this->db->error()['message'] . "\n";
+        } else {
+            echo "  = backfilled " . $this->db->affected_rows() . " row(s)\n";
+        }
+
+        if (!$this->index_exists('emr_followups', 'idx_emr_followups_impression_norm')) {
+            if (!$this->db->query("
+                ALTER TABLE emr_followups
+                ADD INDEX idx_emr_followups_impression_norm (impression_norm)
+            ")) {
+                echo "  ! failed to add index: " . $this->db->error()['message'] . "\n";
+                return;
+            }
+            echo "  + added index idx_emr_followups_impression_norm\n";
+        } else {
+            echo "  = index idx_emr_followups_impression_norm already exists\n";
+        }
+    }
+
+    // --------------------------------------------------------------
+    // 20261005000004 — xray_results
+    // --------------------------------------------------------------
+    private function add_xray_results()
+    {
+        if (!$this->db->table_exists('emr_followups')) {
+            echo "  ! emr_followups not found — aborting this step\n";
+            return;
+        }
+
+        if ($this->column_exists('emr_followups', 'xray_results')) {
+            echo "  = column xray_results already exists\n";
+            return;
+        }
+
+        if (!$this->db->query("
+            ALTER TABLE emr_followups
+            ADD COLUMN xray_results TEXT NULL AFTER dental_findings
+        ")) {
+            echo "  ! failed to add xray_results: " . $this->db->error()['message'] . "\n";
+            return;
+        }
+        echo "  + added column xray_results\n";
+    }
+
+    // --------------------------------------------------------------
+    // Helpers
+    // --------------------------------------------------------------
+    private function column_exists($table, $column)
+    {
+        $q = $this->db->query(
+            "SHOW COLUMNS FROM `" . $this->db->escape_str($table) . "` LIKE " . $this->db->escape($column)
+        );
+        return $q && $q->num_rows() > 0;
+    }
+
+    private function index_exists($table, $index_name)
+    {
+        $q = $this->db->query(
+            "SHOW INDEX FROM `" . $this->db->escape_str($table) . "` WHERE Key_name = " . $this->db->escape($index_name)
+        );
+        return $q && $q->num_rows() > 0;
     }
 }
