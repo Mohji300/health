@@ -25,7 +25,7 @@ class Superadmincontroller extends CI_Controller {
         $users = $this->user_model->get_all_users();
         
         // Define available roles
-        $availableRoles = ['super_admin', 'admin', 'district', 'division', 'user'];
+        $availableRoles = ['super_admin', 'admin', 'district', 'division', 'doctor', 'user'];
         
         // Also load districts and school districts so the view can use authoritative values
         $this->load->model('legislative_district_model');
@@ -87,7 +87,7 @@ class Superadmincontroller extends CI_Controller {
         $this->load->library('form_validation');
 
         // Prepare available roles for the form
-        $availableRoles = ['super_admin', 'admin', 'district', 'division', 'user'];
+        $availableRoles = ['super_admin', 'admin', 'district', 'division', 'doctor', 'user'];
 
         if ($this->input->method() === 'post') {
             $this->form_validation->set_rules('name', 'Full Name', 'required|trim');
@@ -208,7 +208,7 @@ class Superadmincontroller extends CI_Controller {
             return;
         }
 
-        $availableRoles = ['super_admin', 'admin', 'district', 'division', 'user'];
+        $availableRoles = ['super_admin', 'admin', 'district', 'division', 'doctor', 'user'];
 
         if ($this->input->method() === 'post') {
             // Existing rules
