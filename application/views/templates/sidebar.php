@@ -28,6 +28,7 @@
   $is_district = ($user_role == 'district');
   $is_division = ($user_role == 'division');
   $is_regular_user = ($user_role == 'user');
+  $is_doctor = ($user_role == 'doctor');
 
   $current_uri = $this->uri->uri_string();
   $current_url = current_url();
@@ -59,6 +60,20 @@
 
       <li class="nav-item mb-2 px-2">
         <h6 class="text-uppercase text-gray-400 small fw-semibold mb-2 main-sidebar-text">Quick Access</h6>
+
+        <!-- Doctor role -->
+        <?php if ($is_doctor): ?>
+          <a href="<?php echo site_url('emr_controller'); ?>"
+            class="nav-link rounded-2 mb-1 <?php echo is_active_page('emr_controller', $current_uri) ? 'active' : ''; ?>">
+            <i class="fas fa-heartbeat"></i>
+            <span class="main-sidebar-text"> EMR Dashboard</span>
+          </a>
+          <a href="<?php echo site_url('emr_controller/patients'); ?>"
+            class="nav-link rounded-2 mb-1 <?php echo is_active_page('emr_controller/patients', $current_uri) ? 'active' : ''; ?>">
+            <i class="fas fa-user-injured"></i>
+            <span class="main-sidebar-text"> Patients</span>
+          </a>
+        <?php endif; ?>
 
         <!-- Show to Admin and Regular Users only -->
         <?php if ($is_admin || $is_regular_user): ?>
@@ -196,6 +211,7 @@
       <?php endif; ?>
 
       <!-- SBFP Beneficiaries - Show to ALL ROLES -->
+      <?php if ($is_admin || $is_regular_user || $is_district || $is_division): ?>
       <li class="nav-item mb-2 px-2">
         <a href="<?php echo site_url('sbfp_beneficiaries'); ?>"
            class="nav-link rounded-2 mb-1 <?php echo is_active_page('sbfp_beneficiaries', $current_uri) ? 'active' : ''; ?>">
@@ -209,7 +225,7 @@
           <span class="main-sidebar-text"> Archive</span>
         </a>
       </li>
-
+        <?php endif; ?>
     </ul>
   </nav>
 

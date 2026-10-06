@@ -22,9 +22,9 @@
 
 </style>
 
-<div id="wrapper">
+<div id="wrapper" class="d-flex">
     <?php if (empty($no_sidebar)): ?>
         <?php $this->load->view('templates/sidebar'); ?>
     <?php endif; ?>
-    <div id="page-content-wrapper">
+    <div id="page-content-wrapper" class="flex-grow-1 w-100">
         <div class="container-fluid">
