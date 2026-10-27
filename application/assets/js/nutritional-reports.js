@@ -19,13 +19,13 @@ $(document).ready(function() {
                         { "orderable": false, "targets": [8, 9] }
                     ],
                     "language": {
-                        "emptyTable": "No records available",
-                        "info": "Showing _START_ to _END_ of _TOTAL_ records",
-                        "infoEmpty": "Showing 0 to 0 of 0 records",
-                        "infoFiltered": "(filtered from _MAX_ total records)",
-                        "lengthMenu": "Show _MENU_ records",
+                        "emptyTable": "No reports available",
+                        "info": "Showing _START_ to _END_ of _TOTAL_ reports",
+                        "infoEmpty": "Showing 0 to 0 of 0 reports",
+                        "infoFiltered": "(filtered from _MAX_ total reports)",
+                        "lengthMenu": "Show _MENU_ reports",
                         "search": "Search:",
-                        "zeroRecords": "No matching records found",
+                        "zeroRecords": "No matching reports found",
                         "paginate": {
                             "first": "First",
                             "last": "Last",
@@ -278,18 +278,15 @@ $(document).ready(function() {
      * Handle export buttons
      */
     function initializeExportButtons() {
-        $('.export-btn, .export-detail-btn').on('click', function(e) {
+        // Only the CSV export link gets the spinner treatment
+        $(document).on('click', '.export-btn', function (e) {
             const btn = $(this);
             const originalText = btn.html();
-            
-            // Show loading state
+            btn.data('original-html', originalText);
             btn.prop('disabled', true)
-               .html('<i class="fas fa-spinner fa-spin me-1"></i> Exporting...');
-            
-            // Restore button after a delay (if page doesn't redirect)
-            setTimeout(function() {
-                btn.prop('disabled', false)
-                   .html(originalText);
+            .html('<i class="fas fa-spinner fa-spin me-1"></i> Exporting...');
+            setTimeout(function () {
+                btn.prop('disabled', false).html(originalText);
             }, 3000);
         });
     }
@@ -314,7 +311,7 @@ $(document).ready(function() {
         const table = $('#reportsTable').DataTable();
         if (table) {
             const count = table.rows({ search: 'applied' }).count();
-            $('#reportCount').text(`${count.toLocaleString()} Records`);
+            $('#reportCount').text(`${count.toLocaleString()} Reports`);
         }
     }
     
@@ -484,6 +481,42 @@ $(document).ready(function() {
         
         showNotification('CSV exported successfully!', 'success');
     }
+
+    function initializeExportDetailDropdown() {
+    $(document).on('click', '.export-detail-action', function (e) {
+        e.preventDefault();
+
+        const $action = $(this);
+        const $btn    = $action.closest('.btn-group').find('.export-detail-btn');
+        const mode    = $action.data('mode');
+
+        const params = {
+            mode:                 mode,
+            legislative_district: $btn.data('legislative-district'),
+            school_district:      $btn.data('school-district'),
+            school_name:          $btn.data('school-name'),
+            school_id:            $btn.data('school-id'),
+            grade_level:          $btn.data('grade-level'),
+            section:              $btn.data('section'),
+            section_id:           $btn.data('section-id'),
+            year:                 $btn.data('year')
+        };
+
+        const baseUrl = (typeof reportsConfig !== 'undefined' && reportsConfig.exportDetailUrl)
+            ? reportsConfig.exportDetailUrl
+            : window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '') + '/export_detail';
+
+        const query = Object.keys(params)
+            .filter(k => params[k] !== undefined && params[k] !== null && params[k] !== '')
+            .map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k]))
+            .join('&');
+
+        window.location.href = baseUrl + '?' + query;
+
+        const inst = bootstrap.Dropdown.getInstance($btn[0]);
+        if (inst) inst.hide();
+    });
+}
     
     /**
      * Initialize all components
@@ -500,7 +533,7 @@ $(document).ready(function() {
         validateDates();
         initializeTableRowClick();
         initializeAutoSubmit();
-        
+        initializeExportDetailDropdown();   // <-- add this
         console.log('Nutritional reports page initialized successfully');
     }
     

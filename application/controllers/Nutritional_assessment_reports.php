@@ -1,6 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
+use PhpOffice\PhpSpreadsheet\Style\Protection;
 class Nutritional_assessment_reports extends CI_Controller {
 
     public function __construct()
@@ -48,19 +49,6 @@ class Nutritional_assessment_reports extends CI_Controller {
         $section_id = $this->input->get('section_id', TRUE);
 
         $data['reports'] = $this->nutritional_assessment_model->get_reports_with_filters(
-            $legislative_district,
-            $school_district,
-            $school_name,
-            $grade_level,
-            $date_from,
-            $date_to,
-            $assessment_type,
-            $school_id,
-            $section_id
-        );
-
-        // Keep the report table at student level, like the Division consolidated table.
-        $data['student_reports'] = $this->nutritional_assessment_model->get_export_data_with_filters(
             $legislative_district,
             $school_district,
             $school_name,
@@ -124,38 +112,37 @@ class Nutritional_assessment_reports extends CI_Controller {
     public function export()
     {
         try {
-            // Get user session data
-            $session_school = $this->session->userdata('school_name');
+            $session_school    = $this->session->userdata('school_name');
             $session_school_id = $this->session->userdata('school_id');
-            $role = $this->session->userdata('role');
+            $role              = $this->session->userdata('role');
 
-            // Load the PhpSpreadsheet library
             $this->load->library('phpspreadsheet_lib');
 
-            // Define template path
-            $templatePath = FCPATH . ASSETS_PATH . '/excel_templates/nutritional_report_template.xlsx';
-            
-            // Load the template using the library
-            $spreadsheet = $this->phpspreadsheet_lib->loadTemplate($templatePath);
-            $sheet = $spreadsheet->getActiveSheet();
-            
-            // Get filter parameters
-            $legislative_district = $this->input->get('legislative_district', TRUE);
-            $school_district = $this->input->get('school_district', TRUE);
-            $school_name = $this->input->get('school_name', TRUE);
-            $school_id = $this->input->get('school_id', TRUE);
-            $grade_level = $this->input->get('grade_level', TRUE);
-            $assessment_type = $this->input->get('assessment_type', TRUE);
-            $date_from = $this->input->get('date_from', TRUE);
-            $date_to = $this->input->get('date_to', TRUE);
-
-            // For non-admin users, force filter to their school
-            if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
-                $school_name = $session_school;
-                $school_id = $session_school_id;
+            // FIX: correct template for all-sections export
+            $templatePath = FCPATH . ASSETS_PATH . '/excel_templates/export_all_sections.xlsx';
+            if (!file_exists($templatePath)) {
+                show_error('Template file not found at: ' . $templatePath);
             }
 
-            // Get data with filters
+            $spreadsheet = $this->phpspreadsheet_lib->loadTemplate($templatePath);
+            $sheet       = $spreadsheet->getActiveSheet();
+
+            // Filters
+            $legislative_district = $this->input->get('legislative_district', TRUE);
+            $school_district      = $this->input->get('school_district', TRUE);
+            $school_name          = $this->input->get('school_name', TRUE);
+            $school_id            = $this->input->get('school_id', TRUE);
+            $grade_level          = $this->input->get('grade_level', TRUE);
+            $assessment_type      = $this->input->get('assessment_type', TRUE);
+            $date_from            = $this->input->get('date_from', TRUE);
+            $date_to              = $this->input->get('date_to', TRUE);
+            $section_id           = $this->input->get('section_id', TRUE);
+
+            if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
+                $school_name = $session_school;
+                $school_id   = $session_school_id;
+            }
+
             $reports = $this->nutritional_assessment_model->get_export_data_with_filters(
                 $legislative_district,
                 $school_district,
@@ -164,314 +151,211 @@ class Nutritional_assessment_reports extends CI_Controller {
                 $date_from,
                 $date_to,
                 $assessment_type,
-                $school_id
+                $school_id,
+                $section_id
             );
 
             if (empty($reports)) {
                 show_error('No data found for the specified criteria');
             }
 
-            // Clear existing data rows
-            for ($row = 9; $row <= 200; $row++) {
-                $sheet->setCellValue('A' . $row, '');
-                $sheet->setCellValue('B' . $row, '');
-                $sheet->setCellValue('C' . $row, '');
-                $sheet->setCellValue('D' . $row, '');
-                $sheet->setCellValue('E' . $row, '');
-                $sheet->setCellValue('F' . $row, '');
-                $sheet->setCellValue('G' . $row, '');
-                $sheet->setCellValue('H' . $row, '');
-                $sheet->setCellValue('I' . $row, '');
-                $sheet->setCellValue('J' . $row, '');
-                $sheet->setCellValue('K' . $row, '');
-                $sheet->setCellValue('L' . $row, '');
-                $sheet->setCellValue('M' . $row, '');
-                $sheet->setCellValue('N' . $row, '');
+            // FIX: only clear student data cells B–O from row 7 down.
+            // Leave A formulas intact; do NOT touch P–Z (summary block lives there).
+            $lastRow = 100;
+            for ($row = 7; $row <= $lastRow; $row++) {
+                foreach (['B','C','D','E','F','G','H','I','J','K','L','M','N','O'] as $col) {
+                    $sheet->setCellValue($col . $row, '');
+                }
             }
-            
-            // Get the actual year from the first record if available
-            $actual_year = !empty($reports) && isset($reports[0]->year) ? $reports[0]->year : '';
-            
-            // Calculate date of weighing (get earliest date)
-            $dates = array_filter(array_map(function($r) {
+
+            $actual_year = $reports[0]->year ?? '';
+
+            // Earliest date of weighing
+            $dates = array_filter(array_map(function ($r) {
                 return !empty($r->date_of_weighing) ? $r->date_of_weighing : null;
             }, $reports));
-            
-            if (!empty($dates)) {
-                sort($dates);
-                $date_of_weighing_display = date('F d, Y', strtotime($dates[0]));
-            } else {
-                $date_of_weighing_display = date('F d, Y');
-            }
-            
-            // Format date for A6 (short format)
-            $date_of_weighing_short = date('m/d/y');
-            
-            // POPULATE HEADER INFORMATION
-            $sheet->setCellValue('A1', 'NUTRITIONAL STATUS REPORT');
+            sort($dates);
+            $date_of_weighing = !empty($dates) ? date('m/d/Y', strtotime($dates[0])) : date('m/d/Y');
+
+            // FIX: header cells match template (row 3)
+            $sheet->setCellValue('C3', $date_of_weighing);   // Date of Weighing
+            $sheet->setCellValue('E3', $grade_level ?: '');   // Grade
+            $sheet->setCellValue('G3', '');                   // Section (n/a for all-sections)
+
+            // Optional metadata in row 2 (blank in template)
             $sheet->setCellValue('A2', $school_name ?: 'All Schools');
-            $sheet->setCellValue('A3', 'School Year: ' . ($actual_year ?: 'N/A'));
-            $sheet->setCellValue('A4', 'Assessment Type: ' . ucfirst($assessment_type ?: 'All'));
-            $sheet->setCellValue('A6', 'Date of Weighing: ' . $date_of_weighing_short);
-            $sheet->setCellValue('N6', $grade_level ?: 'All Grade Levels');
+            $sheet->setCellValue('P2', 'School Year: ' . ($actual_year ?: 'N/A'));
+            $sheet->setCellValue('U2', 'Assessment: ' . ucfirst($assessment_type ?: 'All'));
 
-            // Add grade level if filtered
-            if ($grade_level) {
-                $sheet->setCellValue('A8', 'Grade Level: ' . $grade_level);
-            }
-
-            // Initialize counters
-            $bmi_summary = [
-                'male' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0],
+            // Summary counters
+            $bmi = [
+                'male'   => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0],
                 'female' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0],
-                'total' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0]
+            ];
+            $hfa = [
+                'male'   => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0],
+                'female' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0],
             ];
 
-            $hfa_summary = [
-                'male' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0],
-                'female' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0],
-                'total' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0]
-            ];
-            
-            // Populate data starting from row 9
-            $startRow = 9;
-            $counter = 1;
-            
+            $startRow = 7;
+            $counter  = 1;
+
             foreach ($reports as $report) {
                 $currentRow = $startRow + ($counter - 1);
-                
-                // A: Student Number
-                $sheet->setCellValue('A' . $currentRow, $counter);
 
-                // B: Punctuation before name
-                $sheet->setCellValue('B' . $currentRow,  '.');
-                
-                // C: Names
-                $sheet->setCellValue('C' . $currentRow, $report->name ?? '');
-                
-                // D: Birthday
+                // Split name
+                [$lastName, $firstName, $mi] = $this->split_name($report->name ?? '');
+
+                // B–D: name parts
+                $sheet->setCellValue('B' . $currentRow, $lastName);
+                $sheet->setCellValue('C' . $currentRow, $firstName);
+                $sheet->setCellValue('D' . $currentRow, $mi);
+
+                // E: Birthday
                 if (!empty($report->birthday) && $report->birthday != '0000-00-00') {
-                    $sheet->setCellValue('D' . $currentRow, date('m/d/Y', strtotime($report->birthday)));
+                    $sheet->setCellValue('E' . $currentRow, date('m/d/Y', strtotime($report->birthday)));
                 }
 
-                // E: Weight
-                $sheet->setCellValue('E' . $currentRow, $report->weight ?? '');
-                
-                // F: Height (meters)
+                // F: Weight
+                $sheet->setCellValue('F' . $currentRow, $report->weight ?? '');
+
+                // G: Height (m)
                 $height = $report->height ?? '';
+                $heightM = null;
                 if (!empty($height) && is_numeric($height)) {
-                    // If height is in cm (>10), convert to meters
-                    if ($height > 10) {
-                        $height = $height / 100;
-                    }
-                    $sheet->setCellValue('F' . $currentRow, number_format((float)$height, 2));
+                    $heightM = ($height > 10) ? $height / 100 : (float)$height;
+                    $sheet->setCellValue('G' . $currentRow, number_format($heightM, 2));
                 }
-                
-                // G: Sex
+
+                // H: Sex
                 $sex = !empty($report->sex) ? strtoupper(substr(trim($report->sex), 0, 1)) : '';
-                $sheet->setCellValue('G' . $currentRow, $sex);
-                
-                // H: Height²
-                if (!empty($report->height_squared)) {
-                    $sheet->setCellValue('H' . $currentRow, $report->height_squared);
-                } elseif (!empty($height) && is_numeric($height)) {
-                    $height_m = ($height > 10) ? $height/100 : $height;
-                    $sheet->setCellValue('H' . $currentRow, round(pow((float)$height_m, 2), 4));
+                $sheet->setCellValue('H' . $currentRow, $sex);
+
+                // I: Height²
+                if ($heightM !== null) {
+                    $sheet->setCellValue('I' . $currentRow, round(pow($heightM, 2), 4));
                 }
-                
-                // I-K: Age
+
+                // J/K/L: Age
                 if (!empty($report->birthday) && !empty($report->date_of_weighing)) {
                     try {
-                        $birthDate = new DateTime($report->birthday);
-                        $weighingDate = new DateTime($report->date_of_weighing);
-                        $age = $birthDate->diff($weighingDate);
-                        
-                        $sheet->setCellValue('I' . $currentRow, $age->y);
-                        $sheet->setCellValue('J' . $currentRow, ',');
-                        $sheet->setCellValue('K' . $currentRow, $age->m);
+                        $age = (new DateTime($report->birthday))
+                            ->diff(new DateTime($report->date_of_weighing));
+                        $sheet->setCellValue('J' . $currentRow, $age->y);
+                        $sheet->setCellValue('K' . $currentRow, ',');
+                        $sheet->setCellValue('L' . $currentRow, $age->m);
                     } catch (Exception $e) {
-                        log_message('error', 'Age calculation error: ' . $e->getMessage());
+                        log_message('error', 'Age calc: ' . $e->getMessage());
                     }
                 }
-                
-                // L: BMI
-                $sheet->setCellValue('L' . $currentRow, $report->bmi ?? '');
-                
-                // M: Nutritional Status (BMI)
-                $nutritional_status = strtolower(trim($report->nutritional_status ?? ''));
-                $sheet->setCellValue('M' . $currentRow, $report->nutritional_status ?? '');
-                
-                // N: Height-For-Age
-                $height_for_age = strtolower(trim($report->height_for_age ?? ''));
-                $sheet->setCellValue('N' . $currentRow, $report->height_for_age ?? '');
-                
-                // Update BMI counters based on sex and nutritional status
-                if ($sex == 'M') {
-                    $bmi_summary['male']['total']++;
-                    $bmi_summary['total']['total']++;
-                    
-                    if ($nutritional_status == 'severely wasted') {
-                        $bmi_summary['male']['severely_wasted']++;
-                        $bmi_summary['total']['severely_wasted']++;
-                    } elseif ($nutritional_status == 'wasted') {
-                        $bmi_summary['male']['wasted']++;
-                        $bmi_summary['total']['wasted']++;
-                    } elseif ($nutritional_status == 'normal') {
-                        $bmi_summary['male']['normal']++;
-                        $bmi_summary['total']['normal']++;
-                    } elseif ($nutritional_status == 'overweight') {
-                        $bmi_summary['male']['overweight']++;
-                        $bmi_summary['total']['overweight']++;
-                    } elseif ($nutritional_status == 'obese') {
-                        $bmi_summary['male']['obese']++;
-                        $bmi_summary['total']['obese']++;
-                    }
-                } elseif ($sex == 'F') {
-                    $bmi_summary['female']['total']++;
-                    $bmi_summary['total']['total']++;
-                    
-                    if ($nutritional_status == 'severely wasted') {
-                        $bmi_summary['female']['severely_wasted']++;
-                        $bmi_summary['total']['severely_wasted']++;
-                    } elseif ($nutritional_status == 'wasted') {
-                        $bmi_summary['female']['wasted']++;
-                        $bmi_summary['total']['wasted']++;
-                    } elseif ($nutritional_status == 'normal') {
-                        $bmi_summary['female']['normal']++;
-                        $bmi_summary['total']['normal']++;
-                    } elseif ($nutritional_status == 'overweight') {
-                        $bmi_summary['female']['overweight']++;
-                        $bmi_summary['total']['overweight']++;
-                    } elseif ($nutritional_status == 'obese') {
-                        $bmi_summary['female']['obese']++;
-                        $bmi_summary['total']['obese']++;
-                    }
+
+                // M: BMI
+                $sheet->setCellValue('M' . $currentRow, $report->bmi ?? '');
+                // N: Nutritional Status
+                $sheet->setCellValue('N' . $currentRow, $report->nutritional_status ?? '');
+                // O: Height-For-Age
+                $sheet->setCellValue('O' . $currentRow, $report->height_for_age ?? '');
+
+                // Update BMI counters
+                $ns = strtolower(trim($report->nutritional_status ?? ''));
+                if ($sex === 'M') {
+                    $bmi['male']['total']++;
+                    if (isset($bmi['male'][$ns])) $bmi['male'][$ns]++;
+                } elseif ($sex === 'F') {
+                    $bmi['female']['total']++;
+                    if (isset($bmi['female'][$ns])) $bmi['female'][$ns]++;
                 }
-                
-                // Update HFA counters based on sex and height-for-age status
-                if ($sex == 'M') {
-                    $hfa_summary['male']['total']++;
-                    $hfa_summary['total']['total']++;
-                    
-                    if ($height_for_age == 'severely stunted') {
-                        $hfa_summary['male']['severely_stunted']++;
-                        $hfa_summary['total']['severely_stunted']++;
-                    } elseif ($height_for_age == 'stunted') {
-                        $hfa_summary['male']['stunted']++;
-                        $hfa_summary['total']['stunted']++;
-                    } elseif ($height_for_age == 'normal') {
-                        $hfa_summary['male']['normal']++;
-                        $hfa_summary['total']['normal']++;
-                    } elseif ($height_for_age == 'tall' || $height_for_age == 'above normal') {
-                        $hfa_summary['male']['tall']++;
-                        $hfa_summary['total']['tall']++;
-                    }
-                } elseif ($sex == 'F') {
-                    $hfa_summary['female']['total']++;
-                    $hfa_summary['total']['total']++;
-                    
-                    if ($height_for_age == 'severely stunted') {
-                        $hfa_summary['female']['severely_stunted']++;
-                        $hfa_summary['total']['severely_stunted']++;
-                    } elseif ($height_for_age == 'stunted') {
-                        $hfa_summary['female']['stunted']++;
-                        $hfa_summary['total']['stunted']++;
-                    } elseif ($height_for_age == 'normal') {
-                        $hfa_summary['female']['normal']++;
-                        $hfa_summary['total']['normal']++;
-                    } elseif ($height_for_age == 'tall' || $height_for_age == 'above normal') {
-                        $hfa_summary['female']['tall']++;
-                        $hfa_summary['total']['tall']++;
-                    }
+
+                // Update HFA counters
+                $hfaStatus = strtolower(trim($report->height_for_age ?? ''));
+                if ($hfaStatus === 'above normal') $hfaStatus = 'tall';
+                if ($sex === 'M') {
+                    $hfa['male']['total']++;
+                    if (isset($hfa['male'][$hfaStatus])) $hfa['male'][$hfaStatus]++;
+                } elseif ($sex === 'F') {
+                    $hfa['female']['total']++;
+                    if (isset($hfa['female'][$hfaStatus])) $hfa['female'][$hfaStatus]++;
                 }
-                
+
                 $counter++;
             }
 
-            // ============================================
-            // CREATE BOTTOM SUMMARY TABLE WITH HEADERS AT ROW 76
-            // ============================================
-            
-            // HEADER ROW (Row 76)
-            $sheet->setCellValue('C76', 'Body Mass Index');
-            $sheet->setCellValue('D76', 'M');
-            $sheet->setCellValue('E76', 'F');
-            $sheet->setCellValue('F76', 'T');
-            $sheet->setCellValue('G76', 'HFA');
-            $sheet->setCellValue('I76', 'M');
-            $sheet->setCellValue('L76', 'F');
-            $sheet->setCellValue('M76', 'TOTAL');
-            
-            // Row 77: No. of Cases
-            $sheet->setCellValue('C77', 'No. of Cases');
-            $sheet->setCellValue('D77', $bmi_summary['male']['total'] ?: '0');
-            $sheet->setCellValue('E77', $bmi_summary['female']['total'] ?: '0');
-            $sheet->setCellValue('F77', $bmi_summary['total']['total'] ?: '0');
-            $sheet->setCellValue('G77', 'No. of Cases');
-            $sheet->setCellValue('I77', $hfa_summary['male']['total'] ?: '0');
-            $sheet->setCellValue('L77', $hfa_summary['female']['total'] ?: '0');
-            $sheet->setCellValue('M77', $hfa_summary['total']['total'] ?: '0');
-            
-            // Row 78: Severely Wasted / Sev. Stunted
-            $sheet->setCellValue('C78', 'Severely Wasted');
-            $sheet->setCellValue('D78', $bmi_summary['male']['severely_wasted'] ?: '0');
-            $sheet->setCellValue('E78', $bmi_summary['female']['severely_wasted'] ?: '0');
-            $sheet->setCellValue('F78', $bmi_summary['total']['severely_wasted'] ?: '0');
-            $sheet->setCellValue('G78', 'Sev. Stunted');
-            $sheet->setCellValue('I78', $hfa_summary['male']['severely_stunted'] ?: '0');
-            $sheet->setCellValue('L78', $hfa_summary['female']['severely_stunted'] ?: '0');
-            $sheet->setCellValue('M78', $hfa_summary['total']['severely_stunted'] ?: '0');
-            
-            // Row 79: Wasted / Stunted
-            $sheet->setCellValue('C79', 'Wasted');
-            $sheet->setCellValue('D79', $bmi_summary['male']['wasted'] ?: '0');
-            $sheet->setCellValue('E79', $bmi_summary['female']['wasted'] ?: '0');
-            $sheet->setCellValue('F79', $bmi_summary['total']['wasted'] ?: '0');
-            $sheet->setCellValue('G79', 'Stunted');
-            $sheet->setCellValue('I79', $hfa_summary['male']['stunted'] ?: '0');
-            $sheet->setCellValue('L79', $hfa_summary['female']['stunted'] ?: '0');
-            $sheet->setCellValue('M79', $hfa_summary['total']['stunted'] ?: '0');
-            
-            // Row 80: Normal (both)
-            $sheet->setCellValue('C80', 'Normal');
-            $sheet->setCellValue('D80', $bmi_summary['male']['normal'] ?: '0');
-            $sheet->setCellValue('E80', $bmi_summary['female']['normal'] ?: '0');
-            $sheet->setCellValue('F80', $bmi_summary['total']['normal'] ?: '0');
-            $sheet->setCellValue('G80', 'Normal');
-            $sheet->setCellValue('I80', $hfa_summary['male']['normal'] ?: '0');
-            $sheet->setCellValue('L80', $hfa_summary['female']['normal'] ?: '0');
-            $sheet->setCellValue('M80', $hfa_summary['total']['normal'] ?: '0');
-            
-            // Row 81: Overweight / Tall
-            $sheet->setCellValue('C81', 'Overweight');
-            $sheet->setCellValue('D81', $bmi_summary['male']['overweight'] ?: '0');
-            $sheet->setCellValue('E81', $bmi_summary['female']['overweight'] ?: '0');
-            $sheet->setCellValue('F81', $bmi_summary['total']['overweight'] ?: '0');
-            $sheet->setCellValue('G81', 'Tall');
-            $sheet->setCellValue('I81', $hfa_summary['male']['tall'] ?: '0');
-            $sheet->setCellValue('L81', $hfa_summary['female']['tall'] ?: '0');
-            $sheet->setCellValue('M81', $hfa_summary['total']['tall'] ?: '0');
-            
-            // Row 82: Obese
-            $sheet->setCellValue('C82', 'Obese');
-            $sheet->setCellValue('D82', $bmi_summary['male']['obese'] ?: '0');
-            $sheet->setCellValue('E82', $bmi_summary['female']['obese'] ?: '0');
-            $sheet->setCellValue('F82', $bmi_summary['total']['obese'] ?: '0');
-            $sheet->setCellValue('I82', 'Prepared by:');
-            $sheet->setCellValue('J82', '');
+            // ============================================================
+            // SUMMARY BLOCK (template rows 3–10, columns P–Z)
+            // Template labels are already in place — write only VALUES.
+            // ============================================================
+            // BMI columns: Q = M, R = F, S = T
+            // HFA columns: U = M, W = F, X = TOTAL  (V is spacer)
+            //
+            // Row mapping (from template):
+            //  row 3  header labels (Body Mass Index / M / F / T / HFA / M / F / TOTAL)
+            //  row 4  No. of Cases
+            //  row 5  Severely Wasted / Sev. Stunted
+            //  row 6  Wasted / Stunted
+            //  row 7  Normal / Normal
+            //  row 8  Overweight / Tall
+            //  row 9  Obese
+            //  row 10 (blank)
+            // ============================================================
 
-            // Generate filename
+            $bmiTotalAll = $bmi['male']['total'] + $bmi['female']['total'];
+            $hfaTotalAll = $hfa['male']['total'] + $hfa['female']['total'];
+
+            // Row 4: No. of Cases
+            $sheet->setCellValue('Q4', $bmi['male']['total']);
+            $sheet->setCellValue('R4', $bmi['female']['total']);
+            $sheet->setCellValue('S4', $bmiTotalAll);
+            $sheet->setCellValue('U4', $hfa['male']['total']);
+            $sheet->setCellValue('W4', $hfa['female']['total']);
+            $sheet->setCellValue('X4', $hfaTotalAll);
+
+            // Row 5: Severely Wasted / Sev. Stunted
+            $sheet->setCellValue('Q5', $bmi['male']['severely_wasted']);
+            $sheet->setCellValue('R5', $bmi['female']['severely_wasted']);
+            $sheet->setCellValue('S5', $bmi['male']['severely_wasted'] + $bmi['female']['severely_wasted']);
+            $sheet->setCellValue('U5', $hfa['male']['severely_stunted']);
+            $sheet->setCellValue('W5', $hfa['female']['severely_stunted']);
+            $sheet->setCellValue('X5', $hfa['male']['severely_stunted'] + $hfa['female']['severely_stunted']);
+
+            // Row 6: Wasted / Stunted
+            $sheet->setCellValue('Q6', $bmi['male']['wasted']);
+            $sheet->setCellValue('R6', $bmi['female']['wasted']);
+            $sheet->setCellValue('S6', $bmi['male']['wasted'] + $bmi['female']['wasted']);
+            $sheet->setCellValue('U6', $hfa['male']['stunted']);
+            $sheet->setCellValue('W6', $hfa['female']['stunted']);
+            $sheet->setCellValue('X6', $hfa['male']['stunted'] + $hfa['female']['stunted']);
+
+            // Row 7: Normal / Normal
+            $sheet->setCellValue('Q7', $bmi['male']['normal']);
+            $sheet->setCellValue('R7', $bmi['female']['normal']);
+            $sheet->setCellValue('S7', $bmi['male']['normal'] + $bmi['female']['normal']);
+            $sheet->setCellValue('U7', $hfa['male']['normal']);
+            $sheet->setCellValue('W7', $hfa['female']['normal']);
+            $sheet->setCellValue('X7', $hfa['male']['normal'] + $hfa['female']['normal']);
+
+            // Row 8: Overweight / Tall
+            $sheet->setCellValue('Q8', $bmi['male']['overweight']);
+            $sheet->setCellValue('R8', $bmi['female']['overweight']);
+            $sheet->setCellValue('S8', $bmi['male']['overweight'] + $bmi['female']['overweight']);
+            $sheet->setCellValue('U8', $hfa['male']['tall']);
+            $sheet->setCellValue('W8', $hfa['female']['tall']);
+            $sheet->setCellValue('X8', $hfa['male']['tall'] + $hfa['female']['tall']);
+
+            // Row 9: Obese
+            $sheet->setCellValue('Q9', $bmi['male']['obese']);
+            $sheet->setCellValue('R9', $bmi['female']['obese']);
+            $sheet->setCellValue('S9', $bmi['male']['obese'] + $bmi['female']['obese']);
+
+            // Filename
             $filename = 'nutritional_report_';
             if ($assessment_type) {
                 $filename .= $assessment_type . '_';
             }
             if ($school_name) {
-                $schoolPart = preg_replace('/[^A-Za-z0-9]/', '_', $school_name);
-                $filename .= $schoolPart . '_';
+                $filename .= preg_replace('/[^A-Za-z0-9]/', '_', $school_name) . '_';
             }
             $filename .= date('Y-m-d') . '.xlsx';
 
-            // Save to output using the library
             $this->phpspreadsheet_lib->saveToOutput($spreadsheet, $filename);
 
         } catch (Exception $e) {
@@ -484,354 +368,379 @@ class Nutritional_assessment_reports extends CI_Controller {
     /**
      * Export detailed report using nutritional_report_template.xlsx template
      */
-    public function export_detail()
-    {
-        try {
-            // Get user session data for security
-            $session_school = $this->session->userdata('school_name');
-            $session_school_id = $this->session->userdata('school_id');
-            $role = $this->session->userdata('role');
+public function export_detail()
+{
+    try {
+        $session_school    = $this->session->userdata('school_name');
+        $session_school_id = $this->session->userdata('school_id');
+        $role              = $this->session->userdata('role');
 
-            // Load the PhpSpreadsheet library
-            $this->load->library('phpspreadsheet_lib');
+        $this->load->library('phpspreadsheet_lib');
 
-            $legislative_district = $this->input->get('legislative_district', TRUE);
-            $school_district = $this->input->get('school_district', TRUE);
-            $school_name = $this->input->get('school_name', TRUE);
-            $school_id = $this->input->get('school_id', TRUE);
-            $grade_level = $this->input->get('grade_level', TRUE);
-            $section = $this->input->get('section', TRUE);
-            $section_id = $this->input->get('section_id', TRUE);
-            $year = $this->input->get('year', TRUE);
-            $assessment_type = $this->input->get('assessment_type', TRUE) ?: 'baseline';
+        // Required filters
+        $legislative_district = $this->input->get('legislative_district', TRUE);
+        $school_district      = $this->input->get('school_district', TRUE);
+        $school_name          = $this->input->get('school_name', TRUE);
+        $school_id            = $this->input->get('school_id', TRUE);
+        $grade_level          = $this->input->get('grade_level', TRUE);
+        $section              = $this->input->get('section', TRUE);
+        $section_id           = $this->input->get('section_id', TRUE);
+        $year                 = $this->input->get('year', TRUE);
 
-            // For non-admin users, force filter to their school
-            if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
-                $school_name = $session_school;
-                $school_id = $session_school_id;
+        // NEW: mode selector
+        // midline | endline | section
+        $mode = strtolower($this->input->get('mode', TRUE) ?: 'section');
+        if (!in_array($mode, ['midline', 'endline', 'section'])) {
+            $mode = 'section';
+        }
+
+        // Mode only controls formatting — NOT which rows are fetched
+        $config = [
+            'midline' => [
+                'template'        => 'export_per_section.xlsx',
+                'include_height'  => false,
+                'include_weight'  => false,
+                'include_date'    => false,
+                'include_summary' => false,
+            ],
+            'endline' => [
+                'template'        => 'export_all_sections.xlsx',
+                'include_height'  => false,
+                'include_weight'  => false,
+                'include_date'    => false,
+                'include_summary' => true,
+            ],
+            'section' => [
+                'template'        => 'export_all_sections.xlsx',
+                'include_height'  => true,
+                'include_weight'  => true,
+                'include_date'    => true,
+                'include_summary' => true,
+            ],
+        ];
+
+        $cfg              = $config[$mode];
+        $assessment_type  = $cfg['assessment_type'];
+        $templateName     = $cfg['template'];
+
+        $assessment_type = $this->input->get('assessment_type', TRUE) ?: null;
+
+        if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
+            $school_name = $session_school;
+            $school_id   = $session_school_id;
+        }
+
+        if (!$legislative_district || !$school_district || !$school_name || !$grade_level || !$section) {
+            show_error('Missing required parameters.');
+        }
+
+        $assessments = $this->nutritional_assessment_model->get_by_section(
+            $legislative_district,
+            $school_district,
+            $grade_level,
+            $section,
+            $year,
+            $assessment_type,   // null = no filter → returns baseline + midline + endline all
+            $section_id,
+            $school_id
+        );
+
+        if (empty($assessments)) {
+            show_error('No data found for the specified criteria (mode: ' . $mode . ').');
+        }
+
+        $actual_year = $assessments[0]->year ?? $year;
+
+        $templatePath = FCPATH . ASSETS_PATH . '/excel_templates/' . $templateName;
+        if (!file_exists($templatePath)) {
+            show_error('Template file not found: ' . $templatePath);
+        }
+
+        $spreadsheet = $this->phpspreadsheet_lib->loadTemplate($templatePath);
+        $sheet       = $spreadsheet->getActiveSheet();
+
+        // ---- Clear previous data ----
+        if ($templateName === 'export_per_section.xlsx') {
+            // A holds the COUNTA formula — leave it
+            for ($row = 7; $row <= 510; $row++) {
+                foreach (['B','C','D','E','F','G','H'] as $col) {
+                    $sheet->setCellValue($col . $row, '');
+                }
             }
-
-            // Validate required parameters
-            if (!$legislative_district || !$school_district || !$school_name || !$grade_level || !$section) {
-                show_error('Missing required parameters. Please provide legislative_district, school_district, school_name, grade_level, and section.');
+        } else {
+            // export_all_sections: leave A formula + P–Z summary block alone
+            for ($row = 7; $row <= 100; $row++) {
+                foreach (['B','C','D','E','F','G','H','I','J','K','L','M','N','O'] as $col) {
+                    $sheet->setCellValue($col . $row, '');
+                }
             }
+        }
 
-            // Get the data
-            $assessments = $this->nutritional_assessment_model->get_by_section(
-                $legislative_district,
-                $school_district,
-                $grade_level,
-                $section,
-                $year,
-                $assessment_type,
-                $section_id,
-                $school_id
-            );
-
-            if (empty($assessments)) {
-                log_message('error', 'No assessments found for: ' . $legislative_district . ', ' . $school_district . ', ' . $grade_level . ', ' . $section);
-                show_error('No data found for the specified criteria');
-            }
-
-            // Get the actual year from the first record for display
-            $actual_year = $assessments[0]->year ?? $year;
-
-            // Define template path
-            $templatePath = FCPATH . ASSETS_PATH . '/excel_templates/nutritional_report_template.xlsx';
-            
-            if (!file_exists($templatePath)) {
-                show_error('Template file not found at: ' . $templatePath);
-            }
-
-            // Load the template using the library
-            $spreadsheet = $this->phpspreadsheet_lib->loadTemplate($templatePath);
-            $sheet = $spreadsheet->getActiveSheet();
-
-            // Clear existing data rows
-            for ($row = 9; $row <= 200; $row++) {
-                $sheet->setCellValue('A' . $row, '');
-                $sheet->setCellValue('B' . $row, '');
-                $sheet->setCellValue('C' . $row, '');
-                $sheet->setCellValue('D' . $row, '');
-                $sheet->setCellValue('E' . $row, '');
-                $sheet->setCellValue('F' . $row, '');
-                $sheet->setCellValue('G' . $row, '');
-                $sheet->setCellValue('H' . $row, '');
-                $sheet->setCellValue('I' . $row, '');
-                $sheet->setCellValue('J' . $row, '');
-                $sheet->setCellValue('K' . $row, '');
-                $sheet->setCellValue('L' . $row, '');
-                $sheet->setCellValue('M' . $row, '');
-                $sheet->setCellValue('N' . $row, '');
-            }
-
-            // Calculate date of weighing
-            $dates = array_filter(array_map(function($a) {
+        // ---- Date of weighing (only if include_date) ----
+        $date_of_weighing = '';
+        if ($cfg['include_date']) {
+            $dates = array_filter(array_map(function ($a) {
                 return !empty($a->date_of_weighing) ? $a->date_of_weighing : null;
             }, $assessments));
-            
-            if (!empty($dates)) {
-                sort($dates);
-                $date_of_weighing = date('m/d/y', strtotime($dates[0]));
-            } else {
-                $date_of_weighing = date('m/d/y');
+            sort($dates);
+            $date_of_weighing = !empty($dates)
+                ? date('m/d/Y', strtotime($dates[0]))
+                : date('m/d/Y');
+        }
+
+        // ---- Header metadata ----
+        $sheet->setCellValue('A1', 'NUTRITIONAL STATUS REPORT');
+        $sheet->setCellValue('A2', $school_name);
+        if ($cfg['include_date']) {
+            // per-section template uses C3 for date
+            // all-sections template uses C3 for date
+            $sheet->setCellValue('C3', $date_of_weighing);
+        } else {
+            $sheet->setCellValue('C3', ''); // leave blank
+        }
+        $sheet->setCellValue('E3', $grade_level);
+        $sheet->setCellValue('G3', $section);
+
+        // Optional metadata
+        if ($templateName === 'export_all_sections.xlsx') {
+            $sheet->setCellValue('P2', 'School Year: ' . ($actual_year ?: 'N/A'));
+            $sheet->setCellValue('U2', 'Assessment: ' . ucfirst($assessment_type));
+        } else {
+            $sheet->setCellValue('E2', 'School Year: ' . ($actual_year ?: 'N/A'));
+            $sheet->setCellValue('G2', ucfirst($assessment_type));
+        }
+
+        // ---- Summary counters (only used by export_all_sections) ----
+        $bmi = [
+            'male'   => ['severely_wasted'=>0,'wasted'=>0,'normal'=>0,'overweight'=>0,'obese'=>0,'total'=>0],
+            'female' => ['severely_wasted'=>0,'wasted'=>0,'normal'=>0,'overweight'=>0,'obese'=>0,'total'=>0],
+        ];
+        $hfa = [
+            'male'   => ['severely_stunted'=>0,'stunted'=>0,'normal'=>0,'tall'=>0,'total'=>0],
+            'female' => ['severely_stunted'=>0,'stunted'=>0,'normal'=>0,'tall'=>0,'total'=>0],
+        ];
+
+        $startRow = 7;
+        $counter  = 1;
+
+        foreach ($assessments as $assessment) {
+            $currentRow = $startRow + ($counter - 1);
+
+            [$lastName, $firstName, $mi] = $this->split_name($assessment->name ?? '');
+
+            // B–D name
+            $sheet->setCellValue('B' . $currentRow, $lastName);
+            $sheet->setCellValue('C' . $currentRow, $firstName);
+            $sheet->setCellValue('D' . $currentRow, $mi);
+
+            // E Birthday
+            if (!empty($assessment->birthday) && $assessment->birthday != '0000-00-00') {
+                $sheet->setCellValue('E' . $currentRow, date('m/d/Y', strtotime($assessment->birthday)));
             }
 
-            // POPULATE HEADER INFORMATION
-            $sheet->setCellValue('A1', 'NUTRITIONAL STATUS REPORT');
-            $sheet->setCellValue('A2', $school_name);
-            $sheet->setCellValue('A3', 'School Year: ' . ($actual_year ?: 'N/A'));
-            $sheet->setCellValue('A4', 'Assessment Type: ' . ucfirst($assessment_type));
-            $sheet->setCellValue('A6', 'Date of Weighing: ' . $date_of_weighing);
-            $sheet->setCellValue('M6', 'Section: ' . $section);
-            $sheet->setCellValue('N6', $grade_level);
+            // Sex (always exported)
+            $sex = !empty($assessment->sex) ? strtoupper(substr(trim($assessment->sex), 0, 1)) : '';
 
-            // Initialize counters
-            $bmi_summary = [
-                'male' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0],
-                'female' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0],
-                'total' => ['severely_wasted' => 0, 'wasted' => 0, 'normal' => 0, 'overweight' => 0, 'obese' => 0, 'total' => 0]
-            ];
+            // ============ PER-SECTION (midline) ============
+            if ($templateName === 'export_per_section.xlsx') {
+                // F Weight -> blank, G Height -> blank
+                $sheet->setCellValue('F' . $currentRow, '');
+                $sheet->setCellValue('G' . $currentRow, '');
+                // H Sex
+                $sheet->setCellValue('H' . $currentRow, $sex);
+            }
+            // ============ ALL-SECTIONS (endline / section) ============
+            else {
+                // F Weight
+                $sheet->setCellValue('F' . $currentRow,
+                    $cfg['include_weight'] ? ($assessment->weight ?? '') : '');
 
-            $hfa_summary = [
-                'male' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0],
-                'female' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0],
-                'total' => ['severely_stunted' => 0, 'stunted' => 0, 'normal' => 0, 'tall' => 0, 'total' => 0]
-            ];
-
-            // POPULATE STUDENT DETAILS
-            $startRow = 9;
-            $counter = 1;
-            
-            foreach ($assessments as $assessment) {
-                $currentRow = $startRow + ($counter - 1);
-                
-                // A: Student Number
-                $sheet->setCellValue('A' . $currentRow, $counter);
-                $sheet->setCellValue('B' . $currentRow, '.');
-                $sheet->setCellValue('C' . $currentRow, $assessment->name ?? '');
-                
-                // D: Birthday
-                if (!empty($assessment->birthday) && $assessment->birthday != '0000-00-00') {
-                    $sheet->setCellValue('D' . $currentRow, date('m/d/Y', strtotime($assessment->birthday)));
+                // G Height (m) + I Height²
+                $heightM = null;
+                if ($cfg['include_height'] && !empty($assessment->height) && is_numeric($assessment->height)) {
+                    $h = (float)$assessment->height;
+                    $heightM = ($h > 10) ? $h / 100 : $h;
+                    $sheet->setCellValue('G' . $currentRow, number_format($heightM, 2));
+                    $sheet->setCellValue('I' . $currentRow, round(pow($heightM, 2), 4));
+                } else {
+                    $sheet->setCellValue('G' . $currentRow, '');
+                    $sheet->setCellValue('I' . $currentRow, '');
                 }
 
-                // E: Weight
-                $sheet->setCellValue('E' . $currentRow, $assessment->weight ?? '');
-                
-                // F: Height
-                $height = $assessment->height ?? '';
-                if (!empty($height) && is_numeric($height)) {
-                    if ($height > 10) {
-                        $height = $height / 100;
-                    }
-                    $sheet->setCellValue('F' . $currentRow, number_format((float)$height, 2));
-                }
-                
-                // G: Sex
-                $sex = !empty($assessment->sex) ? strtoupper(substr(trim($assessment->sex), 0, 1)) : '';
-                $sheet->setCellValue('G' . $currentRow, $sex);
-                
-                // H: Height²
-                if (!empty($assessment->height_squared)) {
-                    $sheet->setCellValue('H' . $currentRow, $assessment->height_squared);
-                } elseif (!empty($height) && is_numeric($height)) {
-                    $height_m = ($height > 10) ? $height/100 : $height;
-                    $sheet->setCellValue('H' . $currentRow, round(pow((float)$height_m, 2), 4));
-                }
-                
-                // I-K: Age
+                // H Sex
+                $sheet->setCellValue('H' . $currentRow, $sex);
+
+                // J/K/L Age (only if we have birthday + weight data; safe to always calc)
                 if (!empty($assessment->birthday) && !empty($assessment->date_of_weighing)) {
                     try {
-                        $birthDate = new DateTime($assessment->birthday);
-                        $weighingDate = new DateTime($assessment->date_of_weighing);
-                        $age = $birthDate->diff($weighingDate);
-                        
-                        $sheet->setCellValue('I' . $currentRow, $age->y);
-                        $sheet->setCellValue('J' . $currentRow, ',');
-                        $sheet->setCellValue('K' . $currentRow, $age->m);
+                        $age = (new DateTime($assessment->birthday))
+                            ->diff(new DateTime($assessment->date_of_weighing));
+                        $sheet->setCellValue('J' . $currentRow, $age->y);
+                        $sheet->setCellValue('K' . $currentRow, ',');
+                        $sheet->setCellValue('L' . $currentRow, $age->m);
                     } catch (Exception $e) {
-                        log_message('error', 'Age calculation error: ' . $e->getMessage());
+                        log_message('error', 'Age calc: ' . $e->getMessage());
                     }
                 }
-                
-                // L: BMI
-                $sheet->setCellValue('L' . $currentRow, $assessment->bmi ?? '');
-                
-                // M: Nutritional Status (BMI)
-                $nutritional_status = strtolower(trim($assessment->nutritional_status ?? ''));
-                $sheet->setCellValue('M' . $currentRow, $assessment->nutritional_status ?? '');
-                
-                // N: Height-For-Age
-                $height_for_age = strtolower(trim($assessment->height_for_age ?? ''));
-                $sheet->setCellValue('N' . $currentRow, $assessment->height_for_age ?? '');
-                
-                // Update BMI counters
-                if ($sex == 'M') {
-                    $bmi_summary['male']['total']++;
-                    $bmi_summary['total']['total']++;
-                    
-                    if ($nutritional_status == 'severely wasted') {
-                        $bmi_summary['male']['severely_wasted']++;
-                        $bmi_summary['total']['severely_wasted']++;
-                    } elseif ($nutritional_status == 'wasted') {
-                        $bmi_summary['male']['wasted']++;
-                        $bmi_summary['total']['wasted']++;
-                    } elseif ($nutritional_status == 'normal') {
-                        $bmi_summary['male']['normal']++;
-                        $bmi_summary['total']['normal']++;
-                    } elseif ($nutritional_status == 'overweight') {
-                        $bmi_summary['male']['overweight']++;
-                        $bmi_summary['total']['overweight']++;
-                    } elseif ($nutritional_status == 'obese') {
-                        $bmi_summary['male']['obese']++;
-                        $bmi_summary['total']['obese']++;
-                    }
-                } elseif ($sex == 'F') {
-                    $bmi_summary['female']['total']++;
-                    $bmi_summary['total']['total']++;
-                    
-                    if ($nutritional_status == 'severely wasted') {
-                        $bmi_summary['female']['severely_wasted']++;
-                        $bmi_summary['total']['severely_wasted']++;
-                    } elseif ($nutritional_status == 'wasted') {
-                        $bmi_summary['female']['wasted']++;
-                        $bmi_summary['total']['wasted']++;
-                    } elseif ($nutritional_status == 'normal') {
-                        $bmi_summary['female']['normal']++;
-                        $bmi_summary['total']['normal']++;
-                    } elseif ($nutritional_status == 'overweight') {
-                        $bmi_summary['female']['overweight']++;
-                        $bmi_summary['total']['overweight']++;
-                    } elseif ($nutritional_status == 'obese') {
-                        $bmi_summary['female']['obese']++;
-                        $bmi_summary['total']['obese']++;
-                    }
+
+                // M BMI
+                $sheet->setCellValue('M' . $currentRow, $assessment->bmi ?? '');
+                // N Nutritional Status
+                $sheet->setCellValue('N' . $currentRow, $assessment->nutritional_status ?? '');
+                // O Height-For-Age
+                $sheet->setCellValue('O' . $currentRow, $assessment->height_for_age ?? '');
+
+                // Update BMI counters (skip if weight/height blank?)
+                // Decision: counters use actual stored statuses regardless of blanked columns
+                $ns = strtolower(trim($assessment->nutritional_status ?? ''));
+                if ($sex === 'M') {
+                    $bmi['male']['total']++;
+                    if (isset($bmi['male'][$ns])) $bmi['male'][$ns]++;
+                } elseif ($sex === 'F') {
+                    $bmi['female']['total']++;
+                    if (isset($bmi['female'][$ns])) $bmi['female'][$ns]++;
                 }
-                
-                // Update HFA counters
-                if ($sex == 'M') {
-                    $hfa_summary['male']['total']++;
-                    $hfa_summary['total']['total']++;
-                    
-                    if ($height_for_age == 'severely stunted') {
-                        $hfa_summary['male']['severely_stunted']++;
-                        $hfa_summary['total']['severely_stunted']++;
-                    } elseif ($height_for_age == 'stunted') {
-                        $hfa_summary['male']['stunted']++;
-                        $hfa_summary['total']['stunted']++;
-                    } elseif ($height_for_age == 'normal') {
-                        $hfa_summary['male']['normal']++;
-                        $hfa_summary['total']['normal']++;
-                    } elseif ($height_for_age == 'tall' || $height_for_age == 'above normal') {
-                        $hfa_summary['male']['tall']++;
-                        $hfa_summary['total']['tall']++;
-                    }
-                } elseif ($sex == 'F') {
-                    $hfa_summary['female']['total']++;
-                    $hfa_summary['total']['total']++;
-                    
-                    if ($height_for_age == 'severely stunted') {
-                        $hfa_summary['female']['severely_stunted']++;
-                        $hfa_summary['total']['severely_stunted']++;
-                    } elseif ($height_for_age == 'stunted') {
-                        $hfa_summary['female']['stunted']++;
-                        $hfa_summary['total']['stunted']++;
-                    } elseif ($height_for_age == 'normal') {
-                        $hfa_summary['female']['normal']++;
-                        $hfa_summary['total']['normal']++;
-                    } elseif ($height_for_age == 'tall' || $height_for_age == 'above normal') {
-                        $hfa_summary['female']['tall']++;
-                        $hfa_summary['total']['tall']++;
-                    }
+
+                $hfaStatus = strtolower(trim($assessment->height_for_age ?? ''));
+                if ($hfaStatus === 'above normal') $hfaStatus = 'tall';
+                if ($sex === 'M') {
+                    $hfa['male']['total']++;
+                    if (isset($hfa['male'][$hfaStatus])) $hfa['male'][$hfaStatus]++;
+                } elseif ($sex === 'F') {
+                    $hfa['female']['total']++;
+                    if (isset($hfa['female'][$hfaStatus])) $hfa['female'][$hfaStatus]++;
                 }
-                
-                $counter++;
             }
-            
-            // row 76: Headers for summary table
-            $sheet->setCellValue('C76', 'Body Mass Index');
-            $sheet->setCellValue('D76', 'M');
-            $sheet->setCellValue('E76', 'F');
-            $sheet->setCellValue('F76', 'T');
-            $sheet->setCellValue('G76', 'HFA');
-            $sheet->setCellValue('I76', 'M');
-            $sheet->setCellValue('L76', 'F');
-            $sheet->setCellValue('M76', 'TOTAL');
-            
-            // row 77: No. of Cases
-            $sheet->setCellValue('C77', 'No. of Cases');
-            $sheet->setCellValue('D77', $bmi_summary['male']['total'] ?: '0');
-            $sheet->setCellValue('E77', $bmi_summary['female']['total'] ?: '0');
-            $sheet->setCellValue('F77', $bmi_summary['total']['total'] ?: '0');
-            $sheet->setCellValue('G77', 'No. of Cases');
-            $sheet->setCellValue('I77', $hfa_summary['male']['total'] ?: '0');
-            $sheet->setCellValue('L77', $hfa_summary['female']['total'] ?: '0');
-            $sheet->setCellValue('M77', $hfa_summary['total']['total'] ?: '0');
-            
-            // row 78: Severely Wasted / Sev. Stunted
-            $sheet->setCellValue('C78', 'Severely Wasted');
-            $sheet->setCellValue('D78', $bmi_summary['male']['severely_wasted'] ?: '0');
-            $sheet->setCellValue('E78', $bmi_summary['female']['severely_wasted'] ?: '0');
-            $sheet->setCellValue('F78', $bmi_summary['total']['severely_wasted'] ?: '0');
-            $sheet->setCellValue('G78', 'Sev. Stunted');
-            $sheet->setCellValue('I78', $hfa_summary['male']['severely_stunted'] ?: '0');
-            $sheet->setCellValue('L78', $hfa_summary['female']['severely_stunted'] ?: '0');
-            $sheet->setCellValue('M78', $hfa_summary['total']['severely_stunted'] ?: '0');
-            
-            // row 79: Wasted / Stunted
-            $sheet->setCellValue('C79', 'Wasted');
-            $sheet->setCellValue('D79', $bmi_summary['male']['wasted'] ?: '0');
-            $sheet->setCellValue('E79', $bmi_summary['female']['wasted'] ?: '0');
-            $sheet->setCellValue('F79', $bmi_summary['total']['wasted'] ?: '0');
-            $sheet->setCellValue('G79', 'Stunted');
-            $sheet->setCellValue('I79', $hfa_summary['male']['stunted'] ?: '0');
-            $sheet->setCellValue('L79', $hfa_summary['female']['stunted'] ?: '0');
-            $sheet->setCellValue('M79', $hfa_summary['total']['stunted'] ?: '0');
-            
-            // row 80: Normal / Tall
-            $sheet->setCellValue('C80', 'Normal');
-            $sheet->setCellValue('D80', $bmi_summary['male']['normal'] ?: '0');
-            $sheet->setCellValue('E80', $bmi_summary['female']['normal'] ?: '0');
-            $sheet->setCellValue('F80', $bmi_summary['total']['normal'] ?: '0');
-            $sheet->setCellValue('G80', 'Normal');
-            $sheet->setCellValue('I80', $hfa_summary['male']['normal'] ?: '0');
-            $sheet->setCellValue('L80', $hfa_summary['female']['normal'] ?: '0');
-            $sheet->setCellValue('M80', $hfa_summary['total']['normal'] ?: '0');
-            
-            // row 81: Overweight / Tall
-            $sheet->setCellValue('C81', 'Overweight');
-            $sheet->setCellValue('D81', $bmi_summary['male']['overweight'] ?: '0');
-            $sheet->setCellValue('E81', $bmi_summary['female']['overweight'] ?: '0');
-            $sheet->setCellValue('F81', $bmi_summary['total']['overweight'] ?: '0');
-            $sheet->setCellValue('G81', 'Tall');
-            $sheet->setCellValue('I81', $hfa_summary['male']['tall'] ?: '0');
-            $sheet->setCellValue('L81', $hfa_summary['female']['tall'] ?: '0');
-            $sheet->setCellValue('M81', $hfa_summary['total']['tall'] ?: '0');
-            
-            // row 82: Obese
-            $sheet->setCellValue('C82', 'Obese');
-            $sheet->setCellValue('D82', $bmi_summary['male']['obese'] ?: '0');
-            $sheet->setCellValue('E82', $bmi_summary['female']['obese'] ?: '0');
-            $sheet->setCellValue('F82', $bmi_summary['total']['obese'] ?: '0');
-            $sheet->setCellValue('I82', 'Prepared by:');
-            $sheet->setCellValue('J82', '');
 
-            // Generate filename
-            $filename = 'nutritional_report_' . preg_replace('/[^A-Za-z0-9]/', '_', $school_name) 
-                . '_Grade' . $grade_level 
-                . '_Section' . $section 
-                . '_' . $assessment_type 
-                . '_' . date('Y-m-d') . '.xlsx';
-
-            // Save to output using the library
-            $this->phpspreadsheet_lib->saveToOutput($spreadsheet, $filename);
-
-        } catch (Exception $e) {
-            log_message('error', 'Export detail failed: ' . $e->getMessage());
-            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
-            show_error('Export failed: ' . $e->getMessage());
+            $counter++;
         }
+
+        // ---- Summary block (only export_all_sections) ----
+        if ($cfg['include_summary'] && $templateName === 'export_all_sections.xlsx') {
+            $bmiTotalAll = $bmi['male']['total'] + $bmi['female']['total'];
+            $hfaTotalAll = $hfa['male']['total'] + $hfa['female']['total'];
+
+            // Row 4: No. of Cases
+            $sheet->setCellValue('Q4', $bmi['male']['total']);
+            $sheet->setCellValue('R4', $bmi['female']['total']);
+            $sheet->setCellValue('S4', $bmiTotalAll);
+            $sheet->setCellValue('U4', $hfa['male']['total']);
+            $sheet->setCellValue('W4', $hfa['female']['total']);
+            $sheet->setCellValue('X4', $hfaTotalAll);
+
+            // Row 5: Severely Wasted / Sev. Stunted
+            $sheet->setCellValue('Q5', $bmi['male']['severely_wasted']);
+            $sheet->setCellValue('R5', $bmi['female']['severely_wasted']);
+            $sheet->setCellValue('S5', $bmi['male']['severely_wasted'] + $bmi['female']['severely_wasted']);
+            $sheet->setCellValue('U5', $hfa['male']['severely_stunted']);
+            $sheet->setCellValue('W5', $hfa['female']['severely_stunted']);
+            $sheet->setCellValue('X5', $hfa['male']['severely_stunted'] + $hfa['female']['severely_stunted']);
+
+            // Row 6: Wasted / Stunted
+            $sheet->setCellValue('Q6', $bmi['male']['wasted']);
+            $sheet->setCellValue('R6', $bmi['female']['wasted']);
+            $sheet->setCellValue('S6', $bmi['male']['wasted'] + $bmi['female']['wasted']);
+            $sheet->setCellValue('U6', $hfa['male']['stunted']);
+            $sheet->setCellValue('W6', $hfa['female']['stunted']);
+            $sheet->setCellValue('X6', $hfa['male']['stunted'] + $hfa['female']['stunted']);
+
+            // Row 7: Normal / Normal
+            $sheet->setCellValue('Q7', $bmi['male']['normal']);
+            $sheet->setCellValue('R7', $bmi['female']['normal']);
+            $sheet->setCellValue('S7', $bmi['male']['normal'] + $bmi['female']['normal']);
+            $sheet->setCellValue('U7', $hfa['male']['normal']);
+            $sheet->setCellValue('W7', $hfa['female']['normal']);
+            $sheet->setCellValue('X7', $hfa['male']['normal'] + $hfa['female']['normal']);
+
+            // Row 8: Overweight / Tall
+            $sheet->setCellValue('Q8', $bmi['male']['overweight']);
+            $sheet->setCellValue('R8', $bmi['female']['overweight']);
+            $sheet->setCellValue('S8', $bmi['male']['overweight'] + $bmi['female']['overweight']);
+            $sheet->setCellValue('U8', $hfa['male']['tall']);
+            $sheet->setCellValue('W8', $hfa['female']['tall']);
+            $sheet->setCellValue('X8', $hfa['male']['tall'] + $hfa['female']['tall']);
+
+            // Row 9: Obese
+            $sheet->setCellValue('Q9', $bmi['male']['obese']);
+            $sheet->setCellValue('R9', $bmi['female']['obese']);
+            $sheet->setCellValue('S9', $bmi['male']['obese'] + $bmi['female']['obese']);
+        }
+
+        // ---- Protection ----
+        $sheet->getProtection()->setSheet(true);
+        $sheet->getProtection()->setPassword('');
+
+        if ($templateName === 'export_per_section.xlsx') {
+            $sheet->getStyle('B7:H510')->getProtection()->setLocked(
+                \PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_UNPROTECTED
+            );
+        } else {
+            $sheet->getStyle('B7:B100')->getProtection()->setLocked(
+                \PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_UNPROTECTED
+            );
+            $sheet->getStyle('P3:Z10')->getProtection()->setLocked(
+                \PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_PROTECTED
+            );
+        }
+        foreach (['C3', 'E3', 'G3'] as $cell) {
+            $sheet->getStyle($cell)->getProtection()->setLocked(
+                \PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_PROTECTED
+            );
+        }
+
+        // ---- Filename ----
+        $filename = 'nutritional_report_' . $mode . '_'
+            . preg_replace('/[^A-Za-z0-9]/', '_', $school_name)
+            . '_Grade' . $grade_level
+            . '_Section' . $section
+            . '_' . $assessment_type
+            . '_' . date('Y-m-d') . '.xlsx';
+
+        $this->phpspreadsheet_lib->saveToOutput($spreadsheet, $filename);
+
+    } catch (Exception $e) {
+        log_message('error', 'Export detail failed: ' . $e->getMessage());
+        log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+        show_error('Export failed: ' . $e->getMessage());
+    }
+}
+
+    /**
+     * Split a full name into [last, first, middle_initial].
+     * Handles formats: "Dela Cruz, Juan P.", "Juan P. Dela Cruz", "Juan Dela Cruz"
+     */
+    private function split_name($fullName)
+    {
+        $fullName = trim(preg_replace('/\s+/', ' ', $fullName));
+        if ($fullName === '') {
+            return ['', '', ''];
+        }
+
+        $last  = '';
+        $first = '';
+        $mi    = '';
+
+        if (strpos($fullName, ',') !== false) {
+            // "Last, First M.I"
+            [$last, $rest] = array_map('trim', explode(',', $fullName, 2));
+            $parts = preg_split('/\s+/', $rest);
+            $first = array_shift($parts) ?? '';
+            if (!empty($parts)) {
+                $mi = strtoupper(substr($parts[0], 0, 1)) . '.';
+            }
+        } else {
+            // "First [MI] Last ..." — assume last token is last name,
+            // second token (if single letter) is M.I.
+            $parts = preg_split('/\s+/', $fullName);
+            $last  = array_pop($parts);
+            if (!empty($parts) && strlen(rtrim($parts[0], '.')) === 1) {
+                $mi = strtoupper($parts[0][0]) . '.';
+                array_shift($parts);
+            }
+            $first = implode(' ', $parts);
+        }
+
+        return [$last, $first, $mi];
     }
 
 
