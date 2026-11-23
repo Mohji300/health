@@ -55,6 +55,13 @@
           <i class="fas fa-tachometer-alt"></i>
           <span class="main-sidebar-text"> Admin Dashboard</span>
         </a>
+        <?php if ($is_admin): ?>
+        <a href="<?php echo site_url('nutritional-assessment-table'); ?>"
+           class="nav-link rounded-2 <?php echo is_active_page('nutritional-assessment-table', $current_uri) ? 'active' : ''; ?>">
+          <i class="fas fa-table"></i>
+          <span class="main-sidebar-text"> Nutritional Assessment Table</span>
+        </a>
+        <?php endif; ?>
       </li>
       <?php endif; ?>
 
@@ -100,6 +107,14 @@
           <i class="fa-solid fa-file-arrow-up"></i>
           <span class="main-sidebar-text"> Upload Nutritional Assessment Template</span>
         </a>
+        <?php endif; ?>
+
+        <?php if ($is_regular_user): ?>
+        <a href="<?php echo site_url('enrollment'); ?>"
+            class="nav-link rounded-2 mb-1 <?php echo is_active_page('enrollment', $current_uri) ? 'active' : ''; ?>">
+            <i class="fa-solid fa-file-arrow-up"></i>
+            <span class="main-sidebar-text"> Enrollment</span>
+          </a>
         <?php endif; ?>
 
         <!-- District Dashboard - Show to Admin and District only -->
