@@ -74,6 +74,11 @@ $route['school-info/get_schools'] = 'schoolinfo/get_schools';
 // ========================
 $route['superadmin'] = 'superadmincontroller/index';
 $route['superadmin/dashboard'] = 'superadmincontroller/index';
+$route['school-section'] = 'superadmincontroller/school_section';
+$route['nutritional-assessment-table'] = 'superadmincontroller/nutritional_assessment_table';
+$route['nutritional-assessment-table/update'] = 'superadmincontroller/update_table_record';
+$route['nutritional-assessment-table/delete'] = 'superadmincontroller/delete_table_record';
+$route['nutritional-assessment-table/data'] = 'superadmincontroller/nutritional_assessment_table_data';
 $route['superadmin/add-user'] = 'superadmincontroller/add_user';
 $route['superadmin/edit-user/(:num)'] = 'superadmincontroller/edit_user/$1';
 $route['superadmin/update_user_role/(:num)'] = 'superadmincontroller/update_user_role/$1';
@@ -103,10 +108,13 @@ $route['sbfp'] = 'sbfp_dashboard_controller/index';
 $route['sbfp/dashboard'] = 'sbfp_dashboard_controller/index';
 $route['sbfp/create_section'] = 'sbfp_dashboard_controller/create_section';
 $route['sbfp/remove_section'] = 'sbfp_dashboard_controller/remove_section';
+$route['sbfp/clear_section_data'] = 'sbfp_dashboard_controller/clear_section_data';
 $route['sbfp/assessment'] = 'sbfp_dashboard_controller/go_to_assessment';
 $route['sbfp/view_assessments'] = 'sbfp_dashboard_controller/view_assessments';
 $route['sbfp/export_assessments'] = 'sbfp_dashboard_controller/export_assessments';
 $route['sbfp/statistics'] = 'sbfp_dashboard_controller/get_statistics';
+$route['sbfp/backfill_school_id'] = 'sbfp_dashboard_controller/backfill_school_id';
+$route['sbfp/backfill_section_id'] = 'sbfp_dashboard_controller/backfill_section_id';
 
 // AJAX Routes
 $route['sbfp/set_assessment_type'] = 'sbfp_dashboard_controller/set_assessment_type';
