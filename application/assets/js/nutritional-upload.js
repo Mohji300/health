@@ -26,8 +26,13 @@
     const config = {
         maxFileSize: window.uploadConfig?.maxFileSize || 5 * 1024 * 1024,
         allowedExtensions: window.uploadConfig?.allowedExtensions || ['xlsx', 'xls', 'csv'],
-        processUrl: window.uploadConfig?.processUrl || ''
+        processUrl: window.uploadConfig?.processUrl || '',
+        heightTolerance: 3 // meters above this = likely cm
     };
+
+    let heightGuideModal = null;
+    let heightGuideSlideIndex = 0;
+    let pendingReupload = null; // remembers the file for the "Try again" button
     
     /**
      * Validate required DOM elements
@@ -127,6 +132,93 @@
             }
         });
     }
+
+        function initHeightGuide() {
+        const modalEl = document.getElementById('heightGuideModal');
+        if (!modalEl) return;
+        if (heightGuideModal) return;   // already initialized
+
+        heightGuideModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+
+        const prevBtn  = document.getElementById('heightGuidePrev');
+        const nextBtn  = document.getElementById('heightGuideNext');
+        const reupBtn  = document.getElementById('heightGuideReupload');
+        const closeBtn = document.getElementById('heightGuideClose');
+        const dots     = document.querySelectorAll('#heightGuideDots .guide-dot');
+        const slides   = document.querySelectorAll('#heightGuideSlides .height-slide');
+        const totalSlides = slides.length;
+
+        function render() {
+            slides.forEach((s, i) => s.classList.toggle('d-none', i !== heightGuideSlideIndex));
+            dots.forEach((d, i) => d.classList.toggle('active', i === heightGuideSlideIndex));
+            prevBtn.disabled = heightGuideSlideIndex === 0;
+            const isLast = heightGuideSlideIndex === totalSlides - 1;
+            nextBtn.classList.toggle('d-none', isLast);
+            reupBtn.classList.toggle('d-none', !isLast);
+        }
+
+        prevBtn.addEventListener('click', () => { if (heightGuideSlideIndex > 0) { heightGuideSlideIndex--; render(); } });
+        nextBtn.addEventListener('click', () => { if (heightGuideSlideIndex < totalSlides - 1) { heightGuideSlideIndex++; render(); } });
+        dots.forEach(d => d.addEventListener('click', () => { heightGuideSlideIndex = parseInt(d.dataset.dot, 10) || 0; render(); }));
+
+        reupBtn.addEventListener('click', () => {
+            if (heightGuideModal) heightGuideModal.hide();
+                isUploading = false;
+                currentUploadController = null;
+            setTimeout(() => {
+                const fi = document.getElementById('excelFile');
+                if (fi) { fi.value = ''; fi.click(); }
+            }, 200);
+        });
+
+        closeBtn.addEventListener('click', () => { if (heightGuideModal) heightGuideModal.hide(); });
+
+        render();
+    }
+
+    function showHeightGuide(heightErrors, onDone) {
+        initHeightGuide();
+        if (!heightGuideModal || typeof heightGuideModal.show !== 'function') {
+            console.error('[showHeightGuide] modal not available — falling back to alert');
+            if (Array.isArray(heightErrors) && heightErrors.length) {
+                const msg = heightErrors.slice(0, 5)
+                    .map(e => `Row ${e.row}: ${e.name} — entered ${e.raw}, use ${e.suggested}`)
+                    .join('\n');
+                window.alert('Height must be in meters (not cm).\n\n' + msg);
+            } else {
+                window.alert('Height must be in meters. Example: 1.45 (not 145).');
+            }
+            if (typeof onDone === 'function') onDone();
+            return;
+        }
+
+        const list = document.getElementById('heightGuideErrorList');
+        if (list && Array.isArray(heightErrors) && heightErrors.length) {
+            const rows = heightErrors.slice(0, 8).map(e =>
+                `<li>Row ${e.row}: <strong>${escapeHtml(e.name)}</strong> — you entered <code>${e.raw}</code>, use <code>${e.suggested}</code> instead</li>`
+            ).join('');
+            list.innerHTML =
+                `<strong>${heightErrors.length} student(s) had height in centimeters:</strong>` +
+                `<ul class="mb-0 mt-2">${rows}</ul>` +
+                (heightErrors.length > 8 ? `<div class="small mt-1">…and ${heightErrors.length - 8} more.</div>` : '');
+            list.classList.remove('d-none');
+        } else if (list) {
+            list.classList.add('d-none');
+        }
+
+        // Chain: call onDone when the modal closes
+        const modalEl = document.getElementById('heightGuideModal');
+        if (modalEl && typeof onDone === 'function') {
+            const onceHandler = function () {
+                modalEl.removeEventListener('hidden.bs.modal', onceHandler);
+                onDone();
+            };
+            modalEl.addEventListener('hidden.bs.modal', onceHandler);
+        }
+
+        heightGuideSlideIndex = 0;
+        heightGuideModal.show();
+    }
     
     /**
      * Extract data from Excel file
@@ -216,6 +308,17 @@
      * Handle successful response
      */
     function handleSuccess(data) {
+        // 1) Height-unit errors take priority — show guide and abort import
+        if (data.has_height_unit_errors && Array.isArray(data.height_unit_errors) && data.height_unit_errors.length) {
+            showHeightGuide(data.height_unit_errors);
+            // If the server also returned valid students alongside errors, still import them
+            if (data.students && data.students.length) {
+                showResults(data.message, data.students);
+            }
+            return;
+        }
+
+        // 2) Existing flow
         if (data.success) {
             showResults(data.message, data.students);
             showModal('Success', 'File processed successfully!', 'success');
@@ -438,6 +541,86 @@
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
+    }
+
+    
+    /* =========================================================
+    Height unit guide (slideshow)
+    ========================================================= */
+    function initHeightGuide() {
+        const modalEl = document.getElementById('heightGuideModal');
+        if (!modalEl) return;
+
+        const prevBtn   = document.getElementById('heightGuidePrev');
+        const nextBtn   = document.getElementById('heightGuideNext');
+        const reupBtn   = document.getElementById('heightGuideReupload');
+        const closeBtn  = document.getElementById('heightGuideClose');
+        const dots      = document.querySelectorAll('#heightGuideDots .guide-dot');
+        const slides    = document.querySelectorAll('#heightGuideSlides .height-slide');
+        const totalSlides = slides.length;
+
+        function render() {
+            slides.forEach((s, i) => s.classList.toggle('d-none', i !== heightGuideSlideIndex));
+            dots.forEach((d, i) => d.classList.toggle('active', i === heightGuideSlideIndex));
+
+            prevBtn.disabled = heightGuideSlideIndex === 0;
+            const isLast = heightGuideSlideIndex === totalSlides - 1;
+
+            nextBtn.classList.toggle('d-none', isLast);
+            reupBtn.classList.toggle('d-none', !isLast);
+        }
+
+        prevBtn.addEventListener('click', () => {
+            if (heightGuideSlideIndex > 0) { heightGuideSlideIndex--; render(); }
+        });
+        nextBtn.addEventListener('click', () => {
+            if (heightGuideSlideIndex < totalSlides - 1) { heightGuideSlideIndex++; render(); }
+        });
+        dots.forEach(d => d.addEventListener('click', () => {
+            heightGuideSlideIndex = parseInt(d.dataset.dot, 10) || 0;
+            render();
+        }));
+
+        reupBtn.addEventListener('click', () => {
+            // Reset file input and trigger chooser so user can pick the fixed file
+            if (heightGuideModal) heightGuideModal.hide();
+            const fi = document.getElementById('excelFile');
+            if (fi) { fi.value = ''; fi.click(); }
+        });
+
+        closeBtn.addEventListener('click', () => {
+            if (heightGuideModal) heightGuideModal.hide();
+        });
+
+        render();
+    }
+
+    function showHeightGuide(heightErrors) {
+        if (!heightGuideModal) initHeightGuide();
+        if (!heightGuideModal) {
+            // Fallback if Bootstrap isn't loaded
+            alert('Height must be in meters. Example: 1.45 (not 145).');
+            return;
+        }
+
+        // Populate the error list on slide 4
+        const list = document.getElementById('heightGuideErrorList');
+        if (list && Array.isArray(heightErrors) && heightErrors.length) {
+            const rows = heightErrors.slice(0, 8).map(e =>
+                `<li>Row ${e.row}: <strong>${escapeHtml(e.name)}</strong> — ` +
+                `you entered <code>${e.raw}</code>, use <code>${e.suggested}</code> instead</li>`
+            ).join('');
+            list.innerHTML =
+                `<strong>${heightErrors.length} student(s) had height in centimeters:</strong>` +
+                `<ul class="mb-0 mt-2">${rows}</ul>` +
+                (heightErrors.length > 8 ? `<div class="small mt-1">…and ${heightErrors.length - 8} more.</div>` : '');
+            list.classList.remove('d-none');
+        } else if (list) {
+            list.classList.add('d-none');
+        }
+
+        heightGuideSlideIndex = 0;
+        heightGuideModal.show();
     }
     
 })();

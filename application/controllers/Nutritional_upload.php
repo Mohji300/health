@@ -4,6 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Nutritional_upload extends CI_Controller {
 
     private $weighing_date = null;
+    private $heightUnitFlags = [];
     
     public function __construct() {
         parent::__construct();
@@ -29,6 +30,15 @@ class Nutritional_upload extends CI_Controller {
     }
 
     public function process_excel() {
+        $assessment_type = $this->input->post('assessment_type') ?: 'baseline';
+        $legislative_district = $this->input->post('legislative_district');
+        $school_district = $this->input->post('school_district');
+        $grade_level = $this->input->post('grade_level');
+        $section = $this->input->post('section');
+        $section_id = $this->input->post('section_id');
+        $school_id = $this->input->post('school_id');
+        $school_year = $this->input->post('school_year');
+
         ini_set('memory_limit', '1024M');
         ini_set('max_execution_time', 300);
         ini_set('max_input_time', 300);
@@ -91,7 +101,7 @@ class Nutritional_upload extends CI_Controller {
                 throw new Exception('Temporary file is not accessible.');
             }
 
-            $required_extensions = ['zip', 'xml', 'dom', 'gd', 'mbstring'];
+            $required_extensions = ['zip', 'xml', 'dom', 'mbstring'];
             foreach ($required_extensions as $ext) {
                 if (!extension_loaded($ext)) {
                     throw new Exception("Required PHP extension '{$ext}' is not installed.");
@@ -123,6 +133,53 @@ class Nutritional_upload extends CI_Controller {
 
             $extractedStudents = $this->processExcelData($data);
 
+            // --- Baseline beneficiary check for midline/endline ---
+            $non_beneficiary_students = [];
+
+            if (in_array($assessment_type, ['midline', 'endline']) && !empty($grade_level) && !empty($section)) {
+                $this->load->model('nutritional_assessment_model');
+
+                $baselineBeneficiaries = $this->nutritional_assessment_model->get_baseline_beneficiary_names(
+                    $legislative_district,
+                    $school_district,
+                    $grade_level,
+                    $section,
+                    $section_id,
+                    $school_id,
+                    $school_year
+                );
+
+                if (empty($baselineBeneficiaries)) {
+                    // No baseline exists — flag all extracted students
+                    foreach ($extractedStudents as $s) {
+                        $non_beneficiary_students[] = [
+                            'name' => $s['name'],
+                            'birthday' => $s['birthday'],
+                            'reason' => 'no_baseline',
+                        ];
+                    }
+                } else {
+                    // Build a normalized set of baseline beneficiary names
+                    $baselineNameSet = [];
+                    foreach ($baselineBeneficiaries as $b) {
+                        $key = $this->normalizeNameForKey($b->name);
+                        $baselineNameSet[$key] = true;
+                    }
+
+                    // Check each extracted student
+                    foreach ($extractedStudents as $s) {
+                        $key = $this->normalizeNameForKey($s['name']);
+                        if (!isset($baselineNameSet[$key])) {
+                            $non_beneficiary_students[] = [
+                                'name' => $s['name'],
+                                'birthday' => $s['birthday'],
+                                'reason' => 'not_in_baseline',
+                            ];
+                        }
+                    }
+                }
+            }
+
             unset($spreadsheet, $worksheet, $data);
             gc_collect_cycles();
 
@@ -133,7 +190,12 @@ class Nutritional_upload extends CI_Controller {
             $response = [
                 'success' => true,
                 'message' => 'Successfully extracted ' . count($extractedStudents) . ' student record(s).',
-                'students' => $extractedStudents
+                'students' => $extractedStudents,
+                'height_unit_errors' => $this->heightUnitFlags,
+                'has_height_unit_errors' => !empty($this->heightUnitFlags),
+                'assessment_type' => $assessment_type,
+                'non_beneficiary_students' => $non_beneficiary_students,
+                'has_non_beneficiary_students' => !empty($non_beneficiary_students),
             ];
             
             $json = json_encode($response);
@@ -159,6 +221,8 @@ class Nutritional_upload extends CI_Controller {
                 
                 $response['students'] = $cleanStudents;
                 $response['message'] = 'Successfully extracted ' . count($extractedStudents) . ' student records.';
+                $response['non_beneficiary_students'] = $non_beneficiary_students;
+                $response['has_non_beneficiary_students'] = !empty($non_beneficiary_students);
                 
                 $json = json_encode($response);
                 
@@ -204,6 +268,37 @@ class Nutritional_upload extends CI_Controller {
             echo $json;
             exit;
         }
+    }
+
+    /**
+     * Normalize a name for matching against baseline beneficiaries.
+     * Matches last name + first name; ignores middle initial, punctuation, case.
+     */
+    private function normalizeNameForKey($fullName) {
+        if (empty($fullName)) return '';
+
+        $name = strtoupper(trim($fullName));
+        // Remove trailing punctuation
+        $name = preg_replace('/[.,]+$/', '', $name);
+        // Split on comma if present (Last, First M.I format)
+        if (strpos($name, ',') !== false) {
+            $parts = explode(',', $name, 2);
+            $last = trim($parts[0]);
+            $firstPart = trim($parts[1]);
+            // Strip middle initial from first name part
+            $firstPart = preg_replace('/\s+[A-Z]\.?$/', '', $firstPart);
+            return $last . '|' . $firstPart;
+        }
+        // Otherwise "Last First M.I" or "First Last" — assume last word is last name
+        $parts = preg_split('/\s+/', $name);
+        if (count($parts) < 2) return $name;
+        $last = array_pop($parts);
+        // Remove middle initial
+        if (!empty($parts) && preg_match('/^[A-Z]\.?$/', end($parts))) {
+            array_pop($parts);
+        }
+        $first = implode(' ', $parts);
+        return $last . '|' . $first;
     }
 
     /**
@@ -308,6 +403,25 @@ class Nutritional_upload extends CI_Controller {
             
             $weight = $this->sanitizeNumeric($rawWeight);
             $height = $this->sanitizeNumeric($rawHeight);
+
+            // --- Height unit sanity check ---
+            // Height MUST be in meters (typical range 0.4m – 2.2m for school children).
+            // If the value is > 3, the user almost certainly typed centimeters.
+            $heightUnitFlags = [];
+
+            // inside the per-student loop, after sanitizing height:
+            if ($height !== null && $height > 3) {
+                // Looks like centimeters — flag it but keep the raw value for the report
+                $this->heightUnitFlags[] = [
+                    'row'      => $rowNumber,
+                    'name'     => $name,
+                    'raw'      => $height,
+                    'suggested'=> round($height / 100, 2), // what it would be in meters
+                ];
+                // Do NOT add this student to the extracted list
+                continue;
+            }
+
             $sex = $this->sanitizeForJson($this->parseSex($rawSex));
             
             if ($this->isValidStudentData($name, $weight, $height, $sex)) {
