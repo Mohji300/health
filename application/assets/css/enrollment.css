@@ -152,3 +152,277 @@ body {
 .card.bg-gradient-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
+
+/* ============================================================
+   Grand Total + Dual Circle Grades
+   Matches existing #667eea → #764ba2 gradient theme
+   ============================================================ */
+
+/* ---------- Grand Total Card ---------- */
+.grand-total-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border-radius: 24px;
+    padding: 1.75rem 1.5rem 1.25rem;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 15px 30px rgba(102, 126, 234, 0.35);
+    user-select: none;
+}
+.grand-total-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.45);
+}
+.grand-total-card:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.35),
+                0 15px 30px rgba(102, 126, 234, 0.35);
+}
+
+.grand-total-label {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.95;
+    margin-bottom: 1rem;
+}
+
+.grand-total-circles {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    margin-bottom: 1rem;
+}
+
+.grand-half {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.grand-circle {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s ease;
+}
+.grand-total-card:hover .grand-circle {
+    transform: scale(1.03);
+}
+
+.grand-circle-school {
+    border: 5px solid #f093fb;
+}
+.grand-circle-school .grand-circle-value {
+    color: #667eea;
+}
+
+.grand-circle-nutrition {
+    border: 5px solid #43e97b;
+}
+.grand-circle-nutrition .grand-circle-value {
+    color: #16a34a;
+}
+
+.grand-circle-value {
+    font-size: 2.6rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.grand-half-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.95;
+}
+
+.grand-total-diff {
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 30px;
+    padding: 0.35rem 1rem;
+    display: inline-block;
+    margin: 0 auto 0.75rem;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.grand-total-hint {
+    text-align: center;
+    font-size: 0.85rem;
+    opacity: 0.9;
+    border-top: 1px solid rgba(255, 255, 255, 0.25);
+    padding-top: 0.75rem;
+}
+
+/* ---------- Per-Grade Card ---------- */
+.grade-circle-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    height: 100%;
+    transition: all 0.2s ease;
+    animation: fadeSlideIn 0.3s ease both;
+}
+.grade-circle-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}
+
+.grade-circle-title {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #1e293b;
+    margin-bottom: 1rem;
+}
+
+.grade-dual-circles {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.dual-circle {
+    width: 105px;
+    height: 105px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease;
+}
+.grade-circle-card:hover .dual-circle {
+    transform: scale(1.05);
+}
+
+.school-circle {
+    background: #eef2ff;
+    border: 3px solid #667eea;
+    color: #2c3e66;
+}
+.nutrition-circle {
+    background: #ecfdf5;
+    border: 3px solid #22c55e;
+    color: #166534;
+}
+
+.dual-circle-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    margin-bottom: 0.15rem;
+}
+.dual-circle-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+/* ---------- Diff pill (reused in both cards) ---------- */
+.grade-diff {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.2rem 0.75rem;
+    border-radius: 20px;
+    margin-bottom: 0.75rem;
+}
+.diff-equal {
+    background: #d1fae5;
+    color: #065f46;
+}
+.diff-over {
+    background: #dbeafe;
+    color: #1e40af;
+}
+.diff-under {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* ---------- Action buttons ---------- */
+.grade-actions .btn {
+    border-radius: 40px;
+    padding: 0.3rem 0.85rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    margin: 0 0.15rem;
+}
+.grade-actions .btn-success {
+    background: #22c55e;
+    border-color: #22c55e;
+}
+.grade-actions .btn-warning {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: #fff;
+}
+.grade-actions .btn-info {
+    background: #667eea;
+    border-color: #667eea;
+    color: #fff;
+}
+
+/* ---------- Fade-in animation for expanded grid ---------- */
+@keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 576px) {
+    .grand-total-circles {
+        gap: 1.5rem;
+    }
+    .grand-circle {
+        width: 105px;
+        height: 105px;
+    }
+    .grand-circle-value {
+        font-size: 2rem;
+    }
+    .dual-circle {
+        width: 85px;
+        height: 85px;
+    }
+    .dual-circle-value {
+        font-size: 1.4rem;
+    }
+}
+#schoolTypeBadge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: #fff !important;
+    padding: 0.4rem 0.9rem;
+    border-radius: 30px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+#refreshNutritionBtn {
+    border-radius: 30px;
+    font-weight: 600;
+}

@@ -1,6 +1,9 @@
 // ------------------------------------------------------------
 // Enrollment Tracker JavaScript
 // ------------------------------------------------------------
+// ------------------------------------------------------------
+// Grade definitions + state
+// ------------------------------------------------------------
 const grades = [
     { id: 'kindergarten', label: 'Kindergarten' }, { id: 'sped', label: 'SPED' },
     { id: 'grade_1', label: 'Grade 1' }, { id: 'grade_2', label: 'Grade 2' },
@@ -10,69 +13,268 @@ const grades = [
     { id: 'grade_9', label: 'Grade 9' }, { id: 'grade_10', label: 'Grade 10' },
     { id: 'grade_11', label: 'Grade 11' }, { id: 'grade_12', label: 'Grade 12' }
 ];
-let totals = {};
-let students = {};
+
+let totals            = {};
+let students          = {};
 let currentSchoolYear = '';
+let schoolType        = window.SCHOOL_TYPE || '';
+let grandTotalExpanded = false;
+
+// Nutritional counts from the server
+let nutritionalCounts = (window.NUTRITIONAL_COUNTS && typeof window.NUTRITIONAL_COUNTS === 'object')
+    ? window.NUTRITIONAL_COUNTS : {};
+let uploadedStudentSummary = (window.UPLOADED_STUDENT_SUMMARY && typeof window.UPLOADED_STUDENT_SUMMARY === 'object')
+    ? window.UPLOADED_STUDENT_SUMMARY : {};
 
 function getTotalCount(gradeId) { return totals[gradeId] || 0; }
-function getOverallTotal() { let sum = 0; for (let g of grades) sum += getTotalCount(g.id); return sum; }
 
+function getOverallTotal() {
+    let sum = 0; for (let g of grades) sum += getTotalCount(g.id); return sum;
+}
+
+function getNutritionalCount(gradeId) {
+    const v = nutritionalCounts[gradeId];
+    return (typeof v === 'number' && v > 0) ? v : (parseInt(v || 0, 10) || 0);
+}
+
+function getOverallNutritionalTotal() {
+    let sum = 0; for (let g of grades) sum += getNutritionalCount(g.id); return sum;
+}
+
+// Which grades actually have data?
+function getActiveGrades() {
+    return grades.filter(g =>
+        getTotalCount(g.id) > 0 || getNutritionalCount(g.id) > 0
+    );
+}
+
+// ------------------------------------------------------------
+// Persistence
+// ------------------------------------------------------------
 function saveToLocalStorage() {
     localStorage.setItem('enrollment_school_year', currentSchoolYear);
-    localStorage.setItem('enrollment_totals', JSON.stringify(totals));
-    localStorage.setItem('enrollment_students', JSON.stringify(students));
+    localStorage.setItem('enrollment_totals',      JSON.stringify(totals));
+    localStorage.setItem('enrollment_students',    JSON.stringify(students));
 }
+
 function loadFromLocalStorage() {
-    currentSchoolYear = localStorage.getItem('enrollment_school_year') || '';
-    const savedTotals = localStorage.getItem('enrollment_totals');
+    currentSchoolYear = window.SCHOOL_YEAR || localStorage.getItem('enrollment_school_year') || '';
+    const savedTotals   = localStorage.getItem('enrollment_totals');
     const savedStudents = localStorage.getItem('enrollment_students');
-    if (savedTotals) totals = JSON.parse(savedTotals);
+    if (savedTotals)   totals   = JSON.parse(savedTotals);
     if (savedStudents) students = JSON.parse(savedStudents);
-    if (currentSchoolYear) document.getElementById('selectedSchoolYearDisplay').innerText = `School year: ${currentSchoolYear}`;
+    if (currentSchoolYear)
+        document.getElementById('selectedSchoolYearDisplay').innerText =
+            `School year: ${currentSchoolYear}`;
     return currentSchoolYear !== '' && savedTotals !== null;
 }
 
+// Hydrate from the server (DB takes precedence over localStorage)
+function hydrateFromServer() {
+    if (window.ENROLLMENT_DATA) {
+        const d = window.ENROLLMENT_DATA;
+        if (d.school_year) {
+            currentSchoolYear = d.school_year;
+            document.getElementById('selectedSchoolYearDisplay').innerText =
+                `School year: ${currentSchoolYear}`;
+        }
+        for (let g of grades) {
+            if (d[g.id] !== undefined) totals[g.id] = parseInt(d[g.id], 10) || 0;
+        }
+    }
+    if (window.SCHOOL_TYPE && window.SCHOOL_TYPE !== 'null') {
+        schoolType = window.SCHOOL_TYPE;
+        const badge = document.getElementById('schoolTypeBadge');
+        if (badge) badge.innerHTML = `<i class="bi bi-building"></i> ${schoolType}`;
+    }
+}
+
+// ------------------------------------------------------------
+// Rendering
+// ------------------------------------------------------------
+function renderUploadedStudentSummary() {
+    const container = document.getElementById('uploadedStudentSummary');
+    if (!container) return;
+
+    const total = Number(uploadedStudentSummary.total) || 0;
+    const male = Number(uploadedStudentSummary.male) || 0;
+    const female = Number(uploadedStudentSummary.female) || 0;
+    const gradeCounts = uploadedStudentSummary.grades || {};
+    const visibleGradeIds = Array.isArray(window.UPLOADED_GRADE_IDS)
+        ? window.UPLOADED_GRADE_IDS
+        : grades.map(grade => grade.id);
+    const visibleGrades = grades.filter(grade => visibleGradeIds.includes(grade.id));
+    const gradeRows = visibleGrades.map(grade => {
+        const counts = gradeCounts[grade.id] || {};
+        return `<tr>
+            <th scope="row">${grade.label}</th>
+            <td>${Number(counts.male) || 0}</td>
+            <td>${Number(counts.female) || 0}</td>
+            <td class="fw-semibold">${Number(counts.total) || 0}</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="row g-3 mb-3">
+            <div class="col-md-4"><div class="border rounded p-3 h-100">
+                <div class="text-muted small">Total Uploaded</div><div class="fs-3 fw-bold">${total}</div>
+            </div></div>
+            <div class="col-md-4"><div class="border rounded p-3 h-100">
+                <div class="text-muted small">Male</div><div class="fs-3 fw-bold">${male}</div>
+            </div></div>
+            <div class="col-md-4"><div class="border rounded p-3 h-100">
+                <div class="text-muted small">Female</div><div class="fs-3 fw-bold">${female}</div>
+            </div></div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+                <thead><tr><th scope="col">Grade Level</th><th scope="col">Male</th>
+                    <th scope="col">Female</th><th scope="col">Total</th></tr></thead>
+                <tbody>${gradeRows}</tbody>
+            </table>
+        </div>`;
+}
+
 function renderOverallSummary() {
-    document.getElementById('overallSummary').innerHTML = `<div class="d-flex justify-content-between"><strong>Total Enrolled Students:</strong> ${getOverallTotal()}</div>`;
+    const inputTotal = getOverallTotal();
+    const nutriTotal = getOverallNutritionalTotal();
+    const diff = inputTotal - nutriTotal;
+    const cls  = diff === 0 ? 'text-success' : (diff > 0 ? 'text-primary' : 'text-danger');
+    document.getElementById('overallSummary').innerHTML = `
+        <div class="d-flex flex-wrap gap-4 justify-content-between">
+            <div><strong>Total School Input:</strong> ${inputTotal}</div>
+            <div><strong>Total (Nutritional Assessment):</strong> ${nutriTotal}</div>
+            <div class="${cls}"><strong>Difference:</strong> ${diff > 0 ? '+' : ''}${diff}</div>
+        </div>`;
+}
+
+function renderGrandTotalCircle() {
+    const inputTotal = getOverallTotal();
+    const nutriTotal = getOverallNutritionalTotal();
+    const wrap = document.getElementById('grandTotalWrapper');
+    if (!wrap) return;
+
+    if (!currentSchoolYear || Object.keys(totals).length === 0) {
+        wrap.innerHTML = '';
+        return;
+    }
+
+    const diff = inputTotal - nutriTotal;
+    const diffCls = diff === 0 ? 'diff-equal' : (diff > 0 ? 'diff-over' : 'diff-under');
+    const diffIcon = diff === 0 ? 'check-circle' : (diff > 0 ? 'arrow-up-circle' : 'arrow-down-circle');
+
+    wrap.innerHTML = `
+        <div class="grand-total-card" id="grandTotalCircle" role="button" tabindex="0"
+             aria-expanded="${grandTotalExpanded}">
+            <div class="grand-total-label">
+                <i class="bi bi-mortarboard-fill"></i>
+                Grand Total ${schoolType ? '· ' + schoolType : ''}
+            </div>
+            <div class="grand-total-circles">
+                <div class="grand-half">
+                    <div class="grand-circle grand-circle-school">
+                        <div class="grand-circle-value">${inputTotal}</div>
+                    </div>
+                    <div class="grand-half-title">School Input</div>
+                </div>
+                <div class="grand-half">
+                    <div class="grand-circle grand-circle-nutrition">
+                        <div class="grand-circle-value">${nutriTotal}</div>
+                    </div>
+                    <div class="grand-half-title">Nutritional</div>
+                </div>
+            </div>
+            <div class="grand-total-diff ${diffCls}">
+                <i class="bi bi-${diffIcon}"></i>
+                Difference: ${diff > 0 ? '+' : ''}${diff}
+            </div>
+            <div class="grand-total-hint">
+                <i class="bi bi-chevron-${grandTotalExpanded ? 'up' : 'down'}"></i>
+                ${grandTotalExpanded ? 'Hide' : 'Show'} grade breakdown
+            </div>
+        </div>`;
+
+    const card = document.getElementById('grandTotalCircle');
+    const toggle = () => { grandTotalExpanded = !grandTotalExpanded; renderCircles(); };
+    card.addEventListener('click', toggle);
+    card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+}
+
+function renderGradeCircles() {
+    const container = document.getElementById('circlesGrid');
+    const active = getActiveGrades();
+    if (!grandTotalExpanded || active.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    for (let grade of active) {
+        const schoolVal = getTotalCount(grade.id);
+        const nutriVal  = getNutritionalCount(grade.id);
+        const diff      = schoolVal - nutriVal;
+        const diffCls   = diff === 0 ? 'diff-equal' : (diff > 0 ? 'diff-over' : 'diff-under');
+        const diffIcon  = diff === 0 ? 'check-circle' : (diff > 0 ? 'arrow-up-circle' : 'arrow-down-circle');
+
+        html += `
+            <div class="col-lg-4 col-md-6">
+                <div class="grade-circle-card">
+                    <div class="grade-circle-title">${grade.label}</div>
+                    <div class="grade-dual-circles">
+                        <div class="dual-circle school-circle">
+                            <div class="dual-circle-label">School</div>
+                            <div class="dual-circle-value">${schoolVal}</div>
+                        </div>
+                        <div class="dual-circle nutrition-circle">
+                            <div class="dual-circle-label">Nutritional</div>
+                            <div class="dual-circle-value">${nutriVal}</div>
+                        </div>
+                    </div>
+                    <div class="grade-diff ${diffCls}">
+                        <i class="bi bi-${diffIcon}"></i>
+                        ${diff > 0 ? '+' : ''}${diff}
+                    </div>
+                    <div class="grade-actions">
+                        <button class="btn btn-sm btn-success add-btn" data-grade="${grade.id}">
+                            <i class="bi bi-plus-circle"></i> Add
+                        </button>
+                        <button class="btn btn-sm btn-warning remove-btn" data-grade="${grade.id}">
+                            <i class="bi bi-dash-circle"></i> Remove
+                        </button>
+                        <button class="btn btn-sm btn-info notes-btn" data-grade="${grade.id}">
+                            <i class="bi bi-journal-bookmark-fill"></i> Notes
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+    }
+    container.innerHTML = html;
+
+    document.querySelectorAll('.add-btn').forEach(b => b.addEventListener('click',
+        () => openAddModal(b.getAttribute('data-grade'))));
+    document.querySelectorAll('.remove-btn').forEach(b => b.addEventListener('click',
+        () => openRemoveModal(b.getAttribute('data-grade'))));
+    document.querySelectorAll('.notes-btn').forEach(b => b.addEventListener('click',
+        () => openNotesModal(b.getAttribute('data-grade'))));
 }
 
 function renderCircles() {
     const container = document.getElementById('circlesGrid');
     if (!currentSchoolYear || Object.keys(totals).length === 0) {
-        container.innerHTML = `<div class="col-12 text-center text-muted py-5"><i class="bi bi-calendar-x"></i><br>Set school year and total enrollment first.</div>`;
+        document.getElementById('grandTotalWrapper').innerHTML = '';
+        container.innerHTML = `
+            <div class="col-12 text-center text-muted py-5">
+                <i class="bi bi-calendar-x fs-1"></i><br>
+                Set the school year and total enrollment first.
+            </div>`;
         renderOverallSummary();
         return;
     }
-    let html = '';
-    for (let grade of grades) {
-        const id = grade.id;
-        const total = getTotalCount(id);
-        html += `
-            <div class="col-lg-3 col-md-4 col-sm-6">
-                <div class="circle-card">
-                    <div class="grade-circle">
-                        <div class="circle-numbers">
-                            <span class="zero">0</span>
-                            <span class="divider">/</span>
-                            <span class="total">${total}</span>
-                        </div>
-                    </div>
-                    <div class="grade-label">${grade.label}</div>
-                    <div class="progress-status"><i class="bi bi-person-check"></i> ${total} enrolled</div>
-                    <div class="mt-3">
-                        <button class="btn btn-sm btn-success btn-action add-btn" data-grade="${id}"><i class="bi bi-plus-circle"></i> Add</button>
-                        <button class="btn btn-sm btn-warning btn-action remove-btn" data-grade="${id}"><i class="bi bi-dash-circle"></i> Remove</button>
-                        <button class="btn btn-sm btn-info btn-action notes-btn" data-grade="${id}"><i class="bi bi-journal-bookmark-fill"></i> Notes</button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    container.innerHTML = html;
-    document.querySelectorAll('.add-btn').forEach(btn => btn.addEventListener('click', () => openAddModal(btn.getAttribute('data-grade'))));
-    document.querySelectorAll('.remove-btn').forEach(btn => btn.addEventListener('click', () => openRemoveModal(btn.getAttribute('data-grade'))));
-    document.querySelectorAll('.notes-btn').forEach(btn => btn.addEventListener('click', () => openNotesModal(btn.getAttribute('data-grade'))));
     renderOverallSummary();
+    renderGrandTotalCircle();
+    renderGradeCircles();
 }
 
 let currentAddGrade = null;
@@ -279,9 +481,13 @@ document.getElementById('confirmSchoolYearBtn').addEventListener('click', () => 
     const sy = document.getElementById('schoolYearInput').value.trim();
     if (!sy) { alert('Enter school year'); return; }
     currentSchoolYear = sy;
+    const enrollmentUrl = new URL(window.location.href);
+    enrollmentUrl.searchParams.set('school_year', sy);
+    window.history.replaceState({}, '', enrollmentUrl.toString());
     document.getElementById('selectedSchoolYearDisplay').innerText = `School year: ${currentSchoolYear}`;
     bootstrap.Modal.getInstance(document.getElementById('schoolYearModal')).hide();
     openTotalModal();
+    refreshNutritionalCounts();
 });
 document.getElementById('resetTotalBtn').addEventListener('click', openTotalModal);
 document.getElementById('confirmTotalBtn').addEventListener('click', setTotalsFromModal);
@@ -305,8 +511,36 @@ const catSelectElem = document.getElementById('beneficiaryCategorySelect');
 if (catSelectElem) catSelectElem.addEventListener('change', (e) => { setBeneficiaryCategory(e.target.value); });
 document.querySelectorAll('#filterButtons .btn').forEach(btn => btn.addEventListener('click', () => { updateChart(btn.getAttribute('data-period')); setActiveFilter(btn.getAttribute('data-period')); }));
 
+// ------------------------------------------------------------
+// Refresh nutrition totals via AJAX
+// ------------------------------------------------------------
+async function refreshNutritionalCounts() {
+    const btn = document.getElementById('refreshNutritionBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Loading…'; }
+    try {
+        const assessmentType = window.ASSESSMENT_TYPE || 'baseline';
+        const res  = await fetch(`${window.BASE_URL}enrollment_controller/nutritional_counts?assessment_type=${encodeURIComponent(assessmentType)}`);
+        const json = await res.json();
+        if (json && json.counts) {
+            nutritionalCounts = json.counts;
+            uploadedStudentSummary = json.uploaded_summary || uploadedStudentSummary;
+            renderUploadedStudentSummary();
+            renderCircles();
+            updateBeneficiaryStats();
+        }
+    } catch (err) {
+        console.error('Failed to refresh nutritional counts', err);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refresh Uploaded Totals'; }
+    }
+}
+
 function init() {
+    hydrateFromServer();
+    renderUploadedStudentSummary();
+
     const hasData = loadFromLocalStorage();
+
     if (hasData && currentSchoolYear && Object.keys(totals).length > 0) {
         renderCircles();
         updateBeneficiaryStats();
@@ -317,6 +551,9 @@ function init() {
         renderCircles();
     }
         // Beneficiary buttons wiring
+        const btnRefresh = document.getElementById('refreshNutritionBtn');
+        if (btnRefresh) btnRefresh.addEventListener('click', refreshNutritionalCounts);
+        refreshNutritionalCounts();
         const toggleBtn = document.getElementById('beneficiaryToggleBtn');
         if (toggleBtn) toggleBtn.addEventListener('click', () => {
             beneficiaryVisible = !beneficiaryVisible;

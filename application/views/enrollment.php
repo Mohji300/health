@@ -1,49 +1,136 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed'); ?>
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enrollment Management System</title>
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Enrollment Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <!-- Custom CSS -->
+    <link rel="icon" href="<?= base_url('favicon.ico'); ?>">
     <link rel="stylesheet" href="<?php echo base_url(ASSETS_PATH . '/css/enrollment.css'); ?>">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
-
 <body class="bg-light">
 <div class="d-flex" id="wrapper">
     <?php $this->load->view('templates/sidebar'); ?>
     <div id="page-content-wrapper" class="w-100">
-<!-- Main content area -->
-<div class="main-content" id="mainContent">
-    <?php
-    // Header (reports header template)
-    $title = 'Enrollment Tracker';
-    $current_filters = [];
-    $reports = [];
-    $this->load->view('templates/default_header', ['title' => $title]);
-    ?>
-
+        <div class="container-fluid py-4">
+            <!-- Main content area -->
+            <div class="main-content" id="mainContent">
     <!-- Enrollment Tracker Content -->
     <div class="tracker-wrapper">
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-            <div>
-                <h2 class="fw-bold"><i class="bi bi-person-arms-up"></i> Enrollment Tracker</h2>
-                <span class="badge bg-secondary fs-6" id="selectedSchoolYearDisplay">School year: –</span>
+        <div class="card bg-gradient-primary text-white mb-4">
+            <div class="card-body">
+                <h1 class="h2 font-weight-bold mb-2">Enrollment Tracker</h1>
+                <p class="mb-0 opacity-8">View and manage enrollment records and nutrition status</p>
             </div>
-            <button class="btn btn-outline-secondary" id="resetTotalBtn">
-                <i class="bi bi-arrow-repeat"></i> Change Total Enrollment
+        </div>
+        <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+            <span class="badge bg-secondary fs-6" id="selectedSchoolYearDisplay">
+                School year: <?php echo !empty($school_year) ? htmlspecialchars($school_year) : '–'; ?>
+            </span>
+            <span class="badge bg-info text-dark fs-6" id="schoolTypeBadge">
+                <i class="bi bi-building"></i>
+                <?php echo !empty($school_type) ? htmlspecialchars($school_type) : 'Type not set'; ?>
+            </span>
+            <button class="btn btn-sm btn-outline-primary" id="refreshNutritionBtn" title="Reload uploaded student totals">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Uploaded Totals
             </button>
         </div>
 
+        <?php
+            $uploaded_summary = isset($uploaded_student_summary) && is_array($uploaded_student_summary)
+                ? $uploaded_student_summary
+                : array();
+            $uploaded_grades = isset($uploaded_summary['grades']) && is_array($uploaded_summary['grades'])
+                ? $uploaded_summary['grades']
+                : array();
+            $uploaded_grade_labels = array(
+                'kindergarten' => 'Kindergarten',
+                'sped' => 'SPED',
+                'grade_1' => 'Grade 1',
+                'grade_2' => 'Grade 2',
+                'grade_3' => 'Grade 3',
+                'grade_4' => 'Grade 4',
+                'grade_5' => 'Grade 5',
+                'grade_6' => 'Grade 6',
+                'grade_7' => 'Grade 7',
+                'grade_8' => 'Grade 8',
+                'grade_9' => 'Grade 9',
+                'grade_10' => 'Grade 10',
+                'grade_11' => 'Grade 11',
+                'grade_12' => 'Grade 12'
+            );
+            $school_type_key = strtolower(trim(isset($school_type) ? (string) $school_type : ''));
+            $school_type_key = preg_replace('/[^a-z0-9]+/', ' ', $school_type_key);
+            if (strpos($school_type_key, 'stand alone shs') !== false || $school_type_key === 'shs only') {
+                $visible_uploaded_grade_ids = array('grade_11', 'grade_12');
+            } elseif (strpos($school_type_key, 'integrated') !== false) {
+                $visible_uploaded_grade_ids = array_keys($uploaded_grade_labels);
+            } elseif (strpos($school_type_key, 'elementary') !== false) {
+                $visible_uploaded_grade_ids = array(
+                    'sped', 'grade_1', 'grade_2', 'grade_3', 'grade_4', 'grade_5', 'grade_6'
+                );
+            } elseif (in_array($school_type_key, array('secondary', 'junior high school', 'senior high school', 'senior high'), true)) {
+                $visible_uploaded_grade_ids = array(
+                    'grade_7', 'grade_8', 'grade_9', 'grade_10', 'grade_11', 'grade_12'
+                );
+            } else {
+                $visible_uploaded_grade_ids = array_keys($uploaded_grade_labels);
+            }
+            $uploaded_grade_labels = array_intersect_key(
+                $uploaded_grade_labels,
+                array_flip($visible_uploaded_grade_ids)
+            );
+        ?>
+        <section class="summary-card" aria-labelledby="uploadedStudentTitle">
+            <h2 class="h5 fw-semibold mb-1" id="uploadedStudentTitle">
+                Uploaded Students <span class="badge bg-secondary"><?php echo html_escape(ucfirst(isset($assessment_type) ? $assessment_type : 'baseline')); ?></span>
+            </h2>
+            <p class="text-muted small mb-3">Counts use the same active assessment records as the User Dashboard. School-year selection applies to the enrollment comparison.</p>
+            <div id="uploadedStudentSummary">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4"><div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Total Uploaded</div>
+                        <div class="fs-3 fw-bold"><?php echo number_format(isset($uploaded_summary['total']) ? (int) $uploaded_summary['total'] : 0); ?></div>
+                    </div></div>
+                    <div class="col-md-4"><div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Male</div>
+                        <div class="fs-3 fw-bold"><?php echo number_format(isset($uploaded_summary['male']) ? (int) $uploaded_summary['male'] : 0); ?></div>
+                    </div></div>
+                    <div class="col-md-4"><div class="border rounded p-3 h-100">
+                        <div class="text-muted small">Female</div>
+                        <div class="fs-3 fw-bold"><?php echo number_format(isset($uploaded_summary['female']) ? (int) $uploaded_summary['female'] : 0); ?></div>
+                    </div></div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle mb-0">
+                        <thead>
+                            <tr><th scope="col">Grade Level</th><th scope="col">Male</th><th scope="col">Female</th><th scope="col">Total</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($uploaded_grade_labels as $grade_id => $grade_label):
+                                $grade_counts = isset($uploaded_grades[$grade_id]) && is_array($uploaded_grades[$grade_id])
+                                    ? $uploaded_grades[$grade_id]
+                                    : array();
+                            ?>
+                                <tr>
+                                    <th scope="row"><?php echo html_escape($grade_label); ?></th>
+                                    <td><?php echo number_format(isset($grade_counts['male']) ? (int) $grade_counts['male'] : 0); ?></td>
+                                    <td><?php echo number_format(isset($grade_counts['female']) ? (int) $grade_counts['female'] : 0); ?></td>
+                                    <td class="fw-semibold"><?php echo number_format(isset($grade_counts['total']) ? (int) $grade_counts['total'] : 0); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
         <div id="overallSummary" class="summary-card"></div>
+        <div id="grandTotalWrapper" class="mb-3"></div>
         <div id="circlesGrid" class="row g-4"></div>
 
         <!-- SBFP Filter -->
@@ -127,7 +214,7 @@
 <div class="modal fade" id="schoolYearModal" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
         <div class="modal-header modal-header-custom"><h5 class="modal-title"><i class="bi bi-calendar"></i> Select School Year</h5></div>
-        <div class="modal-body"><input type="text" class="form-control" id="schoolYearInput" placeholder="2025-2026" value="2025-2026"></div>
+        <div class="modal-body"><input type="text" class="form-control" id="schoolYearInput" placeholder="2025-2026" value="<?php echo !empty($school_year) ? html_escape($school_year) : '2025-2026'; ?>"></div>
         <div class="modal-footer"><button class="btn btn-primary btn-primary-custom" id="confirmSchoolYearBtn">Continue</button></div>
     </div></div>
 </div>
@@ -193,9 +280,20 @@
     </div></div>
 </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    window.BASE_URL = '<?php echo base_url(); ?>';
+    window.BASE_URL          = '<?php echo base_url(); ?>';
+    window.SCHOOL_YEAR       = <?php echo json_encode($school_year); ?>;
+    window.SCHOOL_TYPE       = <?php echo json_encode($school_type); ?>;
+    window.ASSESSMENT_TYPE   = <?php echo json_encode(isset($assessment_type) ? $assessment_type : 'baseline'); ?>;
+    window.NUTRITIONAL_COUNTS = <?php echo json_encode(isset($nutritional_counts) ? $nutritional_counts : new stdClass()); ?>;
+    window.UPLOADED_STUDENT_SUMMARY = <?php echo json_encode(isset($uploaded_student_summary) ? $uploaded_student_summary : array()); ?>;
+    window.UPLOADED_GRADE_IDS = <?php echo json_encode(isset($visible_uploaded_grade_ids) ? $visible_uploaded_grade_ids : array()); ?>;
+    window.ENROLLMENT_DATA   = <?php echo json_encode($enrollment); ?>;
 </script>
 <script src="<?php echo base_url(ASSETS_PATH . '/js/enrollment.js'); ?>"></script>
 </body>
