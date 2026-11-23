@@ -419,13 +419,13 @@
         <ul class="dropdown-menu dropdown-menu-end">
             <li>
                 <a class="dropdown-item export-detail-action" href="#" data-mode="midline">
-                    <i class="fas fa-file-alt me-1 text-info"></i> Midline
+                    <i class="fas fa-file-alt me-1 text-info"></i> Midline Uploading 
                     <small class="d-block text-muted">Name, birthday, sex only</small>
                 </a>
             </li>
             <li>
                 <a class="dropdown-item export-detail-action" href="#" data-mode="endline">
-                    <i class="fas fa-file-alt me-1 text-warning"></i> Endline
+                    <i class="fas fa-file-alt me-1 text-warning"></i> Endline Uploading
                     <small class="d-block text-muted">All fields except height/weight/date</small>
                 </a>
             </li>

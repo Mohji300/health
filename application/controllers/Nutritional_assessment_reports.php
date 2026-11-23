@@ -377,7 +377,7 @@ public function export_detail()
 
         $this->load->library('phpspreadsheet_lib');
 
-        // Required filters
+        // ---- Filters ----
         $legislative_district = $this->input->get('legislative_district', TRUE);
         $school_district      = $this->input->get('school_district', TRUE);
         $school_name          = $this->input->get('school_name', TRUE);
@@ -387,14 +387,12 @@ public function export_detail()
         $section_id           = $this->input->get('section_id', TRUE);
         $year                 = $this->input->get('year', TRUE);
 
-        // NEW: mode selector
-        // midline | endline | section
+        // ---- Mode ----
         $mode = strtolower($this->input->get('mode', TRUE) ?: 'section');
         if (!in_array($mode, ['midline', 'endline', 'section'])) {
             $mode = 'section';
         }
 
-        // Mode only controls formatting — NOT which rows are fetched
         $config = [
             'midline' => [
                 'template'        => 'export_per_section.xlsx',
@@ -404,11 +402,11 @@ public function export_detail()
                 'include_summary' => false,
             ],
             'endline' => [
-                'template'        => 'export_all_sections.xlsx',
+                'template'        => 'export_per_section.xlsx',
                 'include_height'  => false,
                 'include_weight'  => false,
                 'include_date'    => false,
-                'include_summary' => true,
+                'include_summary' => false,
             ],
             'section' => [
                 'template'        => 'export_all_sections.xlsx',
@@ -419,12 +417,10 @@ public function export_detail()
             ],
         ];
 
-        $cfg              = $config[$mode];
-        $assessment_type  = $cfg['assessment_type'];
-        $templateName     = $cfg['template'];
+        $cfg          = $config[$mode];
+        $templateName = $cfg['template'];
 
-        $assessment_type = $this->input->get('assessment_type', TRUE) ?: null;
-
+        // ---- Force school for non-admins ----
         if (!empty($session_school) && !in_array($role, ['admin', 'super_admin'])) {
             $school_name = $session_school;
             $school_id   = $session_school_id;
@@ -434,23 +430,80 @@ public function export_detail()
             show_error('Missing required parameters.');
         }
 
-        $assessments = $this->nutritional_assessment_model->get_by_section(
-            $legislative_district,
-            $school_district,
-            $grade_level,
-            $section,
-            $year,
-            $assessment_type,   // null = no filter → returns baseline + midline + endline all
-            $section_id,
-            $school_id
-        );
+        // ============ Fetch rows (ALL modes anchor on latest baseline, except
+        //              section mode which prefers latest endline if it exists) ====
+        $assessments      = [];
+        $source_type      = 'baseline';
+        $actual_year_used = null;
+
+        if ($mode === 'midline') {
+            // Latest baseline, only SBFP beneficiaries (matches Manage Beneficiaries)
+            $assessments = $this->nutritional_assessment_model->get_latest_baseline_beneficiaries_by_section(
+                $legislative_district,
+                $school_district,
+                $grade_level,
+                $section,
+                $section_id,
+                $school_id
+            );
+            $actual_year_used = $assessments[0]->year ?? null;
+            $source_type      = 'baseline';
+
+        } elseif ($mode === 'endline') {
+            // Latest baseline, ALL students (compact list)
+            $assessments = $this->nutritional_assessment_model->get_latest_baseline_by_section(
+                $legislative_district,
+                $school_district,
+                $grade_level,
+                $section,
+                $section_id,
+                $school_id
+            );
+            $actual_year_used = $assessments[0]->year ?? null;
+            $source_type      = 'baseline';
+
+        } else { // section
+            // Latest endline if present, else latest baseline
+            $has_endline = $this->nutritional_assessment_model->section_has_endline(
+                $legislative_district,
+                $school_district,
+                $grade_level,
+                $section,
+                $section_id,
+                $school_id
+            );
+
+            if ($has_endline) {
+                $assessments = $this->nutritional_assessment_model->get_latest_endline_by_section(
+                    $legislative_district,
+                    $school_district,
+                    $grade_level,
+                    $section,
+                    $section_id,
+                    $school_id
+                );
+                $source_type = 'endline';
+            } else {
+                $assessments = $this->nutritional_assessment_model->get_latest_baseline_by_section(
+                    $legislative_district,
+                    $school_district,
+                    $grade_level,
+                    $section,
+                    $section_id,
+                    $school_id
+                );
+                $source_type = 'baseline';
+            }
+            $actual_year_used = $assessments[0]->year ?? null;
+        }
 
         if (empty($assessments)) {
             show_error('No data found for the specified criteria (mode: ' . $mode . ').');
         }
 
-        $actual_year = $assessments[0]->year ?? $year;
+        $actual_year = $actual_year_used ?: $year;
 
+        // ---- Load template ----
         $templatePath = FCPATH . ASSETS_PATH . '/excel_templates/' . $templateName;
         if (!file_exists($templatePath)) {
             show_error('Template file not found: ' . $templatePath);
@@ -461,14 +514,12 @@ public function export_detail()
 
         // ---- Clear previous data ----
         if ($templateName === 'export_per_section.xlsx') {
-            // A holds the COUNTA formula — leave it
             for ($row = 7; $row <= 510; $row++) {
                 foreach (['B','C','D','E','F','G','H'] as $col) {
                     $sheet->setCellValue($col . $row, '');
                 }
             }
         } else {
-            // export_all_sections: leave A formula + P–Z summary block alone
             for ($row = 7; $row <= 100; $row++) {
                 foreach (['B','C','D','E','F','G','H','I','J','K','L','M','N','O'] as $col) {
                     $sheet->setCellValue($col . $row, '');
@@ -476,7 +527,7 @@ public function export_detail()
             }
         }
 
-        // ---- Date of weighing (only if include_date) ----
+        // ---- Date of weighing (section mode only) ----
         $date_of_weighing = '';
         if ($cfg['include_date']) {
             $dates = array_filter(array_map(function ($a) {
@@ -491,26 +542,19 @@ public function export_detail()
         // ---- Header metadata ----
         $sheet->setCellValue('A1', 'NUTRITIONAL STATUS REPORT');
         $sheet->setCellValue('A2', $school_name);
-        if ($cfg['include_date']) {
-            // per-section template uses C3 for date
-            // all-sections template uses C3 for date
-            $sheet->setCellValue('C3', $date_of_weighing);
-        } else {
-            $sheet->setCellValue('C3', ''); // leave blank
-        }
+        $sheet->setCellValue('C3', $cfg['include_date'] ? $date_of_weighing : '');
         $sheet->setCellValue('E3', $grade_level);
         $sheet->setCellValue('G3', $section);
 
-        // Optional metadata
         if ($templateName === 'export_all_sections.xlsx') {
             $sheet->setCellValue('P2', 'School Year: ' . ($actual_year ?: 'N/A'));
-            $sheet->setCellValue('U2', 'Assessment: ' . ucfirst($assessment_type));
+            $sheet->setCellValue('U2', 'Source: ' . ucfirst($source_type) . ' (latest)');
         } else {
             $sheet->setCellValue('E2', 'School Year: ' . ($actual_year ?: 'N/A'));
-            $sheet->setCellValue('G2', ucfirst($assessment_type));
+            $sheet->setCellValue('G2', ucfirst($source_type) . ' (latest)');
         }
 
-        // ---- Summary counters (only used by export_all_sections) ----
+        // ---- Summary counters ----
         $bmi = [
             'male'   => ['severely_wasted'=>0,'wasted'=>0,'normal'=>0,'overweight'=>0,'obese'=>0,'total'=>0],
             'female' => ['severely_wasted'=>0,'wasted'=>0,'normal'=>0,'overweight'=>0,'obese'=>0,'total'=>0],
@@ -528,34 +572,26 @@ public function export_detail()
 
             [$lastName, $firstName, $mi] = $this->split_name($assessment->name ?? '');
 
-            // B–D name
             $sheet->setCellValue('B' . $currentRow, $lastName);
             $sheet->setCellValue('C' . $currentRow, $firstName);
             $sheet->setCellValue('D' . $currentRow, $mi);
 
-            // E Birthday
             if (!empty($assessment->birthday) && $assessment->birthday != '0000-00-00') {
                 $sheet->setCellValue('E' . $currentRow, date('m/d/Y', strtotime($assessment->birthday)));
             }
 
-            // Sex (always exported)
             $sex = !empty($assessment->sex) ? strtoupper(substr(trim($assessment->sex), 0, 1)) : '';
 
-            // ============ PER-SECTION (midline) ============
             if ($templateName === 'export_per_section.xlsx') {
-                // F Weight -> blank, G Height -> blank
+                // Midline & Endline: name, birthday, sex only
                 $sheet->setCellValue('F' . $currentRow, '');
                 $sheet->setCellValue('G' . $currentRow, '');
-                // H Sex
                 $sheet->setCellValue('H' . $currentRow, $sex);
-            }
-            // ============ ALL-SECTIONS (endline / section) ============
-            else {
-                // F Weight
+            } else {
+                // Export Section: full fields
                 $sheet->setCellValue('F' . $currentRow,
                     $cfg['include_weight'] ? ($assessment->weight ?? '') : '');
 
-                // G Height (m) + I Height²
                 $heightM = null;
                 if ($cfg['include_height'] && !empty($assessment->height) && is_numeric($assessment->height)) {
                     $h = (float)$assessment->height;
@@ -567,10 +603,8 @@ public function export_detail()
                     $sheet->setCellValue('I' . $currentRow, '');
                 }
 
-                // H Sex
                 $sheet->setCellValue('H' . $currentRow, $sex);
 
-                // J/K/L Age (only if we have birthday + weight data; safe to always calc)
                 if (!empty($assessment->birthday) && !empty($assessment->date_of_weighing)) {
                     try {
                         $age = (new DateTime($assessment->birthday))
@@ -583,15 +617,11 @@ public function export_detail()
                     }
                 }
 
-                // M BMI
                 $sheet->setCellValue('M' . $currentRow, $assessment->bmi ?? '');
-                // N Nutritional Status
                 $sheet->setCellValue('N' . $currentRow, $assessment->nutritional_status ?? '');
-                // O Height-For-Age
                 $sheet->setCellValue('O' . $currentRow, $assessment->height_for_age ?? '');
 
-                // Update BMI counters (skip if weight/height blank?)
-                // Decision: counters use actual stored statuses regardless of blanked columns
+                // Accumulate summary counters
                 $ns = strtolower(trim($assessment->nutritional_status ?? ''));
                 if ($sex === 'M') {
                     $bmi['male']['total']++;
@@ -615,12 +645,11 @@ public function export_detail()
             $counter++;
         }
 
-        // ---- Summary block (only export_all_sections) ----
+        // ---- Summary block (section mode only) ----
         if ($cfg['include_summary'] && $templateName === 'export_all_sections.xlsx') {
             $bmiTotalAll = $bmi['male']['total'] + $bmi['female']['total'];
             $hfaTotalAll = $hfa['male']['total'] + $hfa['female']['total'];
 
-            // Row 4: No. of Cases
             $sheet->setCellValue('Q4', $bmi['male']['total']);
             $sheet->setCellValue('R4', $bmi['female']['total']);
             $sheet->setCellValue('S4', $bmiTotalAll);
@@ -628,23 +657,20 @@ public function export_detail()
             $sheet->setCellValue('W4', $hfa['female']['total']);
             $sheet->setCellValue('X4', $hfaTotalAll);
 
-            // Row 5: Severely Wasted / Sev. Stunted
             $sheet->setCellValue('Q5', $bmi['male']['severely_wasted']);
             $sheet->setCellValue('R5', $bmi['female']['severely_wasted']);
             $sheet->setCellValue('S5', $bmi['male']['severely_wasted'] + $bmi['female']['severely_wasted']);
             $sheet->setCellValue('U5', $hfa['male']['severely_stunted']);
             $sheet->setCellValue('W5', $hfa['female']['severely_stunted']);
-            $sheet->setCellValue('X5', $hfa['male']['severely_stunted'] + $hfa['female']['severely_stunted']);
+            $sheet->setCellValue('X5', $hfa['male']['severely_stunted'] + $hfa['female']['severely_stunted']); 
 
-            // Row 6: Wasted / Stunted
             $sheet->setCellValue('Q6', $bmi['male']['wasted']);
             $sheet->setCellValue('R6', $bmi['female']['wasted']);
             $sheet->setCellValue('S6', $bmi['male']['wasted'] + $bmi['female']['wasted']);
             $sheet->setCellValue('U6', $hfa['male']['stunted']);
             $sheet->setCellValue('W6', $hfa['female']['stunted']);
-            $sheet->setCellValue('X6', $hfa['male']['stunted'] + $hfa['female']['stunted']);
+            $sheet->setCellValue('X6', $hfa['male']['stunted'] + $hfa['female']['stunted']); 
 
-            // Row 7: Normal / Normal
             $sheet->setCellValue('Q7', $bmi['male']['normal']);
             $sheet->setCellValue('R7', $bmi['female']['normal']);
             $sheet->setCellValue('S7', $bmi['male']['normal'] + $bmi['female']['normal']);
@@ -652,7 +678,6 @@ public function export_detail()
             $sheet->setCellValue('W7', $hfa['female']['normal']);
             $sheet->setCellValue('X7', $hfa['male']['normal'] + $hfa['female']['normal']);
 
-            // Row 8: Overweight / Tall
             $sheet->setCellValue('Q8', $bmi['male']['overweight']);
             $sheet->setCellValue('R8', $bmi['female']['overweight']);
             $sheet->setCellValue('S8', $bmi['male']['overweight'] + $bmi['female']['overweight']);
@@ -660,32 +685,9 @@ public function export_detail()
             $sheet->setCellValue('W8', $hfa['female']['tall']);
             $sheet->setCellValue('X8', $hfa['male']['tall'] + $hfa['female']['tall']);
 
-            // Row 9: Obese
             $sheet->setCellValue('Q9', $bmi['male']['obese']);
             $sheet->setCellValue('R9', $bmi['female']['obese']);
             $sheet->setCellValue('S9', $bmi['male']['obese'] + $bmi['female']['obese']);
-        }
-
-        // ---- Protection ----
-        $sheet->getProtection()->setSheet(true);
-        $sheet->getProtection()->setPassword('');
-
-        if ($templateName === 'export_per_section.xlsx') {
-            $sheet->getStyle('B7:H510')->getProtection()->setLocked(
-                \PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_UNPROTECTED
-            );
-        } else {
-            $sheet->getStyle('B7:B100')->getProtection()->setLocked(
-                \PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_UNPROTECTED
-            );
-            $sheet->getStyle('P3:Z10')->getProtection()->setLocked(
-                \PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_PROTECTED
-            );
-        }
-        foreach (['C3', 'E3', 'G3'] as $cell) {
-            $sheet->getStyle($cell)->getProtection()->setLocked(
-                \PhpOffice\PhpSpreadsheet\Style\Protection::PROTECTION_PROTECTED
-            );
         }
 
         // ---- Filename ----
@@ -693,7 +695,6 @@ public function export_detail()
             . preg_replace('/[^A-Za-z0-9]/', '_', $school_name)
             . '_Grade' . $grade_level
             . '_Section' . $section
-            . '_' . $assessment_type
             . '_' . date('Y-m-d') . '.xlsx';
 
         $this->phpspreadsheet_lib->saveToOutput($spreadsheet, $filename);
@@ -705,10 +706,6 @@ public function export_detail()
     }
 }
 
-    /**
-     * Split a full name into [last, first, middle_initial].
-     * Handles formats: "Dela Cruz, Juan P.", "Juan P. Dela Cruz", "Juan Dela Cruz"
-     */
     private function split_name($fullName)
     {
         $fullName = trim(preg_replace('/\s+/', ' ', $fullName));
@@ -720,25 +717,46 @@ public function export_detail()
         $first = '';
         $mi    = '';
 
+        // ---- Format: "Last, First MI" ----
         if (strpos($fullName, ',') !== false) {
-            // "Last, First M.I"
             [$last, $rest] = array_map('trim', explode(',', $fullName, 2));
             $parts = preg_split('/\s+/', $rest);
-            $first = array_shift($parts) ?? '';
-            if (!empty($parts)) {
-                $mi = strtoupper(substr($parts[0], 0, 1)) . '.';
+
+            // Detect trailing MI (single letter, optional dot)
+            $lastToken = end($parts);
+            if (!empty($parts) && preg_match('/^[A-Za-z]\.?$/', $lastToken)) {
+                $mi = strtoupper(rtrim($lastToken, '.')) . '.';
+                array_pop($parts);
             }
-        } else {
-            // "First [MI] Last ..." — assume last token is last name,
-            // second token (if single letter) is M.I.
-            $parts = preg_split('/\s+/', $fullName);
-            $last  = array_pop($parts);
-            if (!empty($parts) && strlen(rtrim($parts[0], '.')) === 1) {
-                $mi = strtoupper($parts[0][0]) . '.';
-                array_shift($parts);
-            }
+
             $first = implode(' ', $parts);
+            return [$last, $first, $mi];
         }
+
+        // ---- Format: "First MI Last" or "First Middle Last" (no comma) ----
+        // ASSUMPTION: last name is a SINGLE token (e.g. "Cruz", "Santos").
+        // Multi-word last names like "Dela Cruz" REQUIRE the comma format.
+        $parts = preg_split('/\s+/', $fullName);
+
+        if (count($parts) < 2) {
+            // Only one token — best guess: treat as last name
+            return [$fullName, '', ''];
+        }
+
+        // Last token = last name
+        $last = array_pop($parts);
+
+        // Detect trailing MI in what's left (single letter, optional dot)
+        if (!empty($parts)) {
+            $lastOfRest = end($parts);
+            if (preg_match('/^[A-Za-z]\.?$/', $lastOfRest)) {
+                $mi = strtoupper(rtrim($lastOfRest, '.')) . '.';
+                array_pop($parts);
+            }
+        }
+
+        // Everything remaining is first + middle names (preserved intact)
+        $first = implode(' ', $parts);
 
         return [$last, $first, $mi];
     }
