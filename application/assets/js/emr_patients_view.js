@@ -204,7 +204,9 @@
     function getLatestVisit(id) {
         const patientVisits = getPatientVisits(id);
         if (!patientVisits.length) return null;
-        return patientVisits.sort((a, b) => new Date(b.followup_date) - new Date(a.followup_date))[0];
+        return patientVisits.sort((a, b) =>
+            new Date(b.followup_date) - new Date(a.followup_date) || Number(b.id) - Number(a.id)
+        )[0];
     }
     function formatDate(d) {
         if (!d) return '—';
@@ -537,7 +539,7 @@
     // --------------------------------------------------------------
     // PATIENT MODAL (WIZARD) – 3 steps: Patient, Follow-up, Lab
     // --------------------------------------------------------------
-    function openPatientModal(patientId = null, mode = 'new') {
+    function openPatientModal(patientId = null, mode = 'new', visit = null) {
         let patient = null;
         let isEdit = false;
         let currentStep = 0;
@@ -556,12 +558,12 @@
 
         // Patient field on Follow-up tab
         let patientFieldHtml;
-        if (mode === 'new' || mode === 'visit') {
+        if (mode === 'new' || mode === 'visit' || mode === 'edit') {
             patientFieldHtml = `
                 <div class="col-md-6">
                     <label>Patient</label>
                     <input type="text" class="form-control" id="visitPatientNameDisplay" value="${escapeHtml((patient.name || '').toUpperCase())}" disabled />
-                    <input type="hidden" name="patient_id" id="visitPatientIdHidden" value="${escapeHtml(mode === 'visit' ? patient.id : '')}" />
+                    <input type="hidden" name="patient_id" id="visitPatientIdHidden" value="${escapeHtml(mode === 'new' ? '' : patient.id)}" />
                 </div>
             `;
         } else {
@@ -578,7 +580,7 @@
 
         const modalTitle = isEdit ? (mode === 'visit' ? 'Add Follow-up' : 'Edit Patient') : 'New Patient';
 
-        const v = {};
+        const v = visit || {};
         const lab = normalizeLab(v.lab);
         const prescription = normalizePrescription(v.prescription);
         const combinedImpression = mergedImpression(v.impression, v.diagnoses);
@@ -778,6 +780,13 @@
                             </select>
                         </div>
                     </div>
+                    <div class="mb-3"><label>Consent</label>
+                        <select name="consent" class="form-select">
+                            <option value="" ${!patient.consent ? 'selected' : ''}>Select</option>
+                            <option value="Yes" ${patient.consent === 'Yes' ? 'selected' : ''}>Yes</option>
+                            <option value="No" ${patient.consent === 'No' ? 'selected' : ''}>No</option>
+                        </select>
+                    </div>
                     <div class="row">
                         <div class="col-md-6"><label>District</label><input type="text" id="districtDisplay" class="form-control" readonly /></div>
                         <div class="col-md-6"><label>Legislative District</label><input type="text" id="legislativeDisplay" class="form-control" readonly /></div>
@@ -970,7 +979,7 @@
             const modal  = bootstrap.Modal.getOrCreateInstance(modalElement);
             const footer = document.getElementById('modalFooter');
             const subTabOrder = ['cbc_blood_chemistry', 'urinalysis'];
-            const lastStep = (mode === 'edit') ? 0 : 2;
+            const lastStep = 2;
 
             function getActiveStep() {
                 const el = document.querySelector('#modalContent .step-content.active');
@@ -982,10 +991,6 @@
             }
 
             function renderFooter() {
-                if (mode === 'edit') {
-                    footer.innerHTML = '<button type="button" class="btn btn-success" data-action="save"><i class="fas fa-save"></i> Save</button>';
-                    return;
-                }
                 const step = getActiveStep();
                 const subTab = getActiveSubTab();
                 let buttons = '';
@@ -1040,7 +1045,7 @@
 
                 if (action === 'next-step') {
                     const step = getActiveStep();
-                    if (step === 0 || mode === 'edit') {
+                    if (step === 0) {
                         const name = document.querySelector('#patientForm [name="name"]');
                         if (!name || !name.value.trim()) { alert('Patient name is required.'); return; }
                         const schoolId = document.getElementById('schoolIdHidden');
@@ -1085,6 +1090,8 @@
                         const schoolId = document.getElementById('schoolIdHidden');
                         if (!schoolId || !schoolId.value) { alert('Please select a school.'); return; }
                     }
+                    const visitDate = document.querySelector('#visitForm [name="followup_date"]');
+                    if (!visitDate || !visitDate.value) { alert('Follow-up date is required.'); return; }
                     const result = onSave(btn);
                     if (result && result.then) {
                         result.then(success => { if (success === true) modal.hide(); });
@@ -1222,10 +1229,11 @@
 
                 let patientId;
                 if (isEdit) {
-                    await api('PUT', 'patient/' + patient.id, patientObj);
+                    const result = await api('PUT', 'patient/' + patient.id, patientObj);
                     patientId = patient.id;
+                    patient = { ...patient, ...(result.patient || {}), ...patientObj, id: patient.id };
                     const idx = patients.findIndex(p => p.id == patient.id);
-                    if (idx > -1) patients[idx] = patientObj;
+                    if (idx > -1) patients[idx] = patient;
                 } else {
                     const result = await api('POST', 'patient', patientObj);
                     if (!result || !result.patient) throw new Error('Patient save returned no patient.');
@@ -1239,7 +1247,7 @@
 
                 // Save Follow-up
                 const visitForm = document.getElementById('visitForm');
-                if (visitForm && mode !== 'edit') {
+                if (visitForm) {
                     const visitFormData = new FormData(visitForm);
                     const visitObj = {};
                     visitFormData.forEach((v, k) => {
@@ -1334,9 +1342,18 @@
                         });
                         visitObj.prescription = prescription;
 
-                        const result = await api('POST', 'visit', visitObj);
-                        const newVisit = result.followup || result.visit;
-                        visits.push(newVisit);
+                        if (mode === 'edit' && v.id) visitObj.id = v.id;
+                        const result = await api(
+                            visitObj.id ? 'PUT' : 'POST',
+                            visitObj.id ? 'visit/' + visitObj.id : 'visit',
+                            visitObj
+                        );
+                        const savedVisit = result.followup || result.visit;
+                        if (savedVisit) {
+                            const visitIndex = visits.findIndex(item => item.id == savedVisit.id);
+                            if (visitIndex > -1) visits[visitIndex] = savedVisit;
+                            else visits.push(savedVisit);
+                        }
                     }
                 }
 
@@ -1359,7 +1376,7 @@
 
             // NOTE: Height/Weight/BMI listeners removed.
 
-            if (mode === 'new') {
+            if (mode === 'new' || mode === 'edit') {
                 const nameInput = document.querySelector('#patientForm [name="name"]');
                 const visitNameDisplay = document.getElementById('visitPatientNameDisplay');
                 if (nameInput && visitNameDisplay) {
@@ -1481,8 +1498,15 @@
     async function editPatient(id) {
         const patient = getPatient(id);
         if (!patient) { alert('Patient not found.'); return; }
-        // Reuse the wizard, starting on step 0 for patient edit.
-        openPatientModal(id, 'edit');
+        try {
+            const latestVisit = getLatestVisit(id);
+            const visit = latestVisit
+                ? await api('GET', 'visit/' + encodeURIComponent(latestVisit.id))
+                : null;
+            openPatientModal(id, 'edit', visit);
+        } catch (e) {
+            alert('Error loading the latest follow-up: ' + e.message);
+        }
     }
 
     // --------------------------------------------------------------
