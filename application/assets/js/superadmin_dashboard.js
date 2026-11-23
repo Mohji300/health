@@ -7,18 +7,18 @@ $(document).ready(function() {
         "autoWidth": false,          // Let us control widths manually
         "scrollX": true,             // Enable horizontal scroll
         "columnDefs": [
-            { "orderable": false, "targets": [9] },  // Actions column not orderable
-            // Optionally set width for each column (adjust values as needed)
-            { "width": "12%", "targets": 0 },  // Name
-            { "width": "15%", "targets": 1 },  // Email
-            { "width": "10%", "targets": 2 },  // Legislative District
-            { "width": "10%", "targets": 3 },  // School District
-            { "width": "8%",  "targets": 4 },  // School ID
-            { "width": "12%", "targets": 5 },  // School Address
-            { "width": "8%",  "targets": 6 },  // School Level
-            { "width": "10%", "targets": 7 },  // School Head
-            { "width": "8%",  "targets": 8 },  // Role
-            { "width": "7%",  "targets": 9 }   // Actions
+            { "orderable": false, "targets": [10] }, // Actions column not orderable
+            { "width": "5%",  "targets": 0 },  // User ID
+            { "width": "11%", "targets": 1 },  // Name
+            { "width": "14%", "targets": 2 },  // Email
+            { "width": "9%",  "targets": 3 },  // Legislative District
+            { "width": "9%",  "targets": 4 },  // School District
+            { "width": "7%",  "targets": 5 },  // School ID
+            { "width": "11%", "targets": 6 },  // School Address
+            { "width": "7%",  "targets": 7 },  // School Level
+            { "width": "9%",  "targets": 8 },  // School Head
+            { "width": "8%",  "targets": 9 },  // Role
+            { "width": "10%", "targets": 10 }  // Actions
         ]
     });
 

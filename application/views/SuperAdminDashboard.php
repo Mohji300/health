@@ -192,6 +192,7 @@
                     <table class="table table-bordered table-hover" id="userTable" width="100%" cellspacing="0">
                       <thead class="table-light">
                         <tr>
+                          <th>User ID</th>
                           <th>Name</th>
                           <th>Email</th>
                           <th>Legislative District</th>
@@ -207,6 +208,7 @@
                       <tbody>
                         <?php foreach ($users as $user): ?>
                         <tr data-user-id="<?php echo $user->id; ?>">
+                          <td><?php echo (int) $user->id; ?></td>
                           <td class="fw-bold"><?php echo htmlspecialchars($user->name ?? 'N/A'); ?></td>
                           <td><?php echo htmlspecialchars($user->email ?? 'N/A'); ?></td>
                           <td><?php echo htmlspecialchars($user->legislative_district ?? ''); ?></td>
