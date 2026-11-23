@@ -483,40 +483,90 @@ $(document).ready(function() {
     }
 
     function initializeExportDetailDropdown() {
-    $(document).on('click', '.export-detail-action', function (e) {
-        e.preventDefault();
+        $(document).on('click', '.export-detail-action', function (e) {
+            e.preventDefault();
 
-        const $action = $(this);
-        const $btn    = $action.closest('.btn-group').find('.export-detail-btn');
-        const mode    = $action.data('mode');
+            const $action = $(this);
+            const $btn    = $action.closest('.btn-group').find('.export-detail-btn');
+            const mode    = $action.data('mode');
 
-        const params = {
-            mode:                 mode,
-            legislative_district: $btn.data('legislative-district'),
-            school_district:      $btn.data('school-district'),
-            school_name:          $btn.data('school-name'),
-            school_id:            $btn.data('school-id'),
-            grade_level:          $btn.data('grade-level'),
-            section:              $btn.data('section'),
-            section_id:           $btn.data('section-id'),
-            year:                 $btn.data('year')
-        };
+            // Close the dropdown right away (also fixes the case where
+            // a modal is shown instead of navigating).
+            const inst = bootstrap.Dropdown.getInstance($btn[0]);
+            if (inst) inst.hide();
 
-        const baseUrl = (typeof reportsConfig !== 'undefined' && reportsConfig.exportDetailUrl)
-            ? reportsConfig.exportDetailUrl
-            : window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '') + '/export_detail';
+            const params = {
+                mode:                 mode,
+                legislative_district: $btn.data('legislative-district'),
+                school_district:      $btn.data('school-district'),
+                school_name:          $btn.data('school-name'),
+                school_id:            $btn.data('school-id'),
+                grade_level:          $btn.data('grade-level'),
+                section:              $btn.data('section'),
+                section_id:           $btn.data('section-id'),
+                year:                 $btn.data('year')
+            };
 
-        const query = Object.keys(params)
-            .filter(k => params[k] !== undefined && params[k] !== null && params[k] !== '')
-            .map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k]))
-            .join('&');
+            const baseUrl = (typeof reportsConfig !== 'undefined' && reportsConfig.exportDetailUrl)
+                ? reportsConfig.exportDetailUrl
+                : window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '') + '/export_detail';
 
-        window.location.href = baseUrl + '?' + query;
+            function navigateToExport() {
+                const query = Object.keys(params)
+                    .filter(k => params[k] !== undefined && params[k] !== null && params[k] !== '')
+                    .map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k]))
+                    .join('&');
+                window.location.href = baseUrl + '?' + query;
+            }
 
-        const inst = bootstrap.Dropdown.getInstance($btn[0]);
-        if (inst) inst.hide();
-    });
-}
+            // Only "Midline Uploading" needs the beneficiary pre-check
+            if (mode !== 'midline') {
+                navigateToExport();
+                return;
+            }
+
+            const checkUrl = ((reportsConfig && reportsConfig.checkBeneficiariesUrl)
+                            || (reportsConfig.baseUrl + '/check_beneficiaries'))
+                            + '?' + new URLSearchParams(params).toString();
+
+            fetch(checkUrl, {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data || data.has_beneficiaries) {
+                    navigateToExport();
+                } else {
+                    showNoBeneficiariesModal(data, params);
+                }
+            })
+            .catch(err => {
+                console.error('Beneficiary check failed:', err);
+                // Fail-open so exports keep working if the endpoint is down
+                navigateToExport();
+            });
+        });
+    }
+
+    function showNoBeneficiariesModal(data, params) {
+        const modalEl = document.getElementById('noBeneficiariesModal');
+        if (!modalEl || typeof bootstrap === 'undefined') return;
+
+        const ctx = document.getElementById('noBeneficiariesContext');
+        if (ctx) {
+            ctx.innerHTML =
+                'Grade: <strong>' + escapeHtml(data.grade_level || params.grade_level || 'N/A') + '</strong>' +
+                ' &middot; Section: <strong>' + escapeHtml(data.section || params.section || 'N/A') + '</strong>';
+        }
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, function (c) {
+            return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+        });
+    }
     
     /**
      * Initialize all components

@@ -164,6 +164,7 @@ $route['admin/reports/statistics'] = 'nutritional_assessment_reports/statistics'
 $route['admin/reports/export_statistics'] = 'nutritional_assessment_reports/export_statistics';
 $route['admin/reports/export_all_students'] = 'nutritional_assessment_reports/export_all_students';
 $route['admin/reports/debug_template'] = 'nutritional_assessment_reports/debug_template';
+$route['admin/reports/check_beneficiaries']    = 'nutritional_assessment_reports/check_beneficiaries';
 
 
 // ========================
@@ -189,6 +190,7 @@ $route['user/reports/export'] = 'nutritional_assessment_reports/export';
 $route['user/reports/export_detail'] = 'nutritional_assessment_reports/export_detail';   
 $route['user/reports/view_detail'] = 'nutritional_assessment_reports/view_detail';
 $route['user/reports/statistics'] = 'nutritional_assessment_reports/statistics';
+$route['user/reports/check_beneficiaries'] = 'nutritional_assessment_reports/check_beneficiaries';
 
 // ========================
 // DISTRICT DASHBOARD ROUTES

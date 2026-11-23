@@ -398,53 +398,92 @@
                               <span class="text-muted">N/A</span>
                             <?php endif; ?>
                           </td>
-<td class="text-center">
-    <div class="btn-group">
-        <button type="button"
-                class="btn btn-success btn-sm dropdown-toggle export-detail-btn"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-                title="Export detail"
-                data-bs-tooltip="tooltip"
-                data-legislative-district="<?php echo htmlspecialchars($report->legislative_district ?? ''); ?>"
-                data-school-district="<?php echo htmlspecialchars($report->school_district ?? ''); ?>"
-                data-school-name="<?php echo htmlspecialchars($report->school_name ?? ''); ?>"
-                data-school-id="<?php echo htmlspecialchars($report->school_id ?? ''); ?>"
-                data-grade-level="<?php echo htmlspecialchars($report->grade_level ?? ''); ?>"
-                data-section="<?php echo htmlspecialchars($report->section ?? ''); ?>"
-                data-section-id="<?php echo htmlspecialchars($report->section_id ?? ''); ?>"
-                data-year="<?php echo htmlspecialchars($report->year ?? ''); ?>">
-            <i class="fas fa-file-export me-1"></i> Export
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li>
-                <a class="dropdown-item export-detail-action" href="#" data-mode="midline">
-                    <i class="fas fa-file-alt me-1 text-info"></i> Midline Uploading 
-                    <small class="d-block text-muted">Name, birthday, sex only</small>
-                </a>
-            </li>
-            <li>
-                <a class="dropdown-item export-detail-action" href="#" data-mode="endline">
-                    <i class="fas fa-file-alt me-1 text-warning"></i> Endline Uploading
-                    <small class="d-block text-muted">All fields except height/weight/date</small>
-                </a>
-            </li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-                <a class="dropdown-item export-detail-action" href="#" data-mode="section">
-                    <i class="fas fa-file-excel me-1 text-success"></i> Export Section
-                    <small class="d-block text-muted">Full data included</small>
-                </a>
-            </li>
-        </ul>
-    </div>
-</td>
+                          <td class="text-center">
+                              <div class="btn-group">
+                                  <button type="button"
+                                          class="btn btn-success btn-sm dropdown-toggle export-detail-btn"
+                                          data-bs-toggle="dropdown"
+                                          aria-expanded="false"
+                                          title="Export detail"
+                                          data-bs-tooltip="tooltip"
+                                          data-legislative-district="<?php echo htmlspecialchars($report->legislative_district ?? ''); ?>"
+                                          data-school-district="<?php echo htmlspecialchars($report->school_district ?? ''); ?>"
+                                          data-school-name="<?php echo htmlspecialchars($report->school_name ?? ''); ?>"
+                                          data-school-id="<?php echo htmlspecialchars($report->school_id ?? ''); ?>"
+                                          data-grade-level="<?php echo htmlspecialchars($report->grade_level ?? ''); ?>"
+                                          data-section="<?php echo htmlspecialchars($report->section ?? ''); ?>"
+                                          data-section-id="<?php echo htmlspecialchars($report->section_id ?? ''); ?>"
+                                          data-year="<?php echo htmlspecialchars($report->year ?? ''); ?>">
+                                      <i class="fas fa-file-export me-1"></i> Export
+                                  </button>
+                                  <ul class="dropdown-menu dropdown-menu-end">
+                                      <li>
+                                          <a class="dropdown-item export-detail-action" href="#" data-mode="midline">
+                                              <i class="fas fa-file-alt me-1 text-info"></i> Midline Uploading 
+                                              <small class="d-block text-muted">Name, birthday, sex only</small>
+                                          </a>
+                                      </li>
+                                      <li>
+                                          <a class="dropdown-item export-detail-action" href="#" data-mode="endline">
+                                              <i class="fas fa-file-alt me-1 text-warning"></i> Endline Uploading
+                                              <small class="d-block text-muted">All fields except height/weight/date</small>
+                                          </a>
+                                      </li>
+                                      <li><hr class="dropdown-divider"></li>
+                                      <li>
+                                          <a class="dropdown-item export-detail-action" href="#" data-mode="section">
+                                              <i class="fas fa-file-excel me-1 text-success"></i> Export Section
+                                              <small class="d-block text-muted">Full data included</small>
+                                          </a>
+                                      </li>
+                                  </ul>
+                              </div>
+                          </td>
                         </tr>
                       <?php endforeach; ?>
                     </tbody>
                   </table>
                 </div>
               <?php endif; ?>
+            </div>
+          </div>
+        </div>
+        <!-- No Beneficiaries Modal (Midline Export) -->
+        <div class="modal fade" id="noBeneficiariesModal" tabindex="-1"
+            aria-labelledby="noBeneficiariesModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header bg-warning-subtle border-warning">
+                <h5 class="modal-title d-flex align-items-center" id="noBeneficiariesModalLabel">
+                  <span class="rounded-circle bg-warning bg-opacity-25 p-2 me-2">
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                  </span>
+                  No Beneficiaries Found
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="text-center mb-3">
+                  <i class="fas fa-user-slash fa-4x text-warning opacity-75"></i>
+                </div>
+                <p class="mb-2">
+                  There are no <strong>SBFP beneficiaries</strong> in the latest baseline for this section.
+                </p>
+                <p class="text-muted mb-0" id="noBeneficiariesContext"></p>
+
+                <div class="alert alert-info mt-3 mb-0">
+                  <i class="fas fa-info-circle me-1"></i>
+                  <strong>Midline Uploading</strong> only includes SBFP beneficiaries.
+                  Tag beneficiaries in <em>Manage Beneficiaries</em> first, or use
+                  <strong>Endline Uploading</strong> / <strong>Export Section</strong> to get
+                  the full roster.
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                  <i class="fas fa-times me-1"></i> Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -461,6 +500,7 @@
             currentFilters: <?php echo json_encode($current_filters); ?>,
             baseUrl: '<?php echo site_url($reports_base); ?>',
             exportDetailUrl: '<?php echo site_url($reports_base . '/export_detail'); ?>',
+            checkBeneficiariesUrl: '<?php echo site_url($reports_base . '/check_beneficiaries'); ?>', // NEW
             hasReports: <?php echo !empty($reports) ? 'true' : 'false'; ?>,
             isRegularUser: <?php echo $is_regular_user ? 'true' : 'false'; ?>
         };
