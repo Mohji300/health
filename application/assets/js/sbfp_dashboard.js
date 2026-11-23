@@ -48,20 +48,27 @@ $(document).ready(function() {
         deleteModal.show();
     });
 
-    // Handle remove section button clicks
-    $('.remove-section-btn').click(function() {
-        var sectionId = $(this).data('section-id');
-        var grade = $(this).data('grade');
-        var section = $(this).data('section');
-        var schoolYear = $(this).data('school_year');
+    // Handle clear section data button clicks
+    $('.clear-section-btn').click(function() {
+        var sectionId      = $(this).data('section-id');
+        var assessmentType = $(this).data('assessment_type') || 'baseline';
+        var grade          = $(this).data('grade');
+        var section        = $(this).data('section');
+        var schoolYear     = $(this).data('school_year');
 
-        $('#removeGrade').text(grade);
-        $('#removeSection').text(section);
-        $('#removeSchoolYear').text(schoolYear);
-        $('#removeSectionId').val(sectionId);
+        $('#clearGrade').text(grade);
+        $('#clearSection').text(section);
+        $('#clearSchoolYear').text(schoolYear);
 
-        var removeModal = new bootstrap.Modal(document.getElementById('removeSectionModal'));
-        removeModal.show();
+        var pretty = assessmentType.charAt(0).toUpperCase() + assessmentType.slice(1);
+        $('#clearAssessmentType').val(assessmentType);
+        $('#clearAssessmentTypeBadge').text(assessmentType);
+        $('#clearAssessmentTypeText').text(assessmentType);
+        $('#clearButtonTypeText').text(pretty);
+
+        $('#clearSectionId').val(sectionId);
+
+        new bootstrap.Modal(document.getElementById('clearSectionModal')).show();
     });
 
     // Handle delete confirmation

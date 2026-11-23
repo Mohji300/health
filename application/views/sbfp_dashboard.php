@@ -237,6 +237,23 @@ foreach ($submitted as $s) {
                           </h6>
                       </div>
                       <div class="card-body">
+                          <div class="alert alert-secondary d-flex flex-wrap justify-content-between align-items-center mb-3">
+                            <div>
+                                  <span class="me-3"><strong>User ID:</strong> 
+                                      <code><?php echo htmlspecialchars($auth->user_id ?? 'N/A'); ?></code>
+                                  </span>
+                                  <span class="me-3"><strong>School ID:</strong> 
+                                      <code><?php echo htmlspecialchars($auth->school_id ?? 'N/A'); ?></code>
+                                  </span>
+                            </div>
+                              <form action="<?php echo site_url('sbfp/backfill_school_id'); ?>" method="post" class="m-0"
+                                    onsubmit="return confirm('Populate school_id for ALL your existing sections with School ID <?php echo htmlspecialchars($auth->school_id ?? ''); ?>?');">
+                                  <input type="hidden" name="<?php echo $csrf_name; ?>" value="<?php echo $csrf_hash; ?>">
+                                  <button type="submit" class="btn btn-outline-primary btn-sm">
+                                      <i class="fas fa-sync-alt me-1"></i> Populate school_id on all my sections
+                                  </button>
+                              </form>
+                          </div>
                           <form action="<?php echo site_url('sbfp/create_section'); ?>" method="post" class="row g-3" id="createSectionForm">
                             <input type="hidden" name="<?php echo $csrf_name; ?>" value="<?php echo $csrf_hash; ?>">
                               <div class="col-md-3">
@@ -304,6 +321,7 @@ foreach ($submitted as $s) {
                         <table class="table table-bordered table-hover">
                             <thead class="table-light">
                                 <tr>
+                                    <th>Section ID</th>
                                     <th>Grade Level</th>
                                     <th>Section</th>
                                     <th>School Year</th>
@@ -318,6 +336,7 @@ foreach ($submitted as $s) {
                             $assessmentData = $isSubmitted ? $submitted_lookup[$key] : null;
                           ?>
                             <tr>
+                                <td class="fw-bold text-primary">#<?php echo (int)$item->id; ?></td>
                                 <td class="fw-bold"><?php echo htmlspecialchars($item->grade); ?></td>
                                 <td><?php echo htmlspecialchars($item->section); ?></td>
                                 <td>
@@ -360,57 +379,64 @@ foreach ($submitted as $s) {
                                 <?php endif; ?>
                               </td>
                               <td>
-                              <div class="d-flex justify-content-center gap-2">
-                                <?php if (!$isSubmitted): ?>
-                                    <!-- Create Assessment Button -->
-                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&section_id=' . $item->id . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>" 
-                                      class="btn btn-<?php 
-                                            if ($is_baseline) {
-                                                echo 'primary';
-                                            } elseif ($is_midline) {
-                                                echo 'info';
-                                            } else {
-                                                echo 'success';
-                                            }
-                                      ?> btn-sm">
-                                        <i class="fas fa-<?php echo $is_endline ? 'flag-checkered' : 'flag'; ?> me-1"></i>
-                                        Create <?php echo ucfirst($assessment_type); ?>
-                                    </a>
-                                    
-                                    <!-- Remove Section Button -->
-                                    <button type="button" class="btn btn-outline-danger btn-sm remove-section-btn" 
-                                            data-section-id="<?php echo (int)$item->id; ?>"
-                                            data-grade="<?php echo htmlspecialchars($item->grade); ?>"
-                                            data-section="<?php echo htmlspecialchars($item->section); ?>"
-                                            data-school_year="<?php echo htmlspecialchars($item->school_year ?? ''); ?>">
-                                        <i class="fas fa-trash me-1"></i> Remove
-                                    </button>
-                                <?php else: ?>
-                                    
-                                    <!-- Add Student Button (no date parameter) -->
-                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&section_id=' . $item->id . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type); ?>"
-                                      class="btn btn-primary btn-sm add-student-btn"
-                                      title="Add Student">
-                                      <i class="fas fa-user-plus"></i>
-                                    </a>
-                                    <!-- Manage Beneficiaries Button -->
-                                    <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&section_id=' . $item->id . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&assessment_type=' . $assessment_type . '&mode=beneficiary'); ?>"
-                                      class="btn btn-info btn-sm"
-                                      title="Manage Beneficiaries">
-                                      <i class="fas fa-users"></i> Beneficiaries
-                                    </a>
-                                    
-                                    <!-- Delete Assessment Button -->
-                                    <button class="btn btn-danger btn-sm delete-assessment btn-delete"
-                                            data-grade="<?php echo htmlspecialchars($item->grade); ?>"
-                                            data-section="<?php echo htmlspecialchars($item->section); ?>"
-                                            data-school_year="<?php echo htmlspecialchars($item->school_year ?? ''); ?>"
-                                            data-type="<?php echo $assessment_type; ?>"
-                                            title="Delete Assessment">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                <?php endif; ?>
-                              </div>
+                                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                  <?php if (!$isSubmitted): ?>
+                                      <!-- Create Assessment -->
+                                      <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&section_id=' . $item->id . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&user_id=' . urlencode($auth->user_id ?? '') . '&assessment_type=' . $assessment_type); ?>"
+                                        class="btn btn-<?php echo $is_baseline ? 'primary' : ($is_midline ? 'info' : 'success'); ?> btn-sm">
+                                          <i class="fas fa-<?php echo $is_endline ? 'flag-checkered' : 'flag'; ?> me-1"></i>
+                                          Create <?php echo ucfirst($assessment_type); ?>
+                                      </a>
+
+                                      <!-- Delete Section — only visible while the section has NO data -->
+                                      <form action="<?php echo site_url('sbfp/remove_section'); ?>"
+                                            method="post" class="m-0"
+                                            onsubmit="return confirm('Delete section <?php echo htmlspecialchars($item->grade . ' - ' . $item->section . ' (' . ($item->school_year ?? '') . ')'); ?>?\n\nThis section has no assessment data yet. This action cannot be undone.');">
+                                          <input type="hidden" name="<?php echo $csrf_name; ?>" value="<?php echo $csrf_hash; ?>">
+                                          <input type="hidden" name="section_id" value="<?php echo (int)$item->id; ?>">
+                                          <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                  title="Delete this section (it has no data yet)">
+                                              <i class="fas fa-trash"></i> Delete Section
+                                          </button>
+                                      </form>
+                                  <?php else: ?>
+                                      <!-- Add Student -->
+                                      <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&section_id=' . $item->id . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&user_id=' . urlencode($auth->user_id ?? '') . '&assessment_type=' . $assessment_type); ?>"
+                                        class="btn btn-primary btn-sm add-student-btn" title="Add Student">
+                                          <i class="fas fa-user-plus"></i>
+                                      </a>
+
+                                      <!-- Manage Beneficiaries -->
+                                      <a href="<?php echo site_url('nutritionalassessment?legislative_district=' . urlencode($auth->legislative_district ?? '') . '&school_district=' . urlencode($auth->school_district ?? '') . '&grade=' . urlencode($item->grade) . '&section=' . urlencode($item->section) . '&section_id=' . $item->id . '&school_year=' . urlencode($item->school_year ?? '') . '&school_id=' . urlencode($auth->school_id ?? '') . '&school_name=' . urlencode($auth->school_name ?? '') . '&user_id=' . urlencode($auth->user_id ?? '') . '&assessment_type=' . $assessment_type . '&mode=beneficiary'); ?>"
+                                        class="btn btn-info btn-sm" title="Manage Beneficiaries">
+                                          <i class="fas fa-users"></i> Beneficiaries
+                                      </a>
+
+                                      <!-- Clear Data — only visible when the section HAS data -->
+                                      <button type="button"
+                                              class="btn btn-outline-warning btn-sm clear-section-btn"
+                                              data-section-id="<?php echo (int)$item->id; ?>"
+                                              data-assessment_type="<?php echo htmlspecialchars($assessment_type); ?>"
+                                              data-grade="<?php echo htmlspecialchars($item->grade); ?>"
+                                              data-section="<?php echo htmlspecialchars($item->section); ?>"
+                                              data-school_year="<?php echo htmlspecialchars($item->school_year ?? ''); ?>"
+                                              title="Clear <?php echo htmlspecialchars(ucfirst($assessment_type)); ?> data for this section">
+                                          <i class="fas fa-eraser"></i> Clear Data <?php echo htmlspecialchars(ucfirst($assessment_type)); ?>
+                                      </button>
+                                  <?php endif; ?>
+
+                                  <!-- Per-section backfill: populate section_id on this section's assessment rows -->
+                                  <form action="<?php echo site_url('sbfp/backfill_section_id'); ?>"
+                                        method="post" class="m-0"
+                                        onsubmit="return confirm('Populate section_id for all assessment rows of <?php echo htmlspecialchars($item->grade . ' - ' . $item->section . ' (' . ($item->school_year ?? '') . ')'); ?>?\n\nThis links existing assessments back to Section ID #<?php echo (int)$item->id; ?>.');">
+                                      <input type="hidden" name="<?php echo $csrf_name; ?>" value="<?php echo $csrf_hash; ?>">
+                                      <input type="hidden" name="section_id" value="<?php echo (int)$item->id; ?>">
+                                      <button type="submit" class="btn btn-outline-primary btn-sm"
+                                              title="Link existing assessment rows to Section ID #<?php echo (int)$item->id; ?>">
+                                          <i class="fas fa-link"></i>
+                                      </button>
+                                  </form>
+                                </div>
                               </td>
                             </tr>
                           <?php endforeach; ?>
@@ -580,39 +606,44 @@ foreach ($submitted as $s) {
     </div>
 </div>
 
-<!-- Remove Section Modal -->
-<div class="modal fade" id="removeSectionModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Remove Section</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to remove this section?</p>
-                <p><strong>Grade:</strong> <span id="removeGrade"></span></p>
-                <p><strong>Section:</strong> <span id="removeSection"></span></p>
-                <p><strong>School Year:</strong> <span id="removeSchoolYear"></span></p>
-                <div class="alert alert-warning mt-3">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Important:</strong> 
-                    <ul class="mb-0 mt-1">
-                        <li>This section will be permanently removed</li>
-                        <li>If there are any assessments associated with this section, they will also be deleted</li>
-                        <li>This action cannot be undone</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="removeSectionForm" method="post" action="<?php echo site_url('sbfp/remove_section'); ?>" style="display: inline;">
-                    <input type="hidden" name="section_id" id="removeSectionId" value="">
-                    <button type="submit" class="btn btn-danger">Remove Section</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+  <!-- Clear Section Data Modal -->
+  <div class="modal fade" id="clearSectionModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title">Clear Section Data</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                  <p>Are you sure you want to clear
+                     <span class="badge bg-primary" id="clearAssessmentTypeBadge">baseline</span>
+                     assessment data for this section?
+                  </p>
+                  <p><strong>Grade:</strong> <span id="clearGrade"></span></p>
+                  <p><strong>Section:</strong> <span id="clearSection"></span></p>
+                  <p><strong>School Year:</strong> <span id="clearSchoolYear"></span></p>
+                  <div class="alert alert-warning mt-3">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      <strong>Important:</strong>
+                      <ul class="mb-0 mt-1">
+                          <li>The section itself will <strong>not</strong> be deleted</li>
+                          <li>Only the <span id="clearAssessmentTypeText">baseline</span> assessments for this section will be deleted</li>
+                          <li>Midline / Endline data (if any) stays intact</li>
+                          <li>This action cannot be undone</li>
+                      </ul>
+                  </div>
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                  <form id="clearSectionForm" method="post" action="<?= site_url('sbfp/clear_section_data'); ?>">
+                      <input type="hidden" name="<?= $csrf_name; ?>" value="<?= $csrf_hash; ?>">
+                      <input type="hidden" name="section_id" id="clearSectionId" value="">
+                      <input type="hidden" name="assessment_type" id="clearAssessmentType" value="<?= htmlspecialchars($assessment_type); ?>">
+                      <button type="submit" class="btn btn-warning">Clear <span id="clearButtonTypeText"><?= ucfirst($assessment_type); ?></span> Data</button>
+                  </form>
+              </div>
+      </div>
+  </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

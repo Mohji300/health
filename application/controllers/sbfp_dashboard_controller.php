@@ -78,6 +78,7 @@ class Sbfp_dashboard_controller extends CI_Controller {
             
             // Sanitize user data for view
             $data['auth_user'] = [
+                'user_id' => htmlspecialchars($user->id ?? '', ENT_QUOTES, 'UTF-8'),
                 'legislative_district' => htmlspecialchars($user->legislative_district ?? '', ENT_QUOTES, 'UTF-8'),
                 'school_district' => htmlspecialchars($user->school_district ?? '', ENT_QUOTES, 'UTF-8'),
                 'school_id' => htmlspecialchars($user->school_id ?? '', ENT_QUOTES, 'UTF-8'),
@@ -232,17 +233,131 @@ class Sbfp_dashboard_controller extends CI_Controller {
                 return;
             }
 
-            $inserted = $this->section_model->create_section($grade, $section, $school_year, $leg, $school);
-
-            if ($inserted) {
-                $this->session->set_flashdata('success', 'Section saved successfully');
-            } else {
-                $this->session->set_flashdata('error', 'Failed to save section (it may already exist)');
-            }
+        $inserted = $this->section_model->create_section($grade, $section, $school_year, $leg, $school);
+        if ($inserted) {
+            $this->session->set_flashdata('success', 'Section saved successfully');
+        } else {
+            $this->session->set_flashdata('error', 'Failed to save section (it may already exist)');
+        }
 
         } catch (Exception $e) {
             log_message('error', 'Error in create_section: ' . $e->getMessage());
             $this->session->set_flashdata('error', 'An error occurred while creating the section');
+        }
+
+        redirect('sbfp');
+    }
+
+    /**
+     * Backfill school_id on all grade_sections rows for the current user
+     * (POST, regular form submit)
+     */
+    public function backfill_school_id()
+    {
+        try {
+            $user_id = $this->session->userdata('user_id');
+            if (!$user_id) {
+                $this->session->set_flashdata('error', 'Please login to continue');
+                redirect('sbfp');
+                return;
+            }
+
+            $user = $this->user_model->get_user_by_id($user_id);
+            if (!$user || empty($user->school_id)) {
+                $this->session->set_flashdata('error', 'School ID not found for this user');
+                redirect('sbfp');
+                return;
+            }
+
+            $updated = $this->section_model->backfill_school_id_for_user($user_id, $user->school_id);
+
+            if ($updated === false) {
+                $this->session->set_flashdata('error', 'Failed to backfill school_id');
+            } elseif ($updated === 0) {
+                $this->session->set_flashdata('info', 'All sections already have the correct school_id.');
+            } else {
+                $this->session->set_flashdata('success', $updated . ' section(s) updated with school_id.');
+            }
+
+        } catch (Exception $e) {
+            log_message('error', 'Error in backfill_school_id: ' . $e->getMessage());
+            $this->session->set_flashdata('error', 'An error occurred while backfilling school_id');
+        }
+
+        redirect('sbfp');
+    }
+
+    /**
+     * Clear ALL assessment data for a single section, but keep the section row.
+     * (POST, regular form submit — mirrors backfill_school_id)
+     */
+    public function clear_section_data()
+    {
+        try {
+            $section_id      = $this->input->post('section_id', TRUE);
+            $assessment_type = $this->input->post('assessment_type', TRUE) ?: 'baseline';
+
+            if (!$section_id || !is_numeric($section_id)) {
+                $this->session->set_flashdata('error', 'Invalid section ID');
+                redirect('sbfp');
+                return;
+            }
+
+            if (!in_array($assessment_type, ['baseline', 'midline', 'endline'], true)) {
+                $assessment_type = 'baseline';
+            }
+
+            $cleared = $this->section_model->clear_section_data($section_id, $assessment_type);
+
+            if ($cleared === false) {
+                $this->session->set_flashdata('error', 'Failed to clear section data (section not found or unauthorized)');
+            } elseif ($cleared === 0) {
+                $this->session->set_flashdata('info', 'No ' . $assessment_type . ' assessments to clear for this section.');
+            } else {
+                $this->session->set_flashdata('success',
+                    $cleared . ' ' . $assessment_type . ' assessment record(s) cleared. The section was kept.');
+            }
+        } catch (Exception $e) {
+            log_message('error', 'Error in clear_section_data: ' . $e->getMessage());
+            $this->session->set_flashdata('error', 'An error occurred while clearing section data');
+        }
+
+        redirect('sbfp');
+    }
+
+    /**
+     * Backfill section_id on all assessment rows for a SINGLE section.
+     * (POST, regular form submit — per-row utility button)
+     */
+    public function backfill_section_id()
+    {
+        try {
+            $user_id    = $this->session->userdata('user_id');
+            $section_id = $this->input->post('section_id', TRUE);
+
+            if (!$user_id) {
+                $this->session->set_flashdata('error', 'Please login to continue');
+                redirect('sbfp');
+                return;
+            }
+            if (!$section_id || !is_numeric($section_id)) {
+                $this->session->set_flashdata('error', 'Invalid section ID');
+                redirect('sbfp');
+                return;
+            }
+
+            $updated = $this->section_model->backfill_section_id_for_assessments($section_id);
+
+            if ($updated === false) {
+                $this->session->set_flashdata('error', 'Failed to backfill section_id (section not found or unauthorized)');
+            } elseif ($updated === 0) {
+                $this->session->set_flashdata('info', 'All assessment rows already have the correct section_id.');
+            } else {
+                $this->session->set_flashdata('success', $updated . ' assessment row(s) updated with section_id.');
+            }
+        } catch (Exception $e) {
+            log_message('error', 'Error in backfill_section_id: ' . $e->getMessage());
+            $this->session->set_flashdata('error', 'An error occurred while backfilling section_id');
         }
 
         redirect('sbfp');
