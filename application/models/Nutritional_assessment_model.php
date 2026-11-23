@@ -98,32 +98,431 @@ class nutritional_assessment_model extends CI_Model {
     }
 
     /**
-     * Get assessments by section
+     * Get assessments by section.
+     *
+     * Primary match: section_id.
+     * Fallback: grade + section (case-insensitive) + year + districts + school_id.
+     * The fallback only triggers when section_id is supplied but yields zero rows,
+     * so new (section_id-linked) assessments still use the strict path.
      */
-    public function get_by_section($legislative_district, $school_district, $grade_level, $section, $school_year = null, $assessment_type = null, $section_id = null, $school_id = null)
-    {
+    public function get_by_section(
+        $legislative_district,
+        $school_district,
+        $grade_level,
+        $section,
+        $school_year = null,
+        $assessment_type = null,
+        $section_id = null,
+        $school_id = null
+    ) {
+        // Shared WHERE builder — no section_id yet
+        $apply_base = function () use (
+            $legislative_district, $school_district, $grade_level, $section,
+            $school_year, $assessment_type, $school_id
+        ) {
+            $this->db->where('legislative_district', $legislative_district);
+            $this->db->where('school_district', $school_district);
+            $this->db->where('grade_level', $grade_level);
+            $this->db->where('is_deleted', 0);
+
+            if (!empty($section)) {
+                // case-insensitive, whitespace-safe
+                $this->db->where(
+                    'UPPER(TRIM(section)) = ' . $this->db->escape(strtoupper(trim($section))),
+                    null,
+                    false
+                );
+            }
+            if (!empty($school_id) && $school_id !== 'N/A') {
+                $this->db->where('school_id', $school_id);
+            }
+            if ($school_year && $school_year !== 'N/A' && $school_year !== '') {
+                $this->db->where('year', $school_year);
+            }
+            if (!empty($assessment_type)) {
+                $this->db->where('assessment_type', $assessment_type);
+            }
+        };
+
+        // 1) Strict path: section_id given → try it first
+        if (!empty($section_id)) {
+            $apply_base();
+            $this->db->where('section_id', (int) $section_id);
+            $this->db->order_by('name', 'ASC');
+            $rows = $this->db->get($this->table)->result();
+
+            if (!empty($rows)) {
+                return $rows;
+            }
+            // no rows for this section_id — fall through to fallback
+        }
+
+        // 2) Fallback: no section_id filter (handles old rows with section_id = NULL)
+        $apply_base();
+        $this->db->order_by('name', 'ASC');
+        return $this->db->get($this->table)->result();
+    }
+
+    /**
+     * Latest baseline rows for a section, restricted to SBFP beneficiaries.
+     * Matches Manage Beneficiaries logic (sbfp_beneficiary = 'Yes').
+     */
+    public function get_latest_baseline_beneficiaries_by_section(
+        $legislative_district,
+        $school_district,
+        $grade_level,
+        $section,
+        $section_id = null,
+        $school_id = null
+    ) {
+        $apply_base = function () use (
+            $legislative_district, $school_district, $grade_level,
+            $section, $section_id, $school_id
+        ) {
+            $this->db->where('legislative_district', $legislative_district);
+            $this->db->where('school_district', $school_district);
+            $this->db->where('grade_level', $grade_level);
+            $this->db->where('assessment_type', 'baseline');
+            $this->db->where('is_deleted', 0);
+            $this->db->where('sbfp_beneficiary', 'Yes');   // ← KEY: match Manage Beneficiaries
+
+            if (!empty($section)) {
+                $this->db->where(
+                    'UPPER(TRIM(section)) = ' . $this->db->escape(strtoupper(trim($section))),
+                    null,
+                    false
+                );
+            }
+            if (!empty($school_id) && $school_id !== 'N/A') {
+                $this->db->where('school_id', $school_id);
+            }
+            if (!empty($section_id)) {
+                $this->db->where('section_id', (int) $section_id);
+            }
+        };
+
+        // Find latest baseline year among beneficiaries only
+        $apply_base();
+        $this->db->select(
+            "MAX(CAST(SUBSTRING_INDEX(TRIM(year), '-', 1) AS UNSIGNED)) AS latest_start_year",
+            false
+        );
+        $row = $this->db->get($this->table)->row();
+        $latest_start_year = $row->latest_start_year ?? null;
+        if (!$latest_start_year) return [];
+
+        // Fetch rows from that year
+        $this->db->reset_query();
+        $apply_base();
+        $this->db->where(
+            "CAST(SUBSTRING_INDEX(TRIM(year), '-', 1) AS UNSIGNED) = " . (int) $latest_start_year,
+            null,
+            false
+        );
+        $this->db->order_by('name', 'ASC');
+        $rows = $this->db->get($this->table)->result();
+
+        // Fallback for legacy rows without section_id
+        if (empty($rows) && !empty($section_id)) {
+            $this->db->reset_query();
+            $this->db->where('legislative_district', $legislative_district);
+            $this->db->where('school_district', $school_district);
+            $this->db->where('grade_level', $grade_level);
+            $this->db->where('assessment_type', 'baseline');
+            $this->db->where('is_deleted', 0);
+            $this->db->where('sbfp_beneficiary', 'Yes');
+            $this->db->where('section_id IS NULL', null, false);
+
+            if (!empty($section)) {
+                $this->db->where(
+                    'UPPER(TRIM(section)) = ' . $this->db->escape(strtoupper(trim($section))),
+                    null,
+                    false
+                );
+            }
+            if (!empty($school_id) && $school_id !== 'N/A') {
+                $this->db->where('school_id', $school_id);
+            }
+
+            $this->db->where(
+                "CAST(SUBSTRING_INDEX(TRIM(year), '-', 1) AS UNSIGNED) = " . (int) $latest_start_year,
+                null,
+                false
+            );
+            $this->db->order_by('name', 'ASC');
+            $rows = $this->db->get($this->table)->result();
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Get baseline rows for a section, restricted to the LATEST school year
+     * that has baseline data for that section.
+     *
+     * "Latest" = highest start year in the "YYYY-YYYY" string.
+     * Example: if section has baselines for 2026-2027 and 2027-2028,
+     *          only 2027-2028 rows are returned.
+     */
+    public function get_latest_baseline_by_section(
+        $legislative_district,
+        $school_district,
+        $grade_level,
+        $section,
+        $section_id = null,
+        $school_id = null
+    ) {
+        $apply_base = function () use (
+            $legislative_district, $school_district, $grade_level,
+            $section, $section_id, $school_id
+        ) {
+            $this->db->where('legislative_district', $legislative_district);
+            $this->db->where('school_district', $school_district);
+            $this->db->where('grade_level', $grade_level);
+            $this->db->where('assessment_type', 'baseline');
+            $this->db->where('is_deleted', 0);
+
+            if (!empty($section)) {
+                $this->db->where(
+                    'UPPER(TRIM(section)) = ' . $this->db->escape(strtoupper(trim($section))),
+                    null,
+                    false
+                );
+            }
+            if (!empty($school_id) && $school_id !== 'N/A') {
+                $this->db->where('school_id', $school_id);
+            }
+            if (!empty($section_id)) {
+                $this->db->where('section_id', (int) $section_id);
+            }
+        };
+
+        // -------- Step 1: Find the latest baseline year in this section --------
+        $apply_base();
+        $this->db->select(
+            "MAX(CAST(SUBSTRING_INDEX(TRIM(year), '-', 1) AS UNSIGNED)) AS latest_start_year",
+            false
+        );
+        $row = $this->db->get($this->table)->row();
+        $latest_start_year = $row->latest_start_year ?? null;
+
+        if (!$latest_start_year) {
+            return [];  // no baseline data at all
+        }
+
+        // -------- Step 2: Fetch rows from that year only --------
+        $this->db->reset_query();
+        $apply_base();
+        $this->db->where(
+            "CAST(SUBSTRING_INDEX(TRIM(year), '-', 1) AS UNSIGNED) = " . (int) $latest_start_year,
+            null,
+            false
+        );
+        $this->db->order_by('name', 'ASC');
+
+        $rows = $this->db->get($this->table)->result();
+
+        // -------- Step 3: Fallback for legacy rows without section_id --------
+        if (empty($rows) && !empty($section_id)) {
+            $this->db->reset_query();
+            $this->db->where('legislative_district', $legislative_district);
+            $this->db->where('school_district', $school_district);
+            $this->db->where('grade_level', $grade_level);
+            $this->db->where('assessment_type', 'baseline');
+            $this->db->where('is_deleted', 0);
+            $this->db->where('section_id IS NULL', null, false);
+
+            if (!empty($section)) {
+                $this->db->where(
+                    'UPPER(TRIM(section)) = ' . $this->db->escape(strtoupper(trim($section))),
+                    null,
+                    false
+                );
+            }
+            if (!empty($school_id) && $school_id !== 'N/A') {
+                $this->db->where('school_id', $school_id);
+            }
+
+            $this->db->where(
+                "CAST(SUBSTRING_INDEX(TRIM(year), '-', 1) AS UNSIGNED) = " . (int) $latest_start_year,
+                null,
+                false
+            );
+            $this->db->order_by('name', 'ASC');
+            $rows = $this->db->get($this->table)->result();
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Check if the section has ANY endline data.
+     * Used by Export Section to decide between endline and baseline source.
+     */
+    public function section_has_endline(
+        $legislative_district,
+        $school_district,
+        $grade_level,
+        $section,
+        $section_id = null,
+        $school_id = null
+    ) {
         $this->db->where('legislative_district', $legislative_district);
         $this->db->where('school_district', $school_district);
         $this->db->where('grade_level', $grade_level);
-        $this->db->where('section', $section);
+        $this->db->where('assessment_type', 'endline');
         $this->db->where('is_deleted', 0);
 
-        // Add school_id filter if provided
-        if (!empty($school_id)) {
+        if (!empty($section)) {
+            $this->db->where(
+                'UPPER(TRIM(section)) = ' . $this->db->escape(strtoupper(trim($section))),
+                null,
+                false
+            );
+        }
+        if (!empty($school_id) && $school_id !== 'N/A') {
             $this->db->where('school_id', $school_id);
         }
         if (!empty($section_id)) {
-            $this->db->where('section_id', $section_id);
-        }
-        if ($school_year && $school_year !== 'N/A' && $school_year !== '') {
-            $this->db->where('year', $school_year);
-        }
-        if ($assessment_type) {
-            $this->db->where('assessment_type', $assessment_type);
+            $this->db->where('section_id', (int) $section_id);
         }
 
+        return $this->db->count_all_results($this->table) > 0;
+    }
+
+    /**
+     * Get endline rows for a section, restricted to the LATEST school year
+     * that has endline data. Used by Export Section when endline exists.
+     */
+    public function get_latest_endline_by_section(
+        $legislative_district,
+        $school_district,
+        $grade_level,
+        $section,
+        $section_id = null,
+        $school_id = null
+    ) {
+        $apply_base = function () use (
+            $legislative_district, $school_district, $grade_level,
+            $section, $section_id, $school_id
+        ) {
+            $this->db->where('legislative_district', $legislative_district);
+            $this->db->where('school_district', $school_district);
+            $this->db->where('grade_level', $grade_level);
+            $this->db->where('assessment_type', 'endline');
+            $this->db->where('is_deleted', 0);
+
+            if (!empty($section)) {
+                $this->db->where(
+                    'UPPER(TRIM(section)) = ' . $this->db->escape(strtoupper(trim($section))),
+                    null,
+                    false
+                );
+            }
+            if (!empty($school_id) && $school_id !== 'N/A') {
+                $this->db->where('school_id', $school_id);
+            }
+            if (!empty($section_id)) {
+                $this->db->where('section_id', (int) $section_id);
+            }
+        };
+
+        // Step 1: find latest endline year in this section
+        $apply_base();
+        $this->db->select(
+            "MAX(CAST(SUBSTRING_INDEX(TRIM(year), '-', 1) AS UNSIGNED)) AS latest_start_year",
+            false
+        );
+        $row = $this->db->get($this->table)->row();
+        $latest_start_year = $row->latest_start_year ?? null;
+
+        if (!$latest_start_year) {
+            return [];
+        }
+
+        // Step 2: fetch rows from that year only
+        $this->db->reset_query();
+        $apply_base();
+        $this->db->where(
+            "CAST(SUBSTRING_INDEX(TRIM(year), '-', 1) AS UNSIGNED) = " . (int) $latest_start_year,
+            null,
+            false
+        );
         $this->db->order_by('name', 'ASC');
-        return $this->db->get($this->table)->result();
+        $rows = $this->db->get($this->table)->result();
+
+        // Step 3: fallback for legacy rows without section_id
+        if (empty($rows) && !empty($section_id)) {
+            $this->db->reset_query();
+            $this->db->where('legislative_district', $legislative_district);
+            $this->db->where('school_district', $school_district);
+            $this->db->where('grade_level', $grade_level);
+            $this->db->where('assessment_type', 'endline');
+            $this->db->where('is_deleted', 0);
+            $this->db->where('section_id IS NULL', null, false);
+
+            if (!empty($section)) {
+                $this->db->where(
+                    'UPPER(TRIM(section)) = ' . $this->db->escape(strtoupper(trim($section))),
+                    null,
+                    false
+                );
+            }
+            if (!empty($school_id) && $school_id !== 'N/A') {
+                $this->db->where('school_id', $school_id);
+            }
+
+            $this->db->where(
+                "CAST(SUBSTRING_INDEX(TRIM(year), '-', 1) AS UNSIGNED) = " . (int) $latest_start_year,
+                null,
+                false
+            );
+            $this->db->order_by('name', 'ASC');
+            $rows = $this->db->get($this->table)->result();
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Get names of baseline beneficiaries for a given section.
+     * Returns array of normalized names for matching.
+     */
+    public function get_baseline_beneficiary_names(
+        $legislative_district,
+        $school_district,
+        $grade_level,
+        $section,
+        $section_id = null,
+        $school_id = null,
+        $school_year = null
+    ) {
+        $this->db->select('name, birthday');
+        $this->db->where('legislative_district', $legislative_district);
+        $this->db->where('school_district', $school_district);
+        $this->db->where('grade_level', $grade_level);
+        $this->db->where('assessment_type', 'baseline');
+        $this->db->where('is_deleted', 0);
+        $this->db->where('sbfp_beneficiary', 'Yes');
+
+        if (!empty($section)) {
+            $this->db->where(
+                'UPPER(TRIM(section)) = ' . $this->db->escape(strtoupper(trim($section))),
+                null,
+                false
+            );
+        }
+        if (!empty($section_id)) {
+            $this->db->where('section_id', (int) $section_id);
+        }
+        if (!empty($school_id) && $school_id !== 'N/A') {
+            $this->db->where('school_id', $school_id);
+        }
+        if (!empty($school_year)) {
+            $this->db->where('year', $school_year);
+        }
+
+        return $this->db->get('nutritional_assessments')->result();
     }
 
     /**
@@ -332,7 +731,7 @@ class nutritional_assessment_model extends CI_Model {
      * Update beneficiary status for all students in a section
      * Returns number of affected rows or false on error
      */
-    public function update_all_beneficiaries($legislative_district, $school_district, $school_id, $grade, $section, $school_year, $assessment_type, $beneficiary, $target_grade = null)
+    public function update_all_beneficiaries($legislative_district, $school_district, $school_id, $grade, $section, $school_year, $assessment_type, $beneficiary)
     {
         $grade_filter = $this->normalize_grade_level($grade);
 

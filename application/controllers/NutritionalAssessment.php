@@ -101,7 +101,8 @@ class Nutritionalassessment extends CI_Controller {
             $data['section'],
             $data['school_year'],
             $data['assessment_type'],
-            $data['section_id']
+            $data['section_id'],
+            ($data['school_id'] === 'N/A' ? null : $data['school_id'])
         );
         // Also pass a flag that we are in beneficiary mode
         $data['is_beneficiary_mode'] = true;
@@ -204,6 +205,7 @@ class Nutritionalassessment extends CI_Controller {
             'school_district' => $this->input->post('school_district'),
             'school_id' => $this->input->post('school_id'),
             'school_name' => $this->input->post('school_name'),
+            'year' => $this->input->post('school_year'),
             'school_level' => $school_level,
             'height_squared' => $heightSquared,
             'age' => $ageDisplay,
@@ -667,11 +669,10 @@ class Nutritionalassessment extends CI_Controller {
         $school_year = $this->input->post('school_year');
         $assessment_type = $this->input->post('assessment_type');
         $beneficiary = $this->input->post('beneficiary'); // 'Yes' or 'No'
-        $target_grade = $this->input->post('target_grade');
 
         $updated = $this->nutritional_assessment_model->update_all_beneficiaries(
             $legislative_district, $school_district, $school_id, $grade, $section,
-            $school_year, $assessment_type, $beneficiary, $target_grade
+            $school_year, $assessment_type, $beneficiary
         );
 
         if ($updated !== false) {
@@ -803,4 +804,609 @@ class Nutritionalassessment extends CI_Controller {
             ->set_content_type('application/json')
             ->set_output(json_encode($response));
     }
+
+
+/**
+ * READ-ONLY diagnostic endpoint.
+ * Identifies possible grade_sections rows for one assessment.
+ *
+ * Does NOT update or delete any records.
+ *
+ * Usage:
+ * nutritionalassessment/debug_section_relationship/918
+ *
+ * If the assessment does not contain user_id, you can supply it:
+ * nutritionalassessment/debug_section_relationship/918?user_id=123
+ */
+public function debug_section_relationship($assessment_id = NULL)
+{
+    $this->output->set_content_type('application/json');
+
+    // Require login.
+    if (!$this->session->userdata('user_id')) {
+        $this->output->set_status_header(403);
+
+        return $this->output->set_output(json_encode([
+            'success' => false,
+            'message' => 'Unauthorized. Please log in first.'
+        ], JSON_PRETTY_PRINT));
+    }
+
+    if (empty($assessment_id) || !is_numeric($assessment_id)) {
+        $this->output->set_status_header(400);
+
+        return $this->output->set_output(json_encode([
+            'success' => false,
+            'message' => 'A valid assessment ID is required.'
+        ], JSON_PRETTY_PRINT));
+    }
+
+    // 1. Retrieve the assessment.
+    $assessment = $this->db
+        ->where('id', (int) $assessment_id)
+        ->get('nutritional_assessments')
+        ->row();
+
+    if (!$assessment) {
+        $this->output->set_status_header(404);
+
+        return $this->output->set_output(json_encode([
+            'success' => false,
+            'message' => 'Assessment not found.'
+        ], JSON_PRETTY_PRINT));
+    }
+
+    // 2. Resolve user_id.
+    // Prefer the assessment's own user_id if that column exists.
+    // Otherwise, accept a user_id supplied in the URL.
+    $provided_user_id = trim(
+        (string) $this->input->get('user_id', TRUE)
+    );
+
+    $assessment_has_user_id = isset($assessment->user_id)
+        && $assessment->user_id !== ''
+        && $assessment->user_id !== NULL;
+
+    $resolved_user_id = $assessment_has_user_id
+        ? (string) $assessment->user_id
+        : $provided_user_id;
+
+    $user_id_source = $assessment_has_user_id
+        ? 'nutritional_assessments.user_id'
+        : ($provided_user_id !== ''
+            ? 'URL query parameter'
+            : 'UNAVAILABLE');
+
+    // 3. Build common matching conditions.
+    // Do not use user_id in this first query, so we can see
+    // all possible matches and detect ambiguity.
+    $apply_common_filters = function () use ($assessment) {
+        $this->db->where(
+            'grade',
+            $assessment->grade_level
+        );
+
+        $this->db->where(
+            'year',
+            $assessment->year
+        );
+
+        $this->db->where(
+            'UPPER(TRIM(section)) = ' .
+            $this->db->escape(
+                strtoupper(trim((string) $assessment->section))
+            ),
+            NULL,
+            FALSE
+        );
+
+        if ($assessment->legislative_district !== NULL) {
+            $this->db->where(
+                'legislative_district',
+                $assessment->legislative_district
+            );
+        }
+
+        if ($assessment->school_district !== NULL) {
+            $this->db->where(
+                'school_district',
+                $assessment->school_district
+            );
+        }
+    };
+
+    // 4. Find all candidates based on grade, section,
+    // year, and district.
+    $this->db->select(
+        'id, user_id, grade, section, year, ' .
+        'legislative_district, school_district, created_at'
+    );
+    $this->db->from('grade_sections');
+    $apply_common_filters();
+    $this->db->order_by('user_id', 'ASC');
+    $this->db->order_by('id', 'ASC');
+
+    $candidate_query = $this->db->get();
+
+    if ($candidate_query === FALSE) {
+        $this->output->set_status_header(500);
+
+        return $this->output->set_output(json_encode([
+            'success' => false,
+            'message' => 'Could not query candidate sections.',
+            'database_error' => $this->db->error()
+        ], JSON_PRETTY_PRINT));
+    }
+
+    $all_candidates = $candidate_query->result_array();
+
+    // 5. Narrow candidates to the resolved user_id.
+    $user_candidates = [];
+
+    if ($resolved_user_id !== '') {
+        $this->db->select(
+            'id, user_id, grade, section, year, ' .
+            'legislative_district, school_district, created_at'
+        );
+        $this->db->from('grade_sections');
+        $apply_common_filters();
+        $this->db->where('user_id', $resolved_user_id);
+        $this->db->order_by('id', 'ASC');
+
+        $user_query = $this->db->get();
+
+        if ($user_query === FALSE) {
+            $this->output->set_status_header(500);
+
+            return $this->output->set_output(json_encode([
+                'success' => false,
+                'message' => 'Could not query user-specific sections.',
+                'database_error' => $this->db->error()
+            ], JSON_PRETTY_PRINT));
+        }
+
+        $user_candidates = $user_query->result_array();
+    }
+
+    // 6. Check whether the current section_id points to
+    // an existing grade_sections row.
+    $current_section = NULL;
+
+    if ($assessment->section_id !== NULL
+        && $assessment->section_id !== '') {
+
+        $current_section = $this->db
+            ->where('id', $assessment->section_id)
+            ->get('grade_sections')
+            ->row_array();
+    }
+
+    // 7. Provide a cautious diagnostic conclusion.
+    if ($resolved_user_id === '') {
+        $diagnosis =
+            'USER_ID_UNKNOWN: verify which user_id belongs to ' .
+            'this school before choosing a section.';
+    } elseif (count($user_candidates) === 1) {
+        $diagnosis =
+            'ONE_USER_MATCH: exactly one section matches the ' .
+            'assessment details and user_id. Verify the school-to-user ' .
+            'mapping before using this as a confirmed match.';
+    } elseif (count($user_candidates) > 1) {
+        $diagnosis =
+            'AMBIGUOUS: multiple sections match, even with user_id. ' .
+            'Do not assign a section automatically.';
+    } else {
+        $diagnosis =
+            'NO_USER_MATCH: no section matches all supplied criteria ' .
+            'for this user_id. Check spelling, school year, districts, ' .
+            'and the school-to-user mapping.';
+    }
+
+    // 8. Return read-only diagnostic data.
+    return $this->output->set_output(json_encode([
+        'success' => true,
+        'mode' => 'READ_ONLY',
+        'assessment' => [
+            'id' => $assessment->id,
+            'school_id' => $assessment->school_id,
+            'school_name' => $assessment->school_name,
+            'grade' => $assessment->grade_level,
+            'section' => $assessment->section,
+            'year' => $assessment->year,
+            'legislative_district' =>
+                $assessment->legislative_district,
+            'school_district' => $assessment->school_district,
+            'is_deleted' => $assessment->is_deleted,
+            'current_section_id' => $assessment->section_id
+        ],
+        'user_id_check' => [
+            'assessment_has_user_id' => $assessment_has_user_id,
+            'resolved_user_id' =>
+                $resolved_user_id !== '' ? $resolved_user_id : NULL,
+            'user_id_source' => $user_id_source,
+            'note' =>
+                'Confirm that this user_id belongs to the assessment school.'
+        ],
+        'current_section_check' => [
+            'section_id_is_null' => $assessment->section_id === NULL,
+            'referenced_section_exists' => $current_section !== NULL,
+            'referenced_section' => $current_section
+        ],
+        'all_candidates_without_user_filter' => [
+            'count' => count($all_candidates),
+            'sections' => $all_candidates
+        ],
+        'candidates_matching_user_id' => [
+            'count' => count($user_candidates),
+            'sections' => $user_candidates
+        ],
+        'diagnosis' => $diagnosis
+    ], JSON_PRETTY_PRINT));
+}
+
+
+public function debug_all_sections()
+{
+    $this->output->set_content_type('application/json');
+
+    // Require login.
+    if (!$this->session->userdata('user_id')) {
+        $this->output->set_status_header(403);
+
+        return $this->output->set_output(json_encode([
+            'success' => false,
+            'message' => 'Unauthorized. Please log in first.'
+        ], JSON_PRETTY_PRINT));
+    }
+
+    // Optional filters.
+    $user_id = trim((string) $this->input->get('user_id', TRUE));
+    $grade = trim((string) $this->input->get('grade', TRUE));
+    $section = trim((string) $this->input->get('section', TRUE));
+    $school_year = trim((string) $this->input->get('school_year', TRUE));
+    $school_district = trim((string) $this->input->get('school_district', TRUE));
+    $legislative_district = trim(
+        (string) $this->input->get('legislative_district', TRUE)
+    );
+
+    $limit = 100;
+    $page = max(1, (int) $this->input->get('page'));
+    $offset = ($page - 1) * $limit;
+
+    // Build a reusable filter for grade_sections.
+    $apply_filters = function () use (
+        $user_id,
+        $grade,
+        $section,
+        $school_year,
+        $school_district,
+        $legislative_district
+    ) {
+        if ($user_id !== '') {
+            $this->db->where('user_id', $user_id);
+        }
+
+        if ($grade !== '') {
+            $this->db->where('grade', $grade);
+        }
+
+        if ($section !== '') {
+            $this->db->where(
+                'UPPER(TRIM(section)) = ' .
+                $this->db->escape(strtoupper($section)),
+                NULL,
+                FALSE
+            );
+        }
+
+        if ($school_year !== '') {
+            $this->db->where('year', $school_year);
+        }
+
+        if ($school_district !== '') {
+            $this->db->where('school_district', $school_district);
+        }
+
+        if ($legislative_district !== '') {
+            $this->db->where(
+                'legislative_district',
+                $legislative_district
+            );
+        }
+    };
+
+    // Count all matching section rows.
+    $this->db->from('grade_sections');
+    $apply_filters();
+    $total_sections = $this->db->count_all_results();
+
+    // Retrieve matching sections.
+    $this->db->select(
+        'id, user_id, grade, section, year, ' .
+        'legislative_district, school_district, created_at'
+    );
+    $this->db->from('grade_sections');
+    $apply_filters();
+    $this->db->order_by('user_id', 'ASC');
+    $this->db->order_by('year', 'DESC');
+    $this->db->order_by('grade', 'ASC');
+    $this->db->order_by('section', 'ASC');
+    $this->db->order_by('id', 'ASC');
+    $this->db->limit($limit, $offset);
+
+    $query = $this->db->get();
+
+    if ($query === FALSE) {
+        $this->output->set_status_header(500);
+
+        return $this->output->set_output(json_encode([
+            'success' => false,
+            'message' => 'Could not retrieve sections.',
+            'database_error' => $this->db->error()
+        ], JSON_PRETTY_PRINT));
+    }
+
+    $sections = $query->result_array();
+    $section_ids = [];
+
+    foreach ($sections as $row) {
+        $section_ids[] = (int) $row['id'];
+    }
+
+    // Count linked assessments for the sections on this page.
+    $assessment_counts = [];
+
+    if (!empty($section_ids)) {
+        $this->db->select(
+            'section_id, COUNT(*) AS total_assessments, ' .
+            'SUM(CASE WHEN is_deleted = 0 THEN 1 ELSE 0 END) AS active_assessments, ' .
+            'SUM(CASE WHEN is_deleted = 1 THEN 1 ELSE 0 END) AS deleted_assessments'
+        );
+        $this->db->from('nutritional_assessments');
+        $this->db->where_in('section_id', $section_ids);
+        $this->db->group_by('section_id');
+
+        $count_query = $this->db->get();
+
+        if ($count_query === FALSE) {
+            $this->output->set_status_header(500);
+
+            return $this->output->set_output(json_encode([
+                'success' => false,
+                'message' => 'Could not count linked assessments.',
+                'database_error' => $this->db->error()
+            ], JSON_PRETTY_PRINT));
+        }
+
+        foreach ($count_query->result_array() as $count_row) {
+            $assessment_counts[(string) $count_row['section_id']] = [
+                'total' => (int) $count_row['total_assessments'],
+                'active' => (int) $count_row['active_assessments'],
+                'deleted' => (int) $count_row['deleted_assessments']
+            ];
+        }
+    }
+
+    // Attach counts and a section-level matching summary.
+    foreach ($sections as &$row) {
+        $key = (string) $row['id'];
+
+        $row['linked_assessments'] = isset($assessment_counts[$key])
+            ? $assessment_counts[$key]
+            : [
+                'total' => 0,
+                'active' => 0,
+                'deleted' => 0
+            ];
+
+        // Count active assessments with matching section details
+        // but section_id still NULL. This is diagnostic only.
+        $this->db->from('nutritional_assessments');
+        $this->db->where('section_id IS NULL', NULL, FALSE);
+        $this->db->where('grade_level', $row['grade']);
+        $this->db->where('year', $row['year']);
+        $this->db->where(
+            'UPPER(TRIM(section)) = ' .
+            $this->db->escape(strtoupper(trim($row['section']))),
+            NULL,
+            FALSE
+        );
+        $this->db->where('is_deleted', 0);
+
+        if ($row['school_district'] !== NULL) {
+            $this->db->where(
+                'school_district',
+                $row['school_district']
+            );
+        }
+
+        if ($row['legislative_district'] !== NULL) {
+            $this->db->where(
+                'legislative_district',
+                $row['legislative_district']
+            );
+        }
+
+        $row['unlinked_assessments_same_details'] =
+            $this->db->count_all_results();
+    }
+    unset($row);
+
+    return $this->output->set_output(json_encode([
+        'success' => true,
+        'mode' => 'READ_ONLY',
+        'description' =>
+            'Lists grade_sections and counts linked assessments. ' .
+            'Unlinked counts use matching grade, section, year, and ' .
+            'district only; they do not prove the school matches.',
+        'applied_filters' => [
+            'user_id' => $user_id ?: NULL,
+            'grade' => $grade ?: NULL,
+            'section' => $section ?: NULL,
+            'school_year' => $school_year ?: NULL,
+            'school_district' => $school_district ?: NULL,
+            'legislative_district' => $legislative_district ?: NULL
+        ],
+        'pagination' => [
+            'page' => $page,
+            'per_page' => $limit,
+            'total_sections' => $total_sections,
+            'total_pages' => (int) ceil($total_sections / $limit),
+            'returned_sections' => count($sections)
+        ],
+        'sections' => $sections
+    ], JSON_PRETTY_PRINT));
+}
+
+    /**
+     * READ-ONLY diagnostic endpoint.
+     * Lists individual ACTIVE assessments whose section_id is NULL (all schools),
+     * with the grade_sections rows that could match by grade/section/year/district.
+     * Nothing is updated or deleted. Student names are intentionally not returned.
+     *
+     * Usage:
+     *   nutritionalassessment/debug_unlinked_assessments
+     *   nutritionalassessment/debug_unlinked_assessments?page=2
+     *   Optional filters: school_id, school_district, legislative_district,
+     *                     grade, section, year, assessment_type
+     */
+public function debug_unlinked_assessments()
+{
+    $this->output->set_content_type('application/json');
+
+    // Require login only.
+    if (!$this->session->userdata('user_id')) {
+        $this->output->set_status_header(403);
+        return $this->output->set_output(json_encode([
+            'success' => false,
+            'message' => 'Unauthorized. Please log in first.'
+        ], JSON_PRETTY_PRINT));
+    }
+ 
+        $limit  = 100;
+        $page   = max(1, (int) $this->input->get('page'));
+        $offset = ($page - 1) * $limit;
+ 
+        $filters = [
+            'school_id'            => trim((string) $this->input->get('school_id', TRUE)),
+            'school_district'      => trim((string) $this->input->get('school_district', TRUE)),
+            'legislative_district' => trim((string) $this->input->get('legislative_district', TRUE)),
+            'grade_level'          => trim((string) $this->input->get('grade', TRUE)),
+            'year'                 => trim((string) $this->input->get('year', TRUE)),
+            'assessment_type'      => trim((string) $this->input->get('assessment_type', TRUE)),
+        ];
+        $section_filter = trim((string) $this->input->get('section', TRUE));
+ 
+        $apply_filters = function () use ($filters, $section_filter) {
+            // Core condition: every active assessment with no section.
+            $this->db->where('section_id IS NULL', NULL, FALSE);
+            $this->db->where('is_deleted', 0);
+ 
+            foreach ($filters as $column => $value) {
+                if ($value !== '') {
+                    $this->db->where($column, $value);
+                }
+            }
+            if ($section_filter !== '') {
+                $this->db->where(
+                    'UPPER(TRIM(section)) = ' .
+                    $this->db->escape(strtoupper($section_filter)),
+                    NULL,
+                    FALSE
+                );
+            }
+        };
+ 
+        // Total count.
+        $this->db->from('nutritional_assessments');
+        $apply_filters();
+        $total = $this->db->count_all_results();
+ 
+        // Page of records.
+        $this->db->select(
+            'id, school_id, school_name, grade_level, section, year, ' .
+            'legislative_district, school_district, assessment_type, ' .
+            'created_at, updated_at'
+        );
+        $this->db->from('nutritional_assessments');
+        $apply_filters();
+        $this->db->order_by('school_id', 'ASC');
+        $this->db->order_by('year', 'DESC');
+        $this->db->order_by('grade_level', 'ASC');
+        $this->db->order_by('section', 'ASC');
+        $this->db->order_by('id', 'ASC');
+        $this->db->limit($limit, $offset);
+        $query = $this->db->get();
+ 
+        if ($query === FALSE) {
+            $this->output->set_status_header(500);
+            return $this->output->set_output(json_encode([
+                'success' => FALSE,
+                'message' => 'Could not retrieve unlinked assessments.',
+                'database_error' => $this->db->error()
+            ], JSON_PRETTY_PRINT));
+        }
+ 
+        $rows = $query->result_array();
+ 
+        // Attach candidate sections (cache per unique detail combination).
+        $cache = [];
+        $summary = ['NO_CANDIDATE' => 0, 'ONE_CANDIDATE' => 0, 'MULTIPLE_CANDIDATES' => 0];
+ 
+        foreach ($rows as &$row) {
+            $key = md5(json_encode([
+                $row['grade_level'], strtoupper(trim((string) $row['section'])),
+                $row['year'], $row['legislative_district'], $row['school_district']
+            ]));
+ 
+            if (!isset($cache[$key])) {
+                $this->db->select('id, user_id');
+                $this->db->from('grade_sections');
+                $this->db->where('grade', $row['grade_level']);
+                $this->db->where('year', $row['year']);
+                $this->db->where(
+                    'UPPER(TRIM(section)) = ' .
+                    $this->db->escape(strtoupper(trim((string) $row['section']))),
+                    NULL,
+                    FALSE
+                );
+                if ($row['legislative_district'] !== NULL) {
+                    $this->db->where('legislative_district', $row['legislative_district']);
+                }
+                if ($row['school_district'] !== NULL) {
+                    $this->db->where('school_district', $row['school_district']);
+                }
+                $cq = $this->db->get();
+                $cache[$key] = ($cq === FALSE) ? [] : $cq->result_array();
+            }
+ 
+            $count = count($cache[$key]);
+            $row['candidate_sections'] = $cache[$key];
+            $row['candidate_status'] = $count === 0
+                ? 'NO_CANDIDATE'
+                : ($count === 1 ? 'ONE_CANDIDATE' : 'MULTIPLE_CANDIDATES');
+            $summary[$row['candidate_status']]++;
+        }
+        unset($row);
+ 
+        return $this->output->set_output(json_encode([
+            'success' => TRUE,
+            'mode' => 'READ_ONLY',
+            'description' =>
+                'Active assessments with section_id IS NULL, for all schools. ' .
+                'Candidates match only on grade, section, year and district; ' .
+                'they do NOT prove the school matches. Verify ownership before linking.',
+            'applied_filters' => array_filter($filters + ['section' => $section_filter]),
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $limit,
+                'total_unlinked' => $total,
+                'total_pages' => (int) ceil($total / $limit),
+                'returned' => count($rows)
+            ],
+            'candidate_summary_this_page' => $summary,
+            'assessments' => $rows
+        ], JSON_PRETTY_PRINT));
+    }
+
 }

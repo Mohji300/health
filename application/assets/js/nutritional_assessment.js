@@ -3,6 +3,8 @@
     let students = [];
     let alertModal = null;
     let loadingModal = null;
+    let heightGuideSlideIndex = 0;
+    let heightGuideModal = null;
     let uploadLoadingModal = null;
     let confirmModal = null;
     let submitConfirmModal = null;
@@ -775,19 +777,30 @@
         }
     }
 
-    function showAlert(title, message) { 
-        const tEl = document.getElementById('alertTitle'); 
-        const bEl = document.getElementById('alertBody'); 
-        if (tEl) tEl.textContent = title; 
-        if (bEl) bEl.textContent = message; 
-        
-        if (alertModal) { 
-            try {
-                alertModal.show(); 
-            } catch (e) {
-                window.alert(title + '\n\n' + message);
+    function showAlert(title, message) {
+        const tEl = document.getElementById('alertTitle');
+        const bEl = document.getElementById('alertBody');
+        if (tEl) tEl.textContent = title;
+        if (bEl) bEl.textContent = message;
+
+        const openModal = document.querySelector('.modal.show');
+        if (openModal && openModal.id !== 'alertModal') {
+            const onHidden = function() {
+                openModal.removeEventListener('hidden.bs.modal', onHidden);
+                setTimeout(_doShowAlert, 150);
+            };
+            openModal.addEventListener('hidden.bs.modal', onHidden);
+            return;
+        }
+
+        _doShowAlert();
+
+        function _doShowAlert() {
+            if (alertModal) {
+                try { alertModal.show(); }
+                catch (e) { window.alert(title + '\n\n' + message); }
+                return;
             }
-        } else { 
             try {
                 const alertModalEl = document.getElementById('alertModal');
                 if (alertModalEl) {
@@ -799,7 +812,7 @@
             } catch (e) {
                 window.alert(title + '\n\n' + message);
             }
-        } 
+        }
     }
 
     function switchAssessmentType(type) {
@@ -817,6 +830,74 @@
         const url = new URL(window.location.href);
         url.searchParams.set('assessment_type', type);
         window.location.href = url.toString();
+    }
+
+    function initHeightGuide() {
+        const modalEl = document.getElementById('heightGuideModal');
+        if (!modalEl) return;
+        if (heightGuideModal) return;
+
+        heightGuideModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+
+        const prevBtn  = document.getElementById('heightGuidePrev');
+        const nextBtn  = document.getElementById('heightGuideNext');
+        const reupBtn  = document.getElementById('heightGuideReupload');
+        const closeBtn = document.getElementById('heightGuideClose');
+        const dots     = document.querySelectorAll('#heightGuideDots .guide-dot');
+        const slides   = document.querySelectorAll('#heightGuideSlides .height-slide');
+        const totalSlides = slides.length;
+
+        function render() {
+            slides.forEach((s, i) => s.classList.toggle('d-none', i !== heightGuideSlideIndex));
+            dots.forEach((d, i) => d.classList.toggle('active', i === heightGuideSlideIndex));
+            prevBtn.disabled = heightGuideSlideIndex === 0;
+            const isLast = heightGuideSlideIndex === totalSlides - 1;
+            nextBtn.classList.toggle('d-none', isLast);
+            reupBtn.classList.toggle('d-none', !isLast);
+        }
+
+        prevBtn.addEventListener('click', () => { if (heightGuideSlideIndex > 0) { heightGuideSlideIndex--; render(); } });
+        nextBtn.addEventListener('click', () => { if (heightGuideSlideIndex < totalSlides - 1) { heightGuideSlideIndex++; render(); } });
+        dots.forEach(d => d.addEventListener('click', () => { heightGuideSlideIndex = parseInt(d.dataset.dot, 10) || 0; render(); }));
+
+        reupBtn.addEventListener('click', () => {
+            if (heightGuideModal) heightGuideModal.hide();
+                isUploading = false;
+                currentUploadController = null;
+            setTimeout(() => {
+                const fi = document.getElementById('excelFile');
+                if (fi) { fi.value = ''; fi.click(); }
+            }, 200);
+        });
+
+        closeBtn.addEventListener('click', () => { if (heightGuideModal) heightGuideModal.hide(); });
+
+        render();
+    }
+
+    function showHeightGuide(heightErrors) {
+        initHeightGuide();
+        if (!heightGuideModal) {
+            alert('Height must be in meters. Example: 1.45 (not 145).');
+            return;
+        }
+
+        const list = document.getElementById('heightGuideErrorList');
+        if (list && Array.isArray(heightErrors) && heightErrors.length) {
+            const rows = heightErrors.slice(0, 8).map(e =>
+                `<li>Row ${e.row}: <strong>${escapeHtml(e.name)}</strong> — you entered <code>${e.raw}</code>, use <code>${e.suggested}</code> instead</li>`
+            ).join('');
+            list.innerHTML =
+                `<strong>${heightErrors.length} student(s) had height in centimeters:</strong>` +
+                `<ul class="mb-0 mt-2">${rows}</ul>` +
+                (heightErrors.length > 8 ? `<div class="small mt-1">…and ${heightErrors.length - 8} more.</div>` : '');
+            list.classList.remove('d-none');
+        } else if (list) {
+            list.classList.add('d-none');
+        }
+
+        heightGuideSlideIndex = 0;
+        heightGuideModal.show();
     }
 
     function extractFromExcel() {
@@ -850,9 +931,9 @@
             if (currentUploadController) {
                 currentUploadController.abort();
             }
-        }, 60000); // 60 second timeout
+        }, 310000); // Allow the server's 300-second processing window to finish
 
-        // Show the loading modal (assumed already initialized once on DOMContentLoaded)
+        // Show the loading modal initialized on DOMContentLoaded.
         if (uploadLoadingModal) {
             uploadLoadingModal.show();
         } else {
@@ -866,6 +947,14 @@
 
         const formData = new FormData();
         formData.append('excel_file', file);
+        formData.append('assessment_type', new URLSearchParams(window.location.search).get('assessment_type') || 'baseline');
+        formData.append('legislative_district', document.getElementById('legislative_district')?.value || '');
+        formData.append('school_district', document.getElementById('school_district')?.value || '');
+        formData.append('grade_level', document.getElementById('grade')?.value || '');
+        formData.append('section', document.getElementById('section')?.value || '');
+        formData.append('section_id', document.getElementById('section_id_hidden')?.value || '');
+        formData.append('school_id', document.getElementById('school_id')?.value || '');
+        formData.append('school_year', document.getElementById('school_year')?.value || '');
 
         const processExcelUrl = window.nutritionalassessmentConfig?.urls?.process_excel;
         if (!processExcelUrl) {
@@ -874,71 +963,221 @@
             return;
         }
 
-        fetch(processExcelUrl, {
-            method: 'POST',
-            body: formData,
-            signal: currentUploadController.signal
+    fetch(processExcelUrl, {
+        method: 'POST',
+        body: formData,
+        signal: currentUploadController.signal
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
         })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    if (data.students && data.students.length > 0 && data.students[0].date) {
-                        localStorage.setItem('last_weighing_date', data.students[0].date);
-                    }
-                    addExtractedStudentsDirectly(data.students || [], data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Upload error:', error);
-                let errorMessage = 'An error occurred while processing the file.';
-                if (error.name === 'AbortError') {
-                    errorMessage = 'Request timeout. The file may be too large or the server is slow.';
-                } else if (error.message.includes('HTTP error')) {
-                    errorMessage = 'Server error. Please try again later.';
-                } else if (error.message.includes('Failed to fetch')) {
-                    errorMessage = 'Network error. Please check your connection.';
-                } else if (error.message) {
-                    errorMessage = error.message;
-                }
-                showAlert('Error', errorMessage);
-            })
-            .finally(() => {
-                // --- ALWAYS clean up, whether success or error ---
-                cleanupUpload(null);
-            });
+    .then(data => {
+        if (!data || data.success !== true) {
+            throw new Error(data?.message || 'The server could not extract data from this file.');
+        }
+
+        const hasHeightErrors = data.has_height_unit_errors &&
+                                Array.isArray(data.height_unit_errors) &&
+                                data.height_unit_errors.length > 0;
+
+        const hasNonBeneficiary = data.has_non_beneficiary_students &&
+                                Array.isArray(data.non_beneficiary_students) &&
+                                data.non_beneficiary_students.length > 0;
+
+        if (!Array.isArray(data.students)) {
+            throw new Error('The server returned an invalid extraction response.');
+        }
+
+        if (data.students.length > 0 && data.students[0].date) {
+            localStorage.setItem('last_weighing_date', data.students[0].date);
+        }
+
+        // Reset upload state
+        clearTimeout(timeoutId);
+        isUploading = false;
+        currentUploadController = null;
+        const btn = document.getElementById('chooseFileBtn');
+        if (btn) btn.disabled = false;
+        const fi = document.getElementById('excelFile');
+        if (fi) fi.value = '';
+
+        // ── Force-hide the modal element directly, then proceed.
+        //    This bypasses Bootstrap's transition state entirely. ──
+        const loadingModalEl = document.getElementById('uploadLoadingModal');
+
+        const forceHideAndProceed = () => {
+            // Force-hide the modal element (immune to stuck transitions)
+            if (loadingModalEl) {
+                loadingModalEl.classList.remove('show');
+                loadingModalEl.style.display = 'none';
+                loadingModalEl.setAttribute('aria-hidden', 'true');
+                loadingModalEl.removeAttribute('aria-modal');
+                loadingModalEl.removeAttribute('role');
+            }
+
+            // Remove any straggler backdrops / body locks
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+
+            // Now open the follow-up modal (height guide / non-bene) or import students
+            _showExtractionFollowUps(data, hasHeightErrors, hasNonBeneficiary);
+        };
+
+        if (loadingModalEl && typeof uploadLoadingModal !== 'undefined' && uploadLoadingModal) {
+            let done = false;
+
+            const finish = () => {
+                if (done) return;
+                done = true;
+                loadingModalEl.removeEventListener('hidden.bs.modal', finish);
+                clearTimeout(fallbackTimer);
+                forceHideAndProceed();
+            };
+
+            loadingModalEl.addEventListener('hidden.bs.modal', finish);
+
+            // Fallback in case hidden.bs.modal never fires (e.g., hide() was a no-op)
+            // Reduced from 800ms to 500ms for faster recovery
+            const fallbackTimer = setTimeout(finish, 500);
+
+            try {
+                uploadLoadingModal.hide();
+            } catch (e) {
+                console.warn('[upload] hide error:', e);
+                finish();
+            }
+        } else {
+            // No modal instance — proceed immediately
+            forceHideAndProceed();
+        }
+    })
 
         // Helper function for consistent cleanup
         function cleanupUpload(errorMsg) {
-            // Clear timeout
             clearTimeout(timeoutId);
 
-            // Hide the loading modal
             if (uploadLoadingModal) {
                 try {
-                    uploadLoadingModal.hide();
+                    const el = document.getElementById('uploadLoadingModal');
+                    if (el && el.classList.contains('show')) {
+                        uploadLoadingModal.hide();
+                    }
                 } catch (e) {
-                    console.warn('Error hiding modal:', e);
+                    console.warn('cleanupUpload hide error:', e);
                 }
             }
 
-            // Re-enable the file chooser button
-            if (chooseFileBtn) chooseFileBtn.disabled = false;
-            if (fileInput) fileInput.value = '';
+            const btn = document.getElementById('chooseFileBtn');
+            const fi = document.getElementById('excelFile');
+            if (btn) btn.disabled = false;
+            if (fi) fi.value = '';
 
-            // Reset upload flags
             isUploading = false;
             currentUploadController = null;
 
-            // Optionally show an error message if one was passed
             if (errorMsg) {
                 showAlert('Upload Error', errorMsg);
             }
         }
+    }
+
+    function _showExtractionFollowUps(data, hasHeightErrors, hasNonBeneficiary) {
+        // ── Blocking errors: show modal, NEVER import ──
+        if (hasHeightErrors) {
+            showHeightGuide(data.height_unit_errors, null);   // ← null = no chained import
+            return;
+        }
+        if (hasNonBeneficiary) {
+            showNonBeneficiaryModal(data.non_beneficiary_students, null);   // ← null = no chained import
+            return;
+        }
+
+        // ── No blocking errors: import normally ──
+        if (data.students.length > 0) {
+            addExtractedStudentsDirectly(data.students, data.message);
+        }
+    }
+
+    let nonBeneficiaryModal = null;
+
+    function initNonBeneficiaryModal() {
+        const modalEl = document.getElementById('nonBeneficiaryModal');
+        if (!modalEl) return;
+        if (nonBeneficiaryModal) return;
+
+        try {
+            nonBeneficiaryModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+        } catch (e) {
+            console.error('[nonBeneficiary] init failed:', e);
+            return;
+        }
+
+        // Re-upload button: close modal, reset state, open file picker.
+        // Does NOT import the current students — user must pick a new file.
+        const reuploadBtn = document.getElementById('nonBeneficiaryContinue');
+        if (reuploadBtn) {
+            reuploadBtn.addEventListener('click', () => {
+                if (nonBeneficiaryModal) nonBeneficiaryModal.hide();
+
+                // Reset upload state so the new file picker works cleanly
+                isUploading = false;
+                currentUploadController = null;
+
+                setTimeout(() => {
+                    const fi = document.getElementById('excelFile');
+                    if (fi) { fi.value = ''; fi.click(); }
+                }, 200);
+            });
+        }
+
+        // X and Cancel buttons use data-bs-dismiss="modal" — Bootstrap closes the
+        // modal automatically. Since onDone is null, nothing else fires.
+    }
+
+    function showNonBeneficiaryModal(nonBeneficiaryStudents, onDone) {
+        initNonBeneficiaryModal();
+        if (!nonBeneficiaryModal) {
+            // Fallback: plain alert
+            const msg = nonBeneficiaryStudents.slice(0, 5)
+                .map(s => `- ${s.name}`)
+                .join('\n');
+            window.alert('Not in baseline beneficiaries:\n\n' + msg);
+            if (typeof onDone === 'function') onDone();
+            return;
+        }
+
+        const listEl = document.getElementById('nonBeneficiaryList');
+        if (listEl) {
+            const rows = nonBeneficiaryStudents.slice(0, 20).map(s => {
+                const reason = s.reason === 'no_baseline'
+                    ? '<em class="text-warning">(no baseline exists for this section)</em>'
+                    : '';
+                return `<li><strong>${escapeHtml(s.name)}</strong> ${reason}</li>`;
+            }).join('');
+            listEl.innerHTML =
+                `<strong>${nonBeneficiaryStudents.length} student(s) not in baseline:</strong>` +
+                `<ul class="mb-0 mt-2">${rows}</ul>` +
+                (nonBeneficiaryStudents.length > 20
+                    ? `<div class="small mt-1">…and ${nonBeneficiaryStudents.length - 20} more.</div>`
+                    : '');
+        }
+
+        // Chain to onDone when modal closes
+        const modalEl = document.getElementById('nonBeneficiaryModal');
+        if (modalEl && typeof onDone === 'function') {
+            const onceHandler = function () {
+                modalEl.removeEventListener('hidden.bs.modal', onceHandler);
+                onDone();
+            };
+            modalEl.addEventListener('hidden.bs.modal', onceHandler);
+        }
+
+        nonBeneficiaryModal.show();
     }
     
     // Add extracted students to the list
@@ -1103,6 +1342,7 @@
     // Initialize everything when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize Bootstrap modals with error handling
+        try { initNonBeneficiaryModal(); } catch (e) { console.warn('nonBeneficiary init failed:', e); }
         try {
             const alertModalEl = document.getElementById('alertModal');
             if (alertModalEl) alertModal = new bootstrap.Modal(alertModalEl);
@@ -1110,7 +1350,10 @@
             const loadingModalEl = document.getElementById('loadingModal');
             if (loadingModalEl) loadingModal = new bootstrap.Modal(loadingModalEl, { keyboard: false, backdrop: 'static' });
             
-            // Don't initialize uploadLoadingModal here - will be created fresh on each upload
+            const uploadLoadingModalEl = document.getElementById('uploadLoadingModal');
+            if (uploadLoadingModalEl) {
+                uploadLoadingModal = new bootstrap.Modal(uploadLoadingModalEl, { keyboard: false, backdrop: 'static' });
+            }
             
             const confirmModalEl = document.getElementById('confirmModal');
             if (confirmModalEl) confirmModal = new bootstrap.Modal(confirmModalEl);

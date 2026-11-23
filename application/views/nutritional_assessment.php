@@ -140,7 +140,7 @@
                             $hfa_display = 'Tall';
                           }
                         ?>
-                          <tr data-id="<?= $student->id ?>" data-grade="<?= htmlspecialchars($student->grade_level) ?>">
+                          <tr data-id="<?= $student->id ?>">
                             <td class="text-center"><?= $counter++ ?></td>
                             <td><?= htmlspecialchars($student->name) ?></td>
                             <td class="text-center"><?= $student->sex ?></td>
@@ -421,10 +421,96 @@
               <span class="visually-hidden">Loading...</span>
             </div>
             <h5 class="text-dark mb-2">Extracting Data</h5>
-            <p class="text-muted mb-0">Processing Excel file. This may take a moment...</p>
+            <p class="text-muted mb-0">Processing the file. This may take several minutes...</p>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Height Unit Guide Slideshow -->
+    <div class="modal fade" id="heightGuideModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header bg-warning text-dark">
+            <h5 class="modal-title">
+              <i class="fas fa-ruler-vertical me-2"></i>Height must be in METERS
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        <div class="modal-body">
+            <div id="heightGuideSlides">
+            <!-- Slide 1 -->
+            <div class="height-slide text-center" data-slide="0">
+                <div class="display-1 text-danger mb-3"><i class="fas fa-times-circle"></i></div>
+                <h4>Wrong: height in centimeters</h4>
+                <p class="lead">You entered <strong><span class="cm-example">145</span></strong> — this is centimeters.</p>
+                <div class="bg-light p-3 rounded">
+                <code>Height: 145</code> ❌
+                </div>
+            </div>
+            <!-- Slide 2 -->
+            <div class="height-slide text-center d-none" data-slide="1">
+                <div class="display-1 text-success mb-3"><i class="fas fa-check-circle"></i></div>
+                <h4>Correct: height in meters</h4>
+                <p class="lead">Divide by 100. <strong>145 cm = 1.45 m</strong></p>
+                <div class="bg-light p-3 rounded">
+                <code>Height: 1.45</code> ✅
+                </div>
+            </div>
+            <!-- Slide 3 -->
+            <div class="height-slide text-center d-none" data-slide="2">
+                <div class="display-1 text-primary mb-3"><i class="fas fa-table"></i></div>
+                <h4>In your Excel file</h4>
+                <p>Column <strong>G</strong> must contain meters, like:</p>
+                <table class="table table-sm table-bordered w-auto mx-auto">
+                <thead class="table-dark">
+                    <tr><th>Column G (Height)</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>1.45</td></tr>
+                    <tr><td>1.32</td></tr>
+                    <tr><td>0.98</td></tr>
+                </tbody>
+                </table>
+            </div>
+            <!-- Slide 4 -->
+            <div class="height-slide text-center d-none" data-slide="3">
+                <div class="display-1 text-info mb-3"><i class="fas fa-redo-alt"></i></div>
+                <h4>Fix & re-upload</h4>
+                <ol class="text-start d-inline-block">
+                <li>Open your Excel file</li>
+                <li>Change Column <strong>G</strong> to meters</li>
+                <li>Save the file</li>
+                <li>Click <strong>Choose File</strong> again</li>
+                </ol>
+                <div id="heightGuideErrorList" class="alert alert-danger text-start mt-3 d-none"></div>
+            </div>
+            </div>
+
+            <!-- Dots -->
+            <div class="d-flex justify-content-center gap-2 mt-4" id="heightGuideDots">
+            <span class="guide-dot active" data-dot="0"></span>
+            <span class="guide-dot" data-dot="1"></span>
+            <span class="guide-dot" data-dot="2"></span>
+            <span class="guide-dot" data-dot="3"></span>
+            </div>
+        </div>
+        <div class="modal-footer justify-content-between">
+            <button type="button" class="btn btn-outline-secondary" id="heightGuidePrev">
+            <i class="fas fa-arrow-left me-1"></i>Prev
+            </button>
+            <button type="button" class="btn btn-warning" id="heightGuideNext">
+            Next<i class="fas fa-arrow-right ms-1"></i>
+            </button>
+            <button type="button" class="btn btn-primary d-none" id="heightGuideReupload">
+            <i class="fas fa-upload me-1"></i>Re-upload fixed file
+            </button>
+            <button type="button" class="btn btn-link text-muted" id="heightGuideClose">
+            Cancel
+            </button>
+        </div>
+        </div>
+    </div>
     </div>
 
     <!-- Clear All Confirmation Modal -->
@@ -436,27 +522,6 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body" id="confirmBody">
-              <div class="mb-3" id="beneficiaryGradeGroup" style="display:none;">
-                <label for="beneficiaryGradeSelect" class="form-label fw-bold">Add Grade Indicator</label>
-                <select id="beneficiaryGradeSelect" class="form-select">
-                  <option value="">Select grade</option>
-                  <option value="1">Grade 1</option>
-                  <option value="2">Grade 2</option>
-                  <option value="3">Grade 3</option>
-                  <option value="4">Grade 4</option>
-                  <option value="5">Grade 5</option>
-                  <option value="6">Grade 6</option>
-                  <option value="7">Grade 7</option>
-                  <option value="8">Grade 8</option>
-                  <option value="9">Grade 9</option>
-                  <option value="10">Grade 10</option>
-                  <option value="11">Grade 11</option>
-                  <option value="12">Grade 12</option>
-                  <option value="K">Kinder</option>
-                  <option value="SPED">SPED</option>
-                </select>
-                <div class="form-text">Choose the beneficiary indicator grade. This will display as Grade X (&lt;indicator&gt;).</div>
-              </div>
               <p class="mb-0" id="confirmBodyText">Are you sure?</p>
           </div>
           <div class="modal-footer">
@@ -492,6 +557,38 @@
       </div>
     </div>
 
+  <!-- Non-Beneficiary Warning Modal -->
+  <div class="modal fade" id="nonBeneficiaryModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-exclamation-triangle me-2"></i>Students not in baseline beneficiaries
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            The following student(s) are <strong>not baseline SBFP beneficiaries</strong>. For
+            <strong>midline</strong> and <strong>endline</strong> uploads, only baseline beneficiaries can be included.
+            <hr class="my-2">
+            <strong>Action required:</strong> remove these students from your Excel file and re-upload the corrected file.
+          </div>
+          <div id="nonBeneficiaryList" class="mt-3"></div>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancel Upload
+          </button>
+          <button type="button" class="btn btn-primary" id="nonBeneficiaryContinue">
+            <i class="fas fa-upload me-1"></i>Re-upload corrected file
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
@@ -504,14 +601,13 @@
         redirect_after: '<?= site_url("sbfp/dashboard"); ?>'
       };
       var existingWeighingDate = '<?php echo isset($existing_weighing_date) ? $existing_weighing_date : ''; ?>';
-      var currentGrade = <?= json_encode($grade ?? '') ?>;
     </script>
     
     <script src="<?= base_url(ASSETS_PATH . '/js/nutritional_assessment.js'); ?>"></script>
 
     <script>
       (function() {
-        var pendingAction = null; // 'single' or 'all'
+        var pendingAction = null;
         var pendingId = null;
         var pendingNewValue = null;
         var pendingButton = null;
@@ -520,8 +616,7 @@
         var confirmModalEl = document.getElementById('confirmModal');
         var confirmModal = new bootstrap.Modal(confirmModalEl);
         var confirmBodyText = document.getElementById('confirmBodyText');
-        var gradeSelect = document.getElementById('beneficiaryGradeSelect');
-        var gradeSelectGroup = document.getElementById('beneficiaryGradeGroup');
+        // REMOVED: gradeSelect, gradeSelectGroup
 
         function init() {
           // Single toggle: show modal
@@ -538,44 +633,40 @@
               pendingNewValue = newValue;
               pendingButton = this;
 
-              if (gradeSelectGroup) {
-                gradeSelectGroup.style.display = '';
-              }
-              if (gradeSelect) {
-                gradeSelect.value = '1';
-              }
+              // REMOVED: gradeSelectGroup / gradeSelect manipulation
 
               document.getElementById('confirmTitle').textContent = 'Confirm Beneficiary Update';
               if (confirmBodyText) {
                 confirmBodyText.innerHTML = 'Are you sure you want to <strong>' + actionText + '</strong> this student as a <strong>' + statusText + '</strong>?';
               }
 
-              if (confirmModal) {
-                  confirmModal.show();
-              } else {
-                  // fallback (should not happen)
-                  var modal = new bootstrap.Modal(confirmModalEl);
-                  modal.show();
-              }
+              // FIX: was never set, leaving the button reading "Yes, Clear All" (danger red)
+              confirmBtn.textContent = 'Yes, Update Status';
+              confirmBtn.className = 'btn btn-primary';
+
+              confirmModal.show();
             });
           });
 
           // Mark All buttons
-          document.getElementById('toggleAllYesBtn').addEventListener('click', function() {
-            showAllConfirmation('Yes', 'beneficiary');
-          });
-          document.getElementById('toggleAllNoBtn').addEventListener('click', function() {
-            showAllConfirmation('No', 'non-beneficiary');
-          });
+          var toggleAllYesBtn = document.getElementById('toggleAllYesBtn');
+          if (toggleAllYesBtn) {
+            toggleAllYesBtn.addEventListener('click', function() {
+              showAllConfirmation('Yes', 'beneficiary');
+            });
+          }
+          var toggleAllNoBtn = document.getElementById('toggleAllNoBtn');
+          if (toggleAllNoBtn) {
+            toggleAllNoBtn.addEventListener('click', function() {
+              showAllConfirmation('No', 'non-beneficiary');
+            });
+          }
 
           function showAllConfirmation(value, statusText) {
             pendingAction = 'all';
             pendingNewValue = value;
-            if (gradeSelectGroup) {
-              gradeSelectGroup.style.display = 'none';
-            }
+            // REMOVED: gradeSelectGroup.style.display = 'none';
 
-            // Change to GREEN for bulk beneficiary update
             confirmBtn.textContent = 'Yes, Update All';
             confirmBtn.className = 'btn btn-success';
 
@@ -584,45 +675,27 @@
               confirmBodyText.innerHTML = 'Are you sure you want to mark <strong>ALL</strong> students as <strong>' + statusText + '</strong>? This action cannot be undone.';
             }
 
-            if (confirmModal) {
-              confirmModal.show();
-            } else {
-              // fallback (should not happen)
-              var modal = new bootstrap.Modal(confirmModalEl);
-              modal.show();
-            }
+            confirmModal.show();
           }
 
-          // Handle modal confirm button click
           confirmBtn.addEventListener('click', function() {
-            var selectedIndicator = '';
-            if (gradeSelect && gradeSelect.value) {
-              selectedIndicator = gradeSelect.value;
-            }
+            // REMOVED: selectedIndicator lookup
             if (pendingAction === 'single') {
-              executeSingleToggle(pendingId, pendingNewValue, pendingButton, selectedIndicator);
+              executeSingleToggle(pendingId, pendingNewValue, pendingButton);
             } else if (pendingAction === 'all') {
               executeAllToggle(pendingNewValue);
             }
-            // Reset pending
             pendingAction = null;
             pendingId = null;
             pendingNewValue = null;
             pendingButton = null;
-            // Reset to RED (default for delete/clear)
             confirmBtn.textContent = 'Yes, Clear All';
             confirmBtn.className = 'btn btn-danger';
-            if (gradeSelectGroup) {
-              gradeSelectGroup.style.display = 'none';
-            }
           });
 
-          // Reset to RED when modal is hidden (e.g., user clicks Cancel)
           confirmModalEl.addEventListener('hidden.bs.modal', function() {
             if (pendingAction === null) {
-              if (gradeSelectGroup) {
-                gradeSelectGroup.style.display = '';
-              }
+              // REMOVED: gradeSelectGroup.style.display = '';
               if (confirmBodyText) {
                 confirmBodyText.innerHTML = 'Are you sure?';
               }
@@ -632,9 +705,10 @@
           });
         }
 
-        function executeSingleToggle(id, newValue, btn, selectedIndicator) {
+        function executeSingleToggle(id, newValue, btn) {  // REMOVED: selectedIndicator param
           var formData = new URLSearchParams();
           formData.append('id', id);
+          formData.append('section_id', '<?= (int)($section_id ?? 0) ?>');
           formData.append('beneficiary', newValue);
 
           fetch('<?= site_url("nutritionalassessment/toggle_beneficiary") ?>', {
@@ -654,45 +728,31 @@
                 statusCell.innerHTML = '<span class="badge bg-secondary">No</span>';
                 btn.dataset.current = 'No';
               }
-              var rowGrade = (row.dataset.grade || '').trim();
-              var gradeCell = row.querySelector('td:nth-child(4)');
-              if (gradeCell && rowGrade) {
-                var parts = gradeCell.textContent.split('/');
-                var section = parts[1] ? parts[1].trim() : '';
-                var originalGrade = row.dataset.grade || parts[0].trim();
-                var gradeText = originalGrade;
-                if (newValue === 'Yes' && selectedIndicator) {
-                  gradeText += ' (' + selectedIndicator + ')';
-                }
-                if (section) {
-                  gradeText += ' / ' + section;
-                }
-                gradeCell.textContent = gradeText;
-              }
               showNotification('Beneficiary status updated.', 'success');
-              if (confirmModal) confirmModal.hide();
             } else {
               showNotification('Error: ' + (resp.message || 'Could not update'), 'danger');
-              if (confirmModal) confirmModal.hide();
             }
+            confirmModal.hide();
           })
           .catch(function() {
             showNotification('Server error. Please try again.', 'danger');
-            if (confirmModal) confirmModal.hide();
+            confirmModal.hide();
           });
+          // REMOVED: entire grade cell text rewrite block (rowGrade / gradeCell / "Grade X (indicator)")
         }
 
-        function executeAllToggle(value, targetGrade) {
+        function executeAllToggle(value) {  // REMOVED: targetGrade param
           var data = {
             legislative_district: '<?= htmlspecialchars($legislative_district) ?>',
             school_district: '<?= htmlspecialchars($school_district) ?>',
             school_id: '<?= htmlspecialchars($school_id) ?>',
             grade: '<?= htmlspecialchars($grade) ?>',
             section: '<?= htmlspecialchars($section) ?>',
+            section_id: '<?= (int)($section_id ?? 0) ?>',
             school_year: '<?= htmlspecialchars($school_year) ?>',
             assessment_type: '<?= htmlspecialchars($assessment_type) ?>',
-            beneficiary: value,
-            target_grade: targetGrade || currentGrade
+            beneficiary: value
+            // REMOVED: target_grade: targetGrade || currentGrade
           };
 
           var formData = new URLSearchParams();
@@ -709,20 +769,17 @@
           .then(resp => {
             if (resp.success) {
               showNotification('Updated ' + (resp.updated || 0) + ' student(s).', 'success');
-              var gradeLevelDisplay = document.getElementById('gradeLevelDisplay');
-              if (gradeLevelDisplay && !gradeLevelDisplay.textContent.includes('(additional)')) {
-                gradeLevelDisplay.textContent += ' (additional)';
-              }
-              if (confirmModal) confirmModal.hide();
+              // REMOVED: gradeLevelDisplay " (additional)" suffix mutation
+              confirmModal.hide();
               setTimeout(function() { location.reload(); }, 1000);
             } else {
               showNotification('Error updating all.', 'danger');
-              if (confirmModal) confirmModal.hide();
+              confirmModal.hide();
             }
           })
           .catch(function() {
             showNotification('Server error.', 'danger');
-            if (confirmModal) confirmModal.hide();
+            confirmModal.hide();
           });
         }
 
